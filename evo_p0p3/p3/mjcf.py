@@ -57,6 +57,61 @@ SYNTHETIC_INERTIAL = (
 
 _ROBOT = re.compile(r"(<robot[^>]*>)")
 _LINK = re.compile(r'(<link name="[^"]*">)')
+_JOINT_BLOCK = re.compile(r'<joint\s+[^>]*name="([^"]+)"[^>]*>(.*?)</joint>', re.S)
+_MIMIC = re.compile(r"<mimic\b([^>]*)/?>")
+_ATTR = re.compile(r'(\w+)\s*=\s*"([^"]*)"')
+
+
+@dataclass(frozen=True, slots=True)
+class Mimic:
+    """A URDF coupling declaration: ``q_dependent = multiplier * q_independent + offset``.
+
+    MuJoCo's URDF importer drops ``<mimic>`` without a word -- verified on all seven real
+    assets that declare one, every single one compiling to ``neq = 0``. Among them are a
+    gear assembly with -1 and 0.777778 ratios, a louvered shutter linking fourteen slats,
+    and two paper shredders with counter-rotating cutters. Left alone, KF2 would score all
+    of them zero for having no implementing constraint, when what actually happened is
+    that the importer discarded a constraint the asset declared correctly.
+
+    So the loader translates it. This recovers a statement the source file makes; it does
+    not invent one. An asset that declares no coupling still ends up with no constraint
+    and still scores zero, which is the outcome KF2 is there to produce.
+    """
+
+    dependent: str
+    independent: str
+    multiplier: float = 1.0
+    offset: float = 0.0
+
+    @property
+    def polycoef(self) -> tuple[float, float, float, float, float]:
+        """MuJoCo's ``equality/joint`` form, which is exactly URDF's mimic semantics.
+
+        ``q_joint1 = p0 + p1 * q_joint2 + ...`` against ``q_dep = k * q_ind + c``.
+        """
+        return (self.offset, self.multiplier, 0.0, 0.0, 0.0)
+
+
+def parse_mimics(text: str) -> tuple[Mimic, ...]:
+    """Every ``<mimic>`` in a URDF, paired with the joint that declares it."""
+    out = []
+    for joint_name, body in _JOINT_BLOCK.findall(text):
+        found = _MIMIC.search(body)
+        if not found:
+            continue
+        attrs = dict(_ATTR.findall(found.group(1)))
+        target = attrs.get("joint")
+        if not target:
+            continue
+        out.append(
+            Mimic(
+                dependent=joint_name,
+                independent=target,
+                multiplier=float(attrs.get("multiplier", 1.0)),
+                offset=float(attrs.get("offset", 0.0)),
+            )
+        )
+    return tuple(out)
 
 
 class AssetLoadError(RuntimeError):
@@ -77,6 +132,9 @@ class LoadedAsset:
     reported so that a future asset with real collision geometry is noticed rather than
     silently changing what the distance queries mean."""
 
+    mimics: tuple[Mimic, ...] = ()
+    """Couplings recovered from ``<mimic>`` and re-expressed as MuJoCo equalities."""
+
     notes: tuple[str, ...] = ()
 
     @property
@@ -88,6 +146,15 @@ class LoadedAsset:
             "inertia_synthesized": self.inertia_synthesized,
             "collidable_geoms": self.collidable_geoms,
             "distance_backend": "mj_geomDistance",
+            "mimics_translated": [
+                {
+                    "dependent": m.dependent,
+                    "independent": m.independent,
+                    "multiplier": m.multiplier,
+                    "offset": m.offset,
+                }
+                for m in self.mimics
+            ],
             "notes": list(self.notes),
         }
 
@@ -181,6 +248,14 @@ def load(urdf_path: str | Path, *, record_id: str | None = None) -> LoadedAsset:
             "always empty and every distance goes through mj_geomDistance."
         )
 
+    mimics = parse_mimics(text)
+    if mimics:
+        notes.append(
+            f"{len(mimics)} <mimic> declaration(s) recovered as MuJoCo equalities; the "
+            f"URDF importer drops them silently, which would otherwise leave a correctly "
+            f"declared coupling with no constraint to measure."
+        )
+
     tmp = None
     try:
         with tempfile.NamedTemporaryFile(
@@ -189,7 +264,9 @@ def load(urdf_path: str | Path, *, record_id: str | None = None) -> LoadedAsset:
             fh.write(patched)
             tmp = Path(fh.name)
         try:
-            model = mujoco.MjModel.from_xml_path(str(tmp))
+            spec = mujoco.MjSpec.from_file(str(tmp))
+            _attach_mimics(spec, mimics)
+            model = spec.compile()
         except ValueError as exc:
             raise AssetLoadError(f"{urdf_path.parent.name}: {exc}") from exc
     finally:
@@ -213,8 +290,34 @@ def load(urdf_path: str | Path, *, record_id: str | None = None) -> LoadedAsset:
         source=urdf_path,
         inertia_synthesized=synthesized,
         collidable_geoms=collidable,
+        mimics=mimics,
         notes=tuple(notes),
     )
+
+
+def _attach_mimics(spec: "mujoco.MjSpec", mimics: tuple[Mimic, ...]) -> None:
+    """Re-express each ``<mimic>`` as an ``equality/joint`` on the spec before compiling.
+
+    Editing the spec rather than the text because neither route through XML works: a
+    ``<mujoco><equality>`` block inside a URDF is ignored by the importer, and saving the
+    compiled model back out to MJCF loses the geometry.
+
+    Names are the handle. A mimic whose target joint does not exist is left out rather
+    than guessed at -- that is a malformed asset, and KF2 reporting "no constraint
+    implements this coupling" is the right answer for it.
+    """
+    known = {j.name for j in spec.joints}
+    for m in mimics:
+        if m.dependent not in known or m.independent not in known:
+            continue
+        eq = spec.add_equality()
+        eq.name = f"mimic__{m.dependent}"
+        eq.type = mujoco.mjtEq.mjEQ_JOINT
+        eq.objtype = mujoco.mjtObj.mjOBJ_JOINT
+        eq.name1 = m.dependent
+        eq.name2 = m.independent
+        eq.data[:5] = m.polycoef
+        eq.active = True
 
 
 # --------------------------------------------------------------------------------------

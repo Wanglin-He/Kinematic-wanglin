@@ -163,3 +163,116 @@ def test_aabb_uses_the_parts_own_scale(cabinet):
     drawer = cabinet.body_id("drawer")
     lo, hi = mjcf.subtree_aabb(cabinet, (drawer,))
     assert 0.0 < mjcf.aabb_diagonal(lo, hi) < 1.0
+
+
+# --------------------------------------------------------------------------------------
+# <mimic>: a coupling the URDF declares and MuJoCo's importer throws away
+# --------------------------------------------------------------------------------------
+
+GEARS = textwrap.dedent(
+    """
+    <robot name="gears">
+      <link name="housing">
+        <visual><geometry><box size="0.30 0.10 0.02"/></geometry></visual>
+      </link>
+      <link name="gear_large">
+        <visual><geometry><cylinder radius="0.06" length="0.02"/></geometry></visual>
+      </link>
+      <link name="gear_small">
+        <visual><geometry><cylinder radius="0.02" length="0.02"/></geometry></visual>
+      </link>
+      <joint name="gear_large_spin" type="continuous">
+        <parent link="housing"/><child link="gear_large"/>
+        <origin xyz="-0.08 0 0.03"/><axis xyz="0 0 1"/>
+      </joint>
+      <joint name="gear_small_spin" type="continuous">
+        <parent link="housing"/><child link="gear_small"/>
+        <origin xyz="0 0 0.03"/><axis xyz="0 0 1"/>
+        <mimic joint="gear_large_spin" multiplier="3.0" offset="0.0"/>
+      </joint>
+    </robot>
+    """
+).strip()
+
+
+def _write(tmp_path: Path, text: str) -> mjcf.LoadedAsset:
+    path = tmp_path / "model.urdf"
+    path.write_text(text, encoding="utf-8")
+    return mjcf.load(path, record_id="gears")
+
+
+def test_mimic_is_parsed_with_its_declaring_joint():
+    (m,) = mjcf.parse_mimics(GEARS)
+    assert (m.dependent, m.independent, m.multiplier, m.offset) == (
+        "gear_small_spin",
+        "gear_large_spin",
+        3.0,
+        0.0,
+    )
+
+
+def test_mimic_defaults_match_the_urdf_spec():
+    (m,) = mjcf.parse_mimics(GEARS.replace(' multiplier="3.0" offset="0.0"', ""))
+    assert (m.multiplier, m.offset) == (1.0, 0.0)
+
+
+def test_mimic_maps_onto_mujoco_polycoef():
+    # URDF: q_dep = k * q_ind + c. MuJoCo equality/joint: q_1 = p0 + p1*q_2 + ...
+    (m,) = mjcf.parse_mimics(GEARS)
+    assert m.polycoef == (0.0, 3.0, 0.0, 0.0, 0.0)
+
+
+def test_a_declared_coupling_survives_the_import(tmp_path: Path):
+    # Without the translation MuJoCo compiles this to neq == 0, and KF2 would score the
+    # asset zero for a coupling it declared perfectly well.
+    asset = _write(tmp_path, GEARS)
+    assert asset.model.neq == 1
+    assert list(asset.model.eq_data[0][:3]) == [0.0, 3.0, 0.0]
+
+
+def test_the_translation_is_recorded_in_provenance(tmp_path: Path):
+    asset = _write(tmp_path, GEARS)
+    assert asset.provenance["mimics_translated"] == [
+        {
+            "dependent": "gear_small_spin",
+            "independent": "gear_large_spin",
+            "multiplier": 3.0,
+            "offset": 0.0,
+        }
+    ]
+
+
+def test_an_asset_that_declares_no_coupling_still_gets_no_constraint(tmp_path: Path):
+    # The outcome KF2 exists to produce: nothing to measure means nothing to credit.
+    asset = _write(tmp_path, GEARS.replace(
+        '<mimic joint="gear_large_spin" multiplier="3.0" offset="0.0"/>', ""))
+    assert asset.model.neq == 0
+    assert asset.provenance["mimics_translated"] == []
+
+
+def test_a_mimic_pointing_at_a_missing_joint_is_left_unbound(tmp_path: Path):
+    asset = _write(tmp_path, GEARS.replace('joint="gear_large_spin" multiplier',
+                                           'joint="no_such_joint" multiplier'))
+    assert asset.model.neq == 0
+
+
+@pytest.mark.parametrize(
+    "qpos, expected",
+    [((1.0, 3.0), 0.0), ((1.0, 2.0), 1.0), ((2.0, 4.0), 2.0), ((1.0, 0.0), 3.0)],
+)
+def test_the_residual_grows_with_the_ratio_error(tmp_path: Path, qpos, expected):
+    # This is the measurement KF2 rests on: place qpos on the target manifold, run
+    # forward kinematics with no stepping, and read the asset's own constraint violation.
+    import mujoco
+    import numpy as np
+
+    asset = _write(tmp_path, GEARS)
+    asset.data.qpos[:] = qpos
+    mujoco.mj_forward(asset.model, asset.data)
+    rows = [
+        i
+        for i in range(asset.data.nefc)
+        if asset.data.efc_type[i] == mujoco.mjtConstraint.mjCNSTR_EQUALITY
+    ]
+    assert rows
+    assert float(np.abs(asset.data.efc_pos[rows]).max()) == pytest.approx(expected, abs=1e-6)
