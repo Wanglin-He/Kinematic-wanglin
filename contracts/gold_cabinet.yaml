@@ -1,0 +1,123 @@
+# Gold standard contract A: cabinet.
+#
+# Covers slide, hinge and rigid attachment. Paired with assets/gold/cabinet_*.urdf, where
+# one asset is correct by construction and the rest carry one known defect each. If the
+# evaluator does not score the correct asset 1.0, the evaluator is wrong -- not the asset.
+
+record_id: gold_cabinet
+
+overall_description: >
+  A tall rectangular cabinet with two stacked pull-out drawers and a side-hinged door
+  below them. Each drawer carries a handle on its front face, and the door carries a knob.
+
+required_parts:
+  - {id: cabinet_body, role: fixed}
+  - {id: drawer_1,     role: movable,  group: drawer}
+  - {id: drawer_2,     role: movable,  group: drawer}
+  - {id: door,         role: movable}
+  - {id: handle_1,     role: attached, group: handle}
+  - {id: handle_2,     role: attached, group: handle}
+  - {id: door_knob,    role: attached}
+
+global_form:
+  category: cabinet
+  geometry: tall rectangular outer form with a flat top
+  coarse_structure: two drawers stacked above a single hinged door
+
+part_geometry:
+  - {id: cabinet_body, geometry: rectangular hollow frame with flat side panels}
+  - {id: drawer_1,     geometry: shallow rectangular open-top box}
+  - {id: drawer_2,     geometry: shallow rectangular open-top box}
+  - {id: door,         geometry: flat rectangular panel}
+  - {id: handle_1,     geometry: long thin bar with rounded ends}
+  - {id: handle_2,     geometry: long thin bar with rounded ends}
+  - {id: door_knob,    geometry: small round knob}
+
+part_relations:
+  - {subject: drawer_1,  relation: inside,      object: cabinet_body}
+  - {subject: drawer_2,  relation: inside,      object: cabinet_body}
+  - {subject: handle_1,  relation: attached_to, object: drawer_1}
+  - {subject: handle_2,  relation: attached_to, object: drawer_2}
+  - {subject: door_knob, relation: attached_to, object: door}
+
+proportion_claims:
+  - {parts: [drawer_1, drawer_2], measure: height, target_ratio: [1, 1], tolerance: 0.10}
+
+envelope_m: {x: [0.30, 0.50], y: [0.30, 0.50], z: [0.70, 1.10]}
+
+kinematic_claims:
+
+  canonical_frame:
+    up: gravity
+    front: null           # yaw is undetermined, so axis.numeric would only be N/A
+
+  joints:
+    - id: drawer_1_slide
+      part: drawer_1
+      parent: cabinet_body
+      type: slide
+      axis:
+        semantic: horizontal
+        relational: {type: interface_normal, from: cabinet_body, to: drawer_1}
+      anchor: null        # a translation has no centre; MuJoCo ignores a slide's pos
+      range:  {unit: m, min: 0.0, max: 0.24}
+      states: {closed: 0.0, open: 0.24}
+
+    - id: drawer_2_slide
+      part: drawer_2
+      parent: cabinet_body
+      type: slide
+      axis:
+        semantic: horizontal
+        relational: {type: interface_normal, from: cabinet_body, to: drawer_2}
+      anchor: null
+      range:  {unit: m, min: 0.0, max: 0.24}
+      states: {closed: 0.0, open: 0.24}
+
+    - id: door_hinge
+      part: door
+      parent: cabinet_body
+      type: hinge
+      axis:
+        semantic: vertical
+        relational: {type: interface_line, between: [door, cabinet_body]}
+      anchor: {on_edge_of: door}
+      range:  {unit: rad, min: 0.0, max: 1.920}
+      states: {closed: 0.0, open: 1.920}
+
+  rigid_attachments:
+    - {follower: handle_1,  leader: drawer_1}
+    - {follower: handle_2,  leader: drawer_2}
+    - {follower: door_knob, leader: door}
+
+  couplings: []
+
+  independent_dofs: [drawer_1_slide, drawer_2_slide, door_hinge]
+
+  asset_states:
+    closed: {scope: named_parts, tolerance: {relative: 0.02}}
+    open:   {scope: named_parts, tolerance: {relative: 0.02}}
+
+  contact_policy:
+    required:
+      - {parts: [drawer_1, cabinet_body], state: closed, relation: stop_contact}
+      - {parts: [drawer_2, cabinet_body], state: closed, relation: stop_contact}
+      - {parts: [door,     cabinet_body], state: closed, relation: stop_contact}
+    permitted:
+      - {parts: [{group: handle}, cabinet_body], state: all}
+    forbidden:
+      - {parts: [{group: drawer}, {group: drawer}], state: all}
+      - {parts: [door, drawer_1], state: all}
+      - {parts: [door, drawer_2], state: all}
+    precedence: required_and_permitted_over_forbidden
+
+  tolerances:
+    axis_angle_deg:           15.0
+    anchor_side_fraction_min: 0.95
+    anchor_center_offset_max: 0.05
+    travel_scale_min:         0.50
+    follower_drift_m:         0.0005
+    state_match_relative:     0.02
+    required_contact_m:       0.002
+    forbidden_penetration_m:  0.001
+    coupling_residual:        0.02
