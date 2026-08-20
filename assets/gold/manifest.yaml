@@ -9,250 +9,308 @@
 # fires here while passing on the correct asset. A counterexample that does not change the
 # model is not a counterexample, and a predicate that fires on both is not a predicate.
 
-base: cabinet_correct.urdf
+families:
 
-defects:
+  - base: cabinet_correct.urdf
+    defects:
 
-  - name: wrong_parent
-    targets: KF1.parent
-    defect: >
-      drawer_2 hangs off drawer_1 instead of the carcass. Pulling the upper drawer now
-      drags the lower one with it. Every other claim is untouched: the joint is still a
-      prismatic sliding the declared distance along the declared axis, and at the
-      reference configuration the asset is pose-identical to the correct one, so nothing
-      but the parent claim can see it.
-    substitute:
-      - find: |
-          <joint name="drawer_2_slide" type="prismatic">
-              <parent link="cabinet_body"/>
-        replace: |
-          <joint name="drawer_2_slide" type="prismatic">
-              <parent link="drawer_1"/>
-    expect:
-      KF1.parent:               fail
-      KF1.type:                 pass
-      KF1.dof_composition:      pass
-      KF1.axis_semantic:        pass
-      KF1.axis_admits_motion:   pass
-      KF1.anchor:               pass
-      KF1.range_and_reference:  pass
-      KF1.rigid_follower:       pass
-      KF1.travel_scale:         pass
-  - name: wrong_joint_type
-    targets: KF1.type
-    defect: >
-      The door is prismatic where the contract says revolute. It still moves, still along
-      a declared axis, still through a declared range -- it simply slides instead of
-      swinging.
-    substitute:
-      - find: '<joint name="door_hinge" type="revolute">'
-        replace: '<joint name="door_hinge" type="prismatic">'
-      - find: |
-          <axis xyz="0 0 1"/>
-              <limit lower="0.0" upper="1.92" effort="20" velocity="1.0"/>
-        replace: |
-          <axis xyz="0 0 1"/>
-              <limit lower="0.0" upper="0.30" effort="20" velocity="1.0"/>
-    expect:
-      # Two claims break, and the manifest says so rather than pretending otherwise: a
-      # revolute turned prismatic changes the unit its range is measured in, so the
-      # declared 1.92 rad of travel cannot survive as 1.92 m. Forcing the numbers to line
-      # up would isolate the predicate by making the asset absurd.
-      KF1.type:                 fail
-      KF1.range_and_reference:  fail
-      KF1.parent:               pass
-      KF1.dof_composition:      pass
-      KF1.axis_semantic:        pass
-      KF1.axis_admits_motion:   pass
-      KF1.anchor:               pass
-      KF1.rigid_follower:       pass
-      KF1.travel_scale:         pass
-  - name: hinge_through_middle
-    targets: KF1.anchor
-    defect: >
-      The door's hinge runs through the centre of the panel rather than along its left
-      edge, so the door spins about its own middle like a revolving door. The axis
-      direction is still vertical and the range is still correct; only where the line sits
-      relative to the geometry has changed.
-    substitute:
-      - find: '<origin xyz="-0.17 -0.19 0.21"/>'
-        replace: '<origin xyz="0.00 -0.19 0.21"/>'
-      - find: |
-          <visual name="panel">
-                <origin xyz="0.17 0 0"/>
-        replace: |
-          <visual name="panel">
-                <origin xyz="0 0 0"/>
-    expect:
-      KF1.anchor:               fail
-      KF1.parent:               pass
-      KF1.type:                 pass
-      KF1.dof_composition:      pass
-      KF1.axis_semantic:        pass
-      KF1.axis_admits_motion:   pass
-      KF1.range_and_reference:  pass
-      KF1.rigid_follower:       pass
-      KF1.travel_scale:         pass
-  - name: axis_rotated_90
-    targets: KF1.axis
-    defect: >
-      The upper drawer slides sideways along the cabinet's width instead of outward
-      through its opening. Type, parent, range and travel are all unchanged; only the
-      direction is wrong.
-    substitute:
-      - find: |
-          <origin xyz="0 -0.03 0.72"/>
-              <axis xyz="0 -1 0"/>
-        replace: |
-          <origin xyz="0 -0.03 0.72"/>
-              <axis xyz="-1 0 0"/>
-    expect:
-      # axis_semantic cannot see this and does not claim to: sliding sideways is just as
-      # horizontal as sliding outward. Only the geometry knows which direction leaves
-      # through the opening and which drives into a wall.
-      KF1.axis_admits_motion:   fail
-      KF1.axis_semantic:        pass
-      KF1.parent:               pass
-      KF1.type:                 pass
-      KF1.dof_composition:      pass
-      KF1.anchor:               pass
-      KF1.range_and_reference:  pass
-      KF1.rigid_follower:       pass
-      KF1.travel_scale:         pass
-  - name: range_too_small
-    targets: KF1.range_and_reference
-    defect: >
-      The upper drawer's declared travel is 0.18 m and the model gives it 0.018 m -- a
-      drawer that opens by less than the width of the handle it carries.
-    substitute:
-      - find: |
-          <axis xyz="0 -1 0"/>
-              <limit lower="0.0" upper="0.18" effort="50" velocity="0.5"/>
-            </joint>
+    - name: wrong_parent
+      targets: KF1.parent
+      defect: >
+        drawer_2 hangs off drawer_1 instead of the carcass. Pulling the upper drawer now
+        drags the lower one with it. Every other claim is untouched: the joint is still a
+        prismatic sliding the declared distance along the declared axis, and at the
+        reference configuration the asset is pose-identical to the correct one, so nothing
+        but the parent claim can see it.
+      substitute:
+        - find: |
+            <joint name="drawer_2_slide" type="prismatic">
+                <parent link="cabinet_body"/>
+          replace: |
+            <joint name="drawer_2_slide" type="prismatic">
+                <parent link="drawer_1"/>
+      expect:
+        KF1.parent:               fail
+        KF1.type:                 pass
+        KF1.dof_composition:      pass
+        KF1.axis_semantic:        pass
+        KF1.axis_admits_motion:   pass
+        KF1.anchor:               pass
+        KF1.range_and_reference:  pass
+        KF1.rigid_follower:       pass
+        KF1.travel_scale:         pass
+    - name: wrong_joint_type
+      targets: KF1.type
+      defect: >
+        The door is prismatic where the contract says revolute. It still moves, still along
+        a declared axis, still through a declared range -- it simply slides instead of
+        swinging.
+      substitute:
+        - find: '<joint name="door_hinge" type="revolute">'
+          replace: '<joint name="door_hinge" type="prismatic">'
+        - find: |
+            <axis xyz="0 0 1"/>
+                <limit lower="0.0" upper="1.92" effort="20" velocity="1.0"/>
+          replace: |
+            <axis xyz="0 0 1"/>
+                <limit lower="0.0" upper="0.30" effort="20" velocity="1.0"/>
+      expect:
+        # Two claims break, and the manifest says so rather than pretending otherwise: a
+        # revolute turned prismatic changes the unit its range is measured in, so the
+        # declared 1.92 rad of travel cannot survive as 1.92 m. Forcing the numbers to line
+        # up would isolate the predicate by making the asset absurd.
+        KF1.type:                 fail
+        KF1.range_and_reference:  fail
+        KF1.parent:               pass
+        KF1.dof_composition:      pass
+        KF1.axis_semantic:        pass
+        KF1.axis_admits_motion:   pass
+        KF1.anchor:               pass
+        KF1.rigid_follower:       pass
+        KF1.travel_scale:         pass
+    - name: hinge_through_middle
+      targets: KF1.anchor
+      defect: >
+        The door's hinge runs through the centre of the panel rather than along its left
+        edge, so the door spins about its own middle like a revolving door. The axis
+        direction is still vertical and the range is still correct; only where the line sits
+        relative to the geometry has changed.
+      substitute:
+        - find: '<origin xyz="-0.17 -0.19 0.21"/>'
+          replace: '<origin xyz="0.00 -0.19 0.21"/>'
+        - find: |
+            <visual name="panel">
+                  <origin xyz="0.17 0 0"/>
+          replace: |
+            <visual name="panel">
+                  <origin xyz="0 0 0"/>
+      expect:
+        KF1.anchor:               fail
+        KF1.parent:               pass
+        KF1.type:                 pass
+        KF1.dof_composition:      pass
+        KF1.axis_semantic:        pass
+        KF1.axis_admits_motion:   pass
+        KF1.range_and_reference:  pass
+        KF1.rigid_follower:       pass
+        KF1.travel_scale:         pass
+    - name: axis_rotated_90
+      targets: KF1.axis
+      defect: >
+        The upper drawer slides sideways along the cabinet's width instead of outward
+        through its opening. Type, parent, range and travel are all unchanged; only the
+        direction is wrong.
+      substitute:
+        - find: |
+            <origin xyz="0 -0.03 0.72"/>
+                <axis xyz="0 -1 0"/>
+          replace: |
+            <origin xyz="0 -0.03 0.72"/>
+                <axis xyz="-1 0 0"/>
+      expect:
+        # axis_semantic cannot see this and does not claim to: sliding sideways is just as
+        # horizontal as sliding outward. Only the geometry knows which direction leaves
+        # through the opening and which drives into a wall.
+        KF1.axis_admits_motion:   fail
+        KF1.axis_semantic:        pass
+        KF1.parent:               pass
+        KF1.type:                 pass
+        KF1.dof_composition:      pass
+        KF1.anchor:               pass
+        KF1.range_and_reference:  pass
+        KF1.rigid_follower:       pass
+        KF1.travel_scale:         pass
+    - name: range_too_small
+      targets: KF1.range_and_reference
+      defect: >
+        The upper drawer's declared travel is 0.18 m and the model gives it 0.018 m -- a
+        drawer that opens by less than the width of the handle it carries.
+      substitute:
+        - find: |
+            <axis xyz="0 -1 0"/>
+                <limit lower="0.0" upper="0.18" effort="50" velocity="0.5"/>
+              </joint>
 
-            <link name="handle_1">
-        replace: |
-          <axis xyz="0 -1 0"/>
-              <limit lower="0.0" upper="0.018" effort="50" velocity="0.5"/>
-            </joint>
+              <link name="handle_1">
+          replace: |
+            <axis xyz="0 -1 0"/>
+                <limit lower="0.0" upper="0.018" effort="50" velocity="0.5"/>
+              </joint>
 
-            <link name="handle_1">
-    expect:
-      KF1.range_and_reference:  fail
-      KF1.parent:               pass
-      KF1.type:                 pass
-      KF1.dof_composition:      pass
-      KF1.axis_semantic:        pass
-      KF1.axis_admits_motion:   pass
-      KF1.anchor:               pass
-      KF1.rigid_follower:       pass
-      KF1.travel_scale:         pass
-  - name: detached_follower
-    targets: KF1.rigid_follower
-    defect: >
-      handle_1 is bolted to the carcass rather than to the drawer it belongs to. At the
-      reference configuration the asset renders identically to the correct one -- the
-      handle sits exactly where it should. It is only when the drawer opens that the
-      handle stays behind, which is why a check evaluated at one pose cannot see this and
-      a structural check on the body tree can.
-    substitute:
-      - find: |
-          <joint name="handle_1_fixed" type="fixed">
-              <parent link="drawer_1"/>
-              <child link="handle_1"/>
-              <origin xyz="0 -0.178 0"/>
-        replace: |
-          <joint name="handle_1_fixed" type="fixed">
-              <parent link="cabinet_body"/>
-              <child link="handle_1"/>
-              <origin xyz="0 -0.208 0.72"/>
-    expect:
-      KF1.rigid_follower:       fail
-      KF1.parent:               pass
-      KF1.type:                 pass
-      KF1.dof_composition:      pass
-      KF1.axis_semantic:        pass
-      KF1.axis_admits_motion:   pass
-      KF1.anchor:               pass
-      KF1.range_and_reference:  pass
-      KF1.travel_scale:         pass
-  - name: fake_joint_decoy_geom
-    targets: KF1.travel_scale
-    defect: >
-      drawer_1 carries the declared joint and a correct 0.18 m range, but the body it
-      moves owns only an 8 mm stub hidden inside the carcass. The drawer a viewer sees is
-      geometry of the static body, parked at the closed pose. Everything declarative is
-      perfect and nothing a person would call the drawer ever moves -- the plainest
-      kinematic failure there is, and the one P3's own bullet names but cannot measure,
-      because "visually" needs a renderer the scope forbids.
-    substitute:
-      - find: |
-          <link name="drawer_1">
-              <visual name="box">
-                <origin xyz="0 0 0"/>
-                <geometry><box size="0.34 0.34 0.20"/></geometry>
-              </visual>
-            </link>
-        replace: |
-          <link name="drawer_1">
-              <visual name="stub">
-                <origin xyz="0 0.16 0"/>
-                <geometry><box size="0.008 0.008 0.008"/></geometry>
-              </visual>
-            </link>
-      - find: |
-          <visual name="mid_shelf">
-                <origin xyz="0 0 0.39"/>
-                <geometry><box size="0.36 0.38 0.01"/></geometry>
-              </visual>
-        replace: |
-          <visual name="mid_shelf">
-                <origin xyz="0 0 0.39"/>
-                <geometry><box size="0.36 0.38 0.01"/></geometry>
-              </visual>
-              <visual name="decoy_drawer_front">
-                <origin xyz="0 -0.03 0.72"/>
-                <geometry><box size="0.34 0.34 0.20"/></geometry>
-              </visual>
-    expect:
-      # This table collapses per asset, so axis_admits_motion reads `pass`: drawer_1
-      # abstains -- the stub starts buried inside the decoy belonging to the carcass, and
-      # no direction is judgeable for a part already overlapping its parent -- while
-      # drawer_2 genuinely passes. That per-subject abstention is pinned by a named test
-      # in tests/test_kf1.py rather than flattened into this column.
-      KF1.travel_scale:         fail
-      KF1.axis_admits_motion:   pass
-      KF1.parent:               pass
-      KF1.type:                 pass
-      KF1.dof_composition:      pass
-      KF1.axis_semantic:        pass
-      KF1.anchor:               pass
-      KF1.range_and_reference:  pass
-      KF1.rigid_follower:       pass
-  - name: door_axis_horizontal
-    targets: KF1.axis_semantic
-    defect: >
-      The door's hinge axis lies horizontal instead of vertical, so the panel flops
-      forward like a drawbridge rather than swinging open. Contract, anchor position,
-      range and parent are all untouched; only the direction of the line changed, and it
-      changed by enough that gravity alone settles the question -- no object frame needed.
-    substitute:
-      - find: |
-          <origin xyz="-0.17 -0.19 0.21"/>
-              <axis xyz="0 0 1"/>
-        replace: |
-          <origin xyz="-0.17 -0.19 0.21"/>
-              <axis xyz="1 0 0"/>
-    expect:
-      # anchor breaks as a consequence, and legitimately: a horizontal axis through the
-      # panel's mid-height no longer runs along any edge of it. The defect really does
-      # break both claims.
-      KF1.axis_semantic:        fail
-      KF1.anchor:               fail
-      KF1.parent:               pass
-      KF1.type:                 pass
-      KF1.dof_composition:      pass
-      KF1.axis_admits_motion:   pass
-      KF1.range_and_reference:  pass
-      KF1.rigid_follower:       pass
-      KF1.travel_scale:         pass
+              <link name="handle_1">
+      expect:
+        KF1.range_and_reference:  fail
+        KF1.parent:               pass
+        KF1.type:                 pass
+        KF1.dof_composition:      pass
+        KF1.axis_semantic:        pass
+        KF1.axis_admits_motion:   pass
+        KF1.anchor:               pass
+        KF1.rigid_follower:       pass
+        KF1.travel_scale:         pass
+    - name: detached_follower
+      targets: KF1.rigid_follower
+      defect: >
+        handle_1 is bolted to the carcass rather than to the drawer it belongs to. At the
+        reference configuration the asset renders identically to the correct one -- the
+        handle sits exactly where it should. It is only when the drawer opens that the
+        handle stays behind, which is why a check evaluated at one pose cannot see this and
+        a structural check on the body tree can.
+      substitute:
+        - find: |
+            <joint name="handle_1_fixed" type="fixed">
+                <parent link="drawer_1"/>
+                <child link="handle_1"/>
+                <origin xyz="0 -0.178 0"/>
+          replace: |
+            <joint name="handle_1_fixed" type="fixed">
+                <parent link="cabinet_body"/>
+                <child link="handle_1"/>
+                <origin xyz="0 -0.208 0.72"/>
+      expect:
+        KF1.rigid_follower:       fail
+        KF1.parent:               pass
+        KF1.type:                 pass
+        KF1.dof_composition:      pass
+        KF1.axis_semantic:        pass
+        KF1.axis_admits_motion:   pass
+        KF1.anchor:               pass
+        KF1.range_and_reference:  pass
+        KF1.travel_scale:         pass
+    - name: fake_joint_decoy_geom
+      targets: KF1.travel_scale
+      defect: >
+        drawer_1 carries the declared joint and a correct 0.18 m range, but the body it
+        moves owns only an 8 mm stub hidden inside the carcass. The drawer a viewer sees is
+        geometry of the static body, parked at the closed pose. Everything declarative is
+        perfect and nothing a person would call the drawer ever moves -- the plainest
+        kinematic failure there is, and the one P3's own bullet names but cannot measure,
+        because "visually" needs a renderer the scope forbids.
+      substitute:
+        - find: |
+            <link name="drawer_1">
+                <visual name="box">
+                  <origin xyz="0 0 0"/>
+                  <geometry><box size="0.34 0.34 0.20"/></geometry>
+                </visual>
+              </link>
+          replace: |
+            <link name="drawer_1">
+                <visual name="stub">
+                  <origin xyz="0 0.16 0"/>
+                  <geometry><box size="0.008 0.008 0.008"/></geometry>
+                </visual>
+              </link>
+        - find: |
+            <visual name="mid_shelf">
+                  <origin xyz="0 0 0.39"/>
+                  <geometry><box size="0.36 0.38 0.01"/></geometry>
+                </visual>
+          replace: |
+            <visual name="mid_shelf">
+                  <origin xyz="0 0 0.39"/>
+                  <geometry><box size="0.36 0.38 0.01"/></geometry>
+                </visual>
+                <visual name="decoy_drawer_front">
+                  <origin xyz="0 -0.03 0.72"/>
+                  <geometry><box size="0.34 0.34 0.20"/></geometry>
+                </visual>
+      expect:
+        # This table collapses per asset, so axis_admits_motion reads `pass`: drawer_1
+        # abstains -- the stub starts buried inside the decoy belonging to the carcass, and
+        # no direction is judgeable for a part already overlapping its parent -- while
+        # drawer_2 genuinely passes. That per-subject abstention is pinned by a named test
+        # in tests/test_kf1.py rather than flattened into this column.
+        KF1.travel_scale:         fail
+        KF1.axis_admits_motion:   pass
+        KF1.parent:               pass
+        KF1.type:                 pass
+        KF1.dof_composition:      pass
+        KF1.axis_semantic:        pass
+        KF1.anchor:               pass
+        KF1.range_and_reference:  pass
+        KF1.rigid_follower:       pass
+    - name: door_axis_horizontal
+      targets: KF1.axis_semantic
+      defect: >
+        The door's hinge axis lies horizontal instead of vertical, so the panel flops
+        forward like a drawbridge rather than swinging open. Contract, anchor position,
+        range and parent are all untouched; only the direction of the line changed, and it
+        changed by enough that gravity alone settles the question -- no object frame needed.
+      substitute:
+        - find: |
+            <origin xyz="-0.17 -0.19 0.21"/>
+                <axis xyz="0 0 1"/>
+          replace: |
+            <origin xyz="-0.17 -0.19 0.21"/>
+                <axis xyz="1 0 0"/>
+      expect:
+        # anchor breaks as a consequence, and legitimately: a horizontal axis through the
+        # panel's mid-height no longer runs along any edge of it. The defect really does
+        # break both claims.
+        KF1.axis_semantic:        fail
+        KF1.anchor:               fail
+        KF1.parent:               pass
+        KF1.type:                 pass
+        KF1.dof_composition:      pass
+        KF1.axis_admits_motion:   pass
+        KF1.range_and_reference:  pass
+        KF1.rigid_follower:       pass
+        KF1.travel_scale:         pass
+
+  - base: gearbox_correct.urdf
+    defects:
+
+      - name: gearbox_wrong_ratio
+        targets: KF2.coefficient
+        defect: >
+          The mesh is declared 3:1 and built 2:1. The coupling exists, is active, links the
+          right two joints and counter-rotates correctly; only the ratio is wrong. Nothing
+          static can see it -- at the reference pose the gears sit exactly where they
+          should -- and it shows up only as a residual that grows with how far the input
+          has turned.
+        substitute:
+          - find: 'multiplier="-3.0"'
+            replace: 'multiplier="-2.0"'
+        expect:
+          KF2.bound:          pass
+          KF2.coefficient:    fail
+          KF2.expected_dof:   pass
+          KF2.residual:       fail
+
+      - name: gearbox_wrong_sign
+        targets: KF2.coefficient
+        defect: >
+          The ratio's magnitude is right and its sign is not: the gears are declared to
+          counter-rotate, as any external mesh must, and built to turn the same way. A
+          mechanism that cannot physically exist, expressed by a single character.
+        substitute:
+          - find: 'multiplier="-3.0"'
+            replace: 'multiplier="3.0"'
+        expect:
+          KF2.bound:          pass
+          KF2.coefficient:    fail
+          KF2.expected_dof:   pass
+          KF2.residual:       fail
+
+      - name: gearbox_missing_coupling
+        targets: KF2.bound
+        defect: >
+          The gears are geometrically perfect -- right radii, right centres, pitch circles
+          tangent -- and nothing links them. Each spins independently. This is the failure
+          the printed KF2 formula scores as a PASS: with no constraint there is no residual,
+          a maximum over an empty set makes the indicator true, and the worst possible model
+          takes full marks. The bound() factor exists for this asset.
+        substitute:
+          - find: '<mimic joint="gear_large_spin" multiplier="-3.0" offset="0.0"/>'
+            replace: '<!-- coupling deliberately absent -->'
+        expect:
+          # expected_dof fires too, from an independent direction: two hinges with nothing
+          # between them leave two degrees of freedom where the contract declares one. Two
+          # predicates agreeing here is not redundancy -- one reads the model's constraint
+          # list, the other counts what is left free -- and a coupling that fooled the
+          # first would have to fool the second differently.
+          KF2.bound:          fail
+          KF2.expected_dof:   fail
+          KF2.coefficient:    na
+          KF2.residual:       na

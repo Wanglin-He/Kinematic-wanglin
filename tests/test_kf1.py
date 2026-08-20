@@ -26,6 +26,10 @@ from evo_p0p3.p3 import gold, kf1, mjcf
 from evo_p0p3.p3.verdict import Verdict, score
 
 ROOT = Path(__file__).resolve().parents[1]
+CABINET = gold.defects("cabinet_correct.urdf")
+"""Only the cabinet family. The gearbox exists for the coupling claims and is judged by
+tests/test_kf2.py against its own contract; running it through the cabinet's contract
+would ask KF1 about parts that asset does not have."""
 
 
 @pytest.fixture(scope="module")
@@ -89,7 +93,7 @@ def test_the_control_leaves_nothing_unevaluated_that_should_be_evaluated(
 # --------------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("defect", gold.defects(), ids=lambda d: d.name)
+@pytest.mark.parametrize("defect", CABINET, ids=lambda d: d.name)
 def test_the_verdict_matrix_matches_the_manifest(defect, materialised, contract):
     observed = {
         p: collapse(v)
@@ -103,7 +107,7 @@ def test_the_verdict_matrix_matches_the_manifest(defect, materialised, contract)
     assert not mismatches, f"expected vs observed: {mismatches}"
 
 
-@pytest.mark.parametrize("defect", gold.defects(), ids=lambda d: d.name)
+@pytest.mark.parametrize("defect", CABINET, ids=lambda d: d.name)
 def test_every_defect_is_detected_by_something(defect, materialised, contract):
     verdicts = verdicts_by_predicate(defect.name, materialised, contract)
     assert any(Verdict.FAIL in v for v in verdicts.values()), (
@@ -111,7 +115,7 @@ def test_every_defect_is_detected_by_something(defect, materialised, contract):
     )
 
 
-@pytest.mark.parametrize("defect", gold.defects(), ids=lambda d: d.name)
+@pytest.mark.parametrize("defect", CABINET, ids=lambda d: d.name)
 def test_the_manifest_covers_every_predicate(defect):
     # An expectation table with holes lets a predicate drift into firing on an asset it
     # has nothing to do with, without any test noticing.
@@ -120,7 +124,7 @@ def test_the_manifest_covers_every_predicate(defect):
     assert named <= set(defect.expect), named - set(defect.expect)
 
 
-@pytest.mark.parametrize("defect", gold.defects(), ids=lambda d: d.name)
+@pytest.mark.parametrize("defect", CABINET, ids=lambda d: d.name)
 def test_each_defect_is_caught_by_the_predicate_it_targets(defect, materialised, contract):
     verdicts = verdicts_by_predicate(defect.name, materialised, contract)
     targeted = [p for p, v in defect.expect.items() if v == "fail"]

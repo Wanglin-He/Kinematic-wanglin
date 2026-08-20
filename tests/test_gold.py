@@ -52,6 +52,13 @@ def control(materialised) -> mjcf.LoadedAsset:
     return mjcf.load(materialised["cabinet_correct"], record_id="cabinet_correct")
 
 
+def control_for(defect, materialised) -> mjcf.LoadedAsset:
+    """The control a defect was cut from. Comparing a gearbox against a cabinet would
+    report every field as changed and prove nothing about the edit."""
+    stem = Path(defect.family).stem
+    return mjcf.load(materialised[stem], record_id=stem)
+
+
 def test_the_control_compiles_with_its_geometry_intact(control):
     assert control.model.nbody == 8
     assert control.model.njnt == 3
@@ -78,9 +85,10 @@ def test_the_drawers_start_inside_the_carcass(control):
 
 
 @pytest.mark.parametrize("defect", gold.defects(), ids=lambda d: d.name)
-def test_every_defect_actually_changes_the_compiled_model(defect, materialised, control):
+def test_every_defect_actually_changes_the_compiled_model(defect, materialised):
     asset = mjcf.load(materialised[defect.name], record_id=defect.name)
-    changed = [k for k, v in fingerprint(asset).items() if v != fingerprint(control)[k]]
+    base = fingerprint(control_for(defect, materialised))
+    changed = [k for k, v in fingerprint(asset).items() if v != base[k]]
     assert changed, (
         f"{defect.name} compiles to a model identical to the control, so it is not a "
         f"counterexample and anything tested against it proves nothing"

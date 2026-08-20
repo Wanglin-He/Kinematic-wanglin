@@ -1,0 +1,105 @@
+# Gold standard contract B: a two-gear box.
+#
+# Exists because a coupling needs two joints that must agree with each other, and the
+# cabinet has none. Every KF2 predicate is judged here.
+#
+# The ratio is negative. External gears counter-rotate; a positive ratio would describe a
+# mechanism that cannot be built, which is why gearbox_wrong_sign is a defect and not a
+# convention.
+
+record_id: gold_gearbox
+
+overall_description: >
+  A small open gearbox: a large drive gear meshing with a small gear that turns three
+  times as fast in the opposite direction, both on shafts rising from a flat base plate.
+
+required_parts:
+  - {id: housing,    role: fixed}
+  - {id: gear_large, role: movable, group: gear}
+  - {id: gear_small, role: movable, group: gear}
+
+global_form:
+  category: gearbox
+  geometry: flat rectangular base plate carrying two parallel vertical shafts
+  coarse_structure: two meshing discs of unequal diameter side by side
+
+part_geometry:
+  - {id: housing,    geometry: flat rectangular plate with two short cylindrical bosses}
+  - {id: gear_large, geometry: thick circular disc}
+  - {id: gear_small, geometry: thick circular disc one third the diameter of the large one}
+
+part_relations:
+  - {subject: gear_large, relation: attached_to, object: housing}
+  - {subject: gear_small, relation: attached_to, object: housing}
+
+proportion_claims:
+  - {subject: gear_small, object: gear_large, measure: width, target_ratio: 0.333, tolerance: 0.05}
+
+envelope_m: {x: [0.25, 0.35], y: [0.10, 0.15], z: [0.04, 0.08]}
+
+kinematic_claims:
+
+  canonical_frame:
+    up: gravity
+    front: null
+
+  joints:
+    - id: gear_large_spin
+      part: gear_large
+      parent: housing
+      type: hinge
+      axis:
+        semantic: vertical
+      anchor: {through_center_of: gear_large}
+      range:  {unit: rad, min: -6.283, max: 6.283}
+      states: {home: 0.0}
+
+    - id: gear_small_spin
+      part: gear_small
+      parent: housing
+      type: hinge
+      axis:
+        semantic: vertical
+      anchor: {through_center_of: gear_small}
+      range:  {unit: rad, min: -18.850, max: 18.850}
+      states: {home: 0.0}
+
+  rigid_attachments: []
+
+  couplings:
+    - id: gear_mesh
+      mechanism: any            # equality, fixed tendon, weld -- the relation is the claim
+      relation:
+        dependent:   gear_small_spin
+        independent: gear_large_spin
+        coefficient: -3.0       # q_small = -3 * q_large; negative because they counter-rotate
+        offset:      0.0
+      expected_dof: 1           # two joints, one constraint, one degree of freedom left
+      residual_norm: {by: absolute}   # a gear spanning three turns makes a relative
+                                      # tolerance meaningless: 2% of 37.7 rad is 43 degrees
+      epsilon: 0.005            # about 0.3 degrees of phase error
+
+  independent_dofs: [gear_large_spin]
+
+  asset_states:
+    home: {scope: all_declaring, tolerance: {relative: 0.02}}
+
+  contact_policy:
+    required:
+      - {parts: [gear_large, gear_small], state: all, relation: mesh_contact}
+    permitted: []
+    forbidden:
+      - {parts: [gear_large, housing], state: all}
+      - {parts: [gear_small, housing], state: all}
+    precedence: required_and_permitted_over_forbidden
+
+  tolerances:
+    axis_angle_deg:           15.0
+    anchor_side_fraction_min: 0.95
+    anchor_center_offset_max: 0.05
+    travel_scale_min:         0.50
+    follower_drift_m:         0.0005
+    state_match_relative:     0.02
+    required_contact_m:       0.002
+    forbidden_penetration_m:  0.001
+    coupling_residual:        0.005

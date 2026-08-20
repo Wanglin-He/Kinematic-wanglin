@@ -354,15 +354,26 @@ items:
 
   - id: P3.KF2.bullet1
     spec: "检查 coupling 是否 active，并引用正确的 joint、tendon 与 body 角色"
-    disposition: deferred
+    disposition: literal
+    where: evo_p0p3/p3/kf2.py::bound
 
   - id: P3.KF2.bullet2
     spec: "核对系数、符号、固定成员、reference phase 与 expected DOF"
-    disposition: deferred
+    disposition: clarified
+    where: evo_p0p3/p3/kf2.py::coefficient
+    note: >
+      Coefficient, sign and offset read straight off eq_data, whose polynomial form is
+      exactly URDF mimic semantics and exactly P0's relation -- field to field, nothing
+      interpreted. A model writing the relation with the roles swapped describes the same
+      mechanism and is accepted with the coefficient inverted, rather than failed over
+      which way round it was typed. expected_dof counts member DOFs less the active
+      equalities among them; the limitation of counting rows instead of taking a rank is
+      recorded in the docstring.
 
   - id: P3.KF2.bullet3
     spec: "只采样独立自由度；依赖状态由目标 coupling 关系生成"
-    disposition: deferred
+    disposition: literal
+    where: evo_p0p3/p3/kf2.py::residual
 
   - id: P3.KF2.bullet4
     spec: "在每个样本计算归一化 coupling residual，报告最大值及首次失败状态"
@@ -378,7 +389,8 @@ items:
 
   - id: P3.KF2.formula
     spec: "KF2 = mean_g 1[max_q |r_g,norm(q)| ≤ epsilon_g]"
-    disposition: decided
+    disposition: changed
+    where: evo_p0p3/p3/kf2.py::bound
     replaced_by: "KF2 = mean_g 1[bound(g)] * 1[max_q |r| ≤ epsilon_g]"
     reason: >
       The residual exists only if the model instantiates a constraint. If a generator
@@ -389,7 +401,8 @@ items:
 
   - id: P3.KF2.na
     spec: "没有 coupling claim 的独立单关节对象将 KF2 标为 N/A，不自动记 0 或 1"
-    disposition: deferred
+    disposition: literal
+    where: evo_p0p3/p3/verdict.py::score
 
   - id: P3.KF2.urdf_mimic
     spec: "（无）"

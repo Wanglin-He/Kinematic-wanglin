@@ -34,6 +34,10 @@ class Defect:
     defect: str
     urdf: str
     expect: dict[str, str]
+    family: str = ""
+    """The control this defect edits. Two so far: a cabinet for the articulation claims and
+    a gearbox for the coupling ones, since a coupling needs two joints that must agree and
+    a cabinet has none."""
 
     @property
     def expected_failures(self) -> tuple[str, ...]:
@@ -48,8 +52,12 @@ def _manifest() -> dict:
     return yaml.safe_load((GOLD_DIR / "manifest.yaml").read_text(encoding="utf-8"))
 
 
-def correct_urdf() -> str:
-    return (GOLD_DIR / _manifest()["base"]).read_text(encoding="utf-8")
+def families() -> tuple[str, ...]:
+    return tuple(f["base"] for f in _manifest()["families"])
+
+
+def correct_urdf(base: str = "cabinet_correct.urdf") -> str:
+    return (GOLD_DIR / base).read_text(encoding="utf-8")
 
 
 def _apply(text: str, substitutions: list[dict[str, str]], name: str) -> str:
@@ -107,21 +115,25 @@ def _replace_normalised(text: str, find: str, replace: str) -> str:
     raise DefectNotApplied(f"substitution matched nothing: {find[:120]!r}")
 
 
-def defects() -> tuple[Defect, ...]:
+def defects(family: str | None = None) -> tuple[Defect, ...]:
     """Every defective asset, with its URDF text already materialised."""
-    manifest = _manifest()
-    base = correct_urdf()
     out = []
-    for entry in manifest["defects"]:
-        out.append(
-            Defect(
-                name=entry["name"],
-                targets=entry["targets"],
-                defect=entry["defect"].strip(),
-                urdf=_apply(base, entry["substitute"], entry["name"]),
-                expect=dict(entry.get("expect") or {}),
+    for group in _manifest()["families"]:
+        base_name = group["base"]
+        if family is not None and base_name != family:
+            continue
+        base = correct_urdf(base_name)
+        for entry in group["defects"]:
+            out.append(
+                Defect(
+                    name=entry["name"],
+                    targets=entry["targets"],
+                    defect=entry["defect"].strip(),
+                    urdf=_apply(base, entry["substitute"], entry["name"]),
+                    expect=dict(entry.get("expect") or {}),
+                    family=base_name,
+                )
             )
-        )
     return tuple(out)
 
 
@@ -136,10 +148,13 @@ def write_all(out_dir: str | Path) -> dict[str, Path]:
     """Write the control and every defect to disk, for inspection or for a viewer."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    written = {"cabinet_correct": out_dir / "cabinet_correct.urdf"}
-    written["cabinet_correct"].write_text(correct_urdf(), encoding="utf-8")
+    written = {}
+    for base in families():
+        stem = Path(base).stem
+        written[stem] = out_dir / base
+        written[stem].write_text(correct_urdf(base), encoding="utf-8")
     for d in defects():
-        path = out_dir / f"cabinet_{d.name}.urdf"
+        path = out_dir / f"{d.name}.urdf"
         path.write_text(d.urdf, encoding="utf-8")
         written[d.name] = path
     return written

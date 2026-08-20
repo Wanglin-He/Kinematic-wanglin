@@ -1,0 +1,62 @@
+<!--
+  Gold standard: a two-gear box that is correct by construction.
+
+    gear_large   radius 0.060, on the shaft at x = -0.04
+    gear_small   radius 0.020, on the shaft at x = +0.04
+    centres      0.080 apart, exactly the sum of the radii, so the pitch circles are
+                 tangent and the gears actually mesh rather than merely sitting near
+                 each other
+    ratio        -3, negative because external gears counter-rotate; a positive ratio
+                 here would describe a mechanism that cannot exist
+
+  The coupling is declared the only way URDF can declare one, with <mimic>. MuJoCo's URDF
+  importer discards it silently -- verified on all seven real Articraft assets that carry
+  one, every single one compiling to neq = 0 -- so the loader recovers it as an
+  equality/joint before compiling and records having done so. Without that, KF2 would score
+  a correctly declared coupling zero for having no constraint to measure.
+-->
+<robot name="gold_gearbox">
+
+  <link name="housing">
+    <visual name="base_plate">
+      <origin xyz="0 0 0.010"/>
+      <geometry><box size="0.30 0.12 0.020"/></geometry>
+    </visual>
+    <visual name="boss_large">
+      <origin xyz="-0.04 0 0.025"/>
+      <geometry><cylinder radius="0.010" length="0.010"/></geometry>
+    </visual>
+    <visual name="boss_small">
+      <origin xyz="0.04 0 0.025"/>
+      <geometry><cylinder radius="0.006" length="0.010"/></geometry>
+    </visual>
+  </link>
+
+  <link name="gear_large">
+    <visual name="disc">
+      <origin xyz="0 0 0"/>
+      <geometry><cylinder radius="0.060" length="0.020"/></geometry>
+    </visual>
+  </link>
+  <joint name="gear_large_spin" type="continuous">
+    <parent link="housing"/>
+    <child link="gear_large"/>
+    <origin xyz="-0.04 0 0.040"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+
+  <link name="gear_small">
+    <visual name="disc">
+      <origin xyz="0 0 0"/>
+      <geometry><cylinder radius="0.020" length="0.020"/></geometry>
+    </visual>
+  </link>
+  <joint name="gear_small_spin" type="continuous">
+    <parent link="housing"/>
+    <child link="gear_small"/>
+    <origin xyz="0.04 0 0.040"/>
+    <axis xyz="0 0 1"/>
+    <mimic joint="gear_large_spin" multiplier="-3.0" offset="0.0"/>
+  </joint>
+
+</robot>
