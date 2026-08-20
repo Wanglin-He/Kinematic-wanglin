@@ -1,0 +1,447 @@
+{
+  "record_id": "rec_drillpress_tilt_table_0001",
+  "contract_id": "rec_drillpress_tilt_table_0001",
+  "admitted": true,
+  "gate": [
+    {
+      "check": "G0",
+      "status": "pass",
+      "detail": "compiled: 6 bodies, 3 joints, 53 geoms"
+    },
+    {
+      "check": "G1",
+      "status": "pass",
+      "detail": "all 3 required parts have geometry"
+    },
+    {
+      "check": "G2",
+      "status": "pass",
+      "detail": "every required part has a motion chain matching its declared role"
+    },
+    {
+      "check": "G3",
+      "status": "pass",
+      "detail": "declared masses and inertias compile"
+    }
+  ],
+  "profile": {
+    "KF1": 0.8181818181818182,
+    "KF2": null,
+    "KF3": 0.2
+  },
+  "sub_scores": {
+    "KF1.declared": 1.0,
+    "KF1.measured": 0.75
+  },
+  "applicability": {
+    "KF1": "11/16",
+    "KF2": "0/0",
+    "KF3": "5/5"
+  },
+  "tolerance_digest": "f9f12e6afa23c9a0",
+  "provenance": {
+    "record_id": "rec_drillpress_tilt_table_0001",
+    "source": "/Users/wanglin/Desktop/articraft-data/cache/record_materialization/rec_drillpress_tilt_table_0001/model.urdf",
+    "inertia_synthesized": false,
+    "collidable_geoms": 0,
+    "distance_backend": "mj_geomDistance",
+    "mimics_translated": [],
+    "notes": [
+      "no <collision> in source; all geoms are visual-only, so mjData.contact is always empty and every distance goes through mj_geomDistance."
+    ]
+  },
+  "coverage": {
+    "samples": 662,
+    "by_layer": {
+      "reference": 1,
+      "scan": 66,
+      "pair": 81,
+      "states": 2,
+      "fill": 512
+    },
+    "driven_dofs": [
+      "table_tilt",
+      "lock_turn"
+    ],
+    "dependent_dofs": [],
+    "pairs_swept": [
+      [
+        "table_tilt",
+        "lock_turn"
+      ]
+    ],
+    "pairs_skipped": [],
+    "scan_points": 33,
+    "pair_points": 9,
+    "fill_per_dof": 256,
+    "notes": []
+  },
+  "claims": [
+    {
+      "predicate": "KF1.parent",
+      "subject": "table_tilt",
+      "verdict": "pass",
+      "reason": "'work_surface' moves relative to 'mounting_structure' as declared",
+      "measured": {
+        "nearest_declared_ancestor": "mounting_structure",
+        "links_up": 2
+      },
+      "threshold": {},
+      "evidence": {
+        "part": "work_surface",
+        "child_body": "table",
+        "body_chain_upward": [
+          "yoke",
+          "mount"
+        ],
+        "binding_source": "table"
+      }
+    },
+    {
+      "predicate": "KF1.parent",
+      "subject": "lock_turn",
+      "verdict": "pass",
+      "reason": "'lock_handle' moves relative to 'mounting_structure' as declared",
+      "measured": {
+        "nearest_declared_ancestor": "mounting_structure",
+        "links_up": 2
+      },
+      "threshold": {},
+      "evidence": {
+        "part": "lock_handle",
+        "child_body": "left_lock_handle",
+        "body_chain_upward": [
+          "yoke",
+          "mount"
+        ],
+        "binding_source": "table"
+      }
+    },
+    {
+      "predicate": "KF1.type",
+      "subject": "table_tilt",
+      "verdict": "pass",
+      "reason": "declared and built as hinge",
+      "measured": {
+        "joint_type": "hinge"
+      },
+      "threshold": {
+        "declared": "hinge"
+      },
+      "evidence": {
+        "mj_joint": "table_tilt"
+      }
+    },
+    {
+      "predicate": "KF1.type",
+      "subject": "lock_turn",
+      "verdict": "pass",
+      "reason": "declared and built as hinge",
+      "measured": {
+        "joint_type": "hinge"
+      },
+      "threshold": {
+        "declared": "hinge"
+      },
+      "evidence": {
+        "mj_joint": "left_handle_spin"
+      }
+    },
+    {
+      "predicate": "KF1.dof_composition",
+      "subject": "table_tilt",
+      "verdict": "pass",
+      "reason": "one declared degree of freedom, one joint",
+      "measured": {
+        "joints_on_body": 1
+      },
+      "threshold": {
+        "expected": 1
+      },
+      "evidence": {
+        "joint_names": [
+          "table_tilt"
+        ],
+        "body": "table"
+      }
+    },
+    {
+      "predicate": "KF1.dof_composition",
+      "subject": "lock_turn",
+      "verdict": "pass",
+      "reason": "one declared degree of freedom, one joint",
+      "measured": {
+        "joints_on_body": 1
+      },
+      "threshold": {
+        "expected": 1
+      },
+      "evidence": {
+        "joint_names": [
+          "left_handle_spin"
+        ],
+        "body": "left_lock_handle"
+      }
+    },
+    {
+      "predicate": "KF1.axis_semantic",
+      "subject": "table_tilt",
+      "verdict": "pass",
+      "reason": "axis is horizontal (perpendicular to up), off by 0.0 deg",
+      "measured": {
+        "angle_to_up_deg": 90.0,
+        "deviation_deg": 0.0
+      },
+      "threshold": {
+        "axis_angle_deg": 15.0
+      },
+      "evidence": {
+        "axis_world": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "up": [
+          -0.0,
+          -0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.axis_semantic",
+      "subject": "lock_turn",
+      "verdict": "pass",
+      "reason": "axis is horizontal (perpendicular to up), off by 0.0 deg",
+      "measured": {
+        "angle_to_up_deg": 90.0,
+        "deviation_deg": 0.0
+      },
+      "threshold": {
+        "axis_angle_deg": 15.0
+      },
+      "evidence": {
+        "axis_world": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "up": [
+          -0.0,
+          -0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.axis_admits_motion",
+      "subject": "table_tilt",
+      "verdict": "na",
+      "reason": "only meaningful for a slide; hinge travel is an arc and is KF3's to sweep",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.axis_admits_motion",
+      "subject": "lock_turn",
+      "verdict": "na",
+      "reason": "only meaningful for a slide; hinge travel is an arc and is KF3's to sweep",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.anchor",
+      "subject": "table_tilt",
+      "verdict": "fail",
+      "reason": "the axis splits 'work_surface' 102/26; only 80% lies on one side, so it turns about its middle rather than its edge",
+      "measured": {
+        "side_fraction": 0.7969,
+        "positive": 102,
+        "negative": 26,
+        "on_axis": 0
+      },
+      "threshold": {
+        "anchor_side_fraction_min": 0.95
+      },
+      "evidence": {
+        "part": "work_surface",
+        "anchor_world": [
+          0.0,
+          0.232,
+          0.173
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.anchor",
+      "subject": "lock_turn",
+      "verdict": "fail",
+      "reason": "the axis misses 'lock_handle''s centroid by 16.1% of the part's own size, past the 5% allowed",
+      "measured": {
+        "offset_over_diagonal": 0.1606,
+        "offset_m": 0.013503,
+        "part_diagonal_m": 0.084078
+      },
+      "threshold": {
+        "anchor_center_offset_max": 0.05
+      },
+      "evidence": {
+        "part": "lock_handle",
+        "anchor_world": [
+          -0.102,
+          0.232,
+          0.173
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.range_and_reference",
+      "subject": "table_tilt",
+      "verdict": "pass",
+      "reason": "travel 1.571 rad matches the declared 1.58",
+      "measured": {
+        "model_span": 1.570796,
+        "model_range": [
+          -0.785398,
+          0.785398
+        ]
+      },
+      "threshold": {
+        "declared_span": 1.58,
+        "state_match_relative": 0.02
+      },
+      "evidence": {
+        "unit": "rad",
+        "declared_states": {
+          "flat": 0.0,
+          "tilted": 0.79
+        }
+      }
+    },
+    {
+      "predicate": "KF1.range_and_reference",
+      "subject": "lock_turn",
+      "verdict": "na",
+      "reason": "the joint is unlimited (URDF 'continuous'), so there is no declared travel to compare against",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.travel_scale",
+      "subject": "table_tilt",
+      "verdict": "na",
+      "reason": "a hinge range is an angle, with no length to compare a size against",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.travel_scale",
+      "subject": "lock_turn",
+      "verdict": "na",
+      "reason": "a hinge range is an angle, with no length to compare a size against",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.state_reachability",
+      "subject": "flat",
+      "verdict": "fail",
+      "reason": "state 'flat' cannot be held cleanly: 'work_surface' and 'lock_handle' overlap by 0.0013 m at table_tilt=+0,lock_turn=+0",
+      "measured": {
+        "max_penetration_m": 0.001291,
+        "configurations_in_state": 2
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": "table_tilt=+0,lock_turn=+0",
+        "worst_pair": [
+          "work_surface",
+          "lock_handle"
+        ]
+      }
+    },
+    {
+      "predicate": "KF3.state_reachability",
+      "subject": "tilted",
+      "verdict": "fail",
+      "reason": "state 'tilted' cannot be held cleanly: 'work_surface' and 'lock_handle' overlap by 0.0013 m at table_tilt=+0.79,lock_turn=+3.14",
+      "measured": {
+        "max_penetration_m": 0.001291,
+        "configurations_in_state": 21
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": "table_tilt=+0.79,lock_turn=+3.14",
+        "worst_pair": [
+          "work_surface",
+          "lock_handle"
+        ]
+      }
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "work_surface+lock_handle@all",
+      "verdict": "fail",
+      "reason": "'work_surface' passes 0.0021 m into 'lock_handle' at halton[131], first exceeding 0.001 m at reference",
+      "measured": {
+        "max_penetration_m": 0.002055,
+        "min_clearance_m": -0.002055,
+        "samples_evaluated": 662
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": "halton[131]",
+        "first_failing_configuration": "reference",
+        "closest_configuration": "halton[131]",
+        "distmax": 0.5
+      }
+    },
+    {
+      "predicate": "KF3.required_contact",
+      "subject": "work_surface+mounting_structure@all",
+      "verdict": "pass",
+      "reason": "'work_surface' and 'mounting_structure' meet in state 'all', closest -0.0532 m",
+      "measured": {
+        "min_clearance_m": -0.053154,
+        "samples_evaluated": 662
+      },
+      "threshold": {
+        "required_contact_m": 0.005
+      },
+      "evidence": {
+        "relation": "mesh_contact",
+        "closest_configuration": "halton[220]",
+        "state": "all"
+      }
+    },
+    {
+      "predicate": "KF3.required_contact",
+      "subject": "lock_handle+mounting_structure@all",
+      "verdict": "fail",
+      "reason": "'lock_handle' never comes closer than 0.0724 m to 'mounting_structure' in state 'all', so the declared mesh_contact is not realised by any geometry",
+      "measured": {
+        "min_clearance_m": 0.072351,
+        "samples_evaluated": 662
+      },
+      "threshold": {
+        "required_contact_m": 0.005
+      },
+      "evidence": {
+        "relation": "mesh_contact",
+        "closest_configuration": "halton[483]",
+        "state": "all"
+      }
+    }
+  ]
+}

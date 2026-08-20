@@ -1,0 +1,496 @@
+{
+  "record_id": "rec_laptop_clamshell_d201e66211d4426096f1625b7b4fc1cf",
+  "contract_id": "rec_laptop_clamshell_d201e66211d4426096f1625b7b4fc1cf",
+  "admitted": true,
+  "gate": [
+    {
+      "check": "G0",
+      "status": "pass",
+      "detail": "compiled: 51 bodies, 49 joints, 119 geoms"
+    },
+    {
+      "check": "G1",
+      "status": "pass",
+      "detail": "all 3 required parts have geometry"
+    },
+    {
+      "check": "G2",
+      "status": "pass",
+      "detail": "every required part has a motion chain matching its declared role"
+    },
+    {
+      "check": "G3",
+      "status": "fail",
+      "detail": "the source declares no <inertial>; mass and inertia were synthesised to satisfy the compiler. Reported, but not a precondition for P3, whose scope excludes mass entirely"
+    }
+  ],
+  "profile": {
+    "KF1": 0.8333333333333334,
+    "KF2": null,
+    "KF3": 0.5714285714285714
+  },
+  "sub_scores": {
+    "KF1.declared": 0.5,
+    "KF1.measured": 1.0
+  },
+  "applicability": {
+    "KF1": "12/16",
+    "KF2": "0/0",
+    "KF3": "7/7"
+  },
+  "tolerance_digest": "f9f12e6afa23c9a0",
+  "provenance": {
+    "record_id": "rec_laptop_clamshell_d201e66211d4426096f1625b7b4fc1cf",
+    "source": "/Users/wanglin/Desktop/articraft-data/cache/record_materialization/rec_laptop_clamshell_d201e66211d4426096f1625b7b4fc1cf/model.urdf",
+    "inertia_synthesized": true,
+    "collidable_geoms": 0,
+    "distance_backend": "mj_geomDistance",
+    "mimics_translated": [],
+    "notes": [
+      "no <inertial> in source; mass and inertia synthesised to satisfy the compiler. Never used in scoring.",
+      "no <collision> in source; all geoms are visual-only, so mjData.contact is always empty and every distance goes through mj_geomDistance."
+    ]
+  },
+  "coverage": {
+    "samples": 664,
+    "by_layer": {
+      "reference": 1,
+      "scan": 66,
+      "pair": 81,
+      "states": 4,
+      "fill": 512
+    },
+    "driven_dofs": [
+      "display_hinge",
+      "clickpad_rock"
+    ],
+    "dependent_dofs": [],
+    "pairs_swept": [
+      [
+        "display_hinge",
+        "clickpad_rock"
+      ]
+    ],
+    "pairs_skipped": [],
+    "scan_points": 33,
+    "pair_points": 9,
+    "fill_per_dof": 256,
+    "notes": []
+  },
+  "claims": [
+    {
+      "predicate": "KF1.parent",
+      "subject": "display_hinge",
+      "verdict": "pass",
+      "reason": "'display' moves relative to 'chassis' as declared",
+      "measured": {
+        "nearest_declared_ancestor": "chassis",
+        "links_up": 1
+      },
+      "threshold": {},
+      "evidence": {
+        "part": "display",
+        "child_body": "display",
+        "body_chain_upward": [
+          "base"
+        ],
+        "binding_source": "table"
+      }
+    },
+    {
+      "predicate": "KF1.parent",
+      "subject": "clickpad_rock",
+      "verdict": "pass",
+      "reason": "'clickpad' moves relative to 'chassis' as declared",
+      "measured": {
+        "nearest_declared_ancestor": "chassis",
+        "links_up": 1
+      },
+      "threshold": {},
+      "evidence": {
+        "part": "clickpad",
+        "child_body": "clickpad",
+        "body_chain_upward": [
+          "base"
+        ],
+        "binding_source": "table"
+      }
+    },
+    {
+      "predicate": "KF1.type",
+      "subject": "display_hinge",
+      "verdict": "pass",
+      "reason": "declared and built as hinge",
+      "measured": {
+        "joint_type": "hinge"
+      },
+      "threshold": {
+        "declared": "hinge"
+      },
+      "evidence": {
+        "mj_joint": "base_to_display"
+      }
+    },
+    {
+      "predicate": "KF1.type",
+      "subject": "clickpad_rock",
+      "verdict": "pass",
+      "reason": "declared and built as hinge",
+      "measured": {
+        "joint_type": "hinge"
+      },
+      "threshold": {
+        "declared": "hinge"
+      },
+      "evidence": {
+        "mj_joint": "base_to_clickpad"
+      }
+    },
+    {
+      "predicate": "KF1.dof_composition",
+      "subject": "display_hinge",
+      "verdict": "pass",
+      "reason": "one declared degree of freedom, one joint",
+      "measured": {
+        "joints_on_body": 1
+      },
+      "threshold": {
+        "expected": 1
+      },
+      "evidence": {
+        "joint_names": [
+          "base_to_display"
+        ],
+        "body": "display"
+      }
+    },
+    {
+      "predicate": "KF1.dof_composition",
+      "subject": "clickpad_rock",
+      "verdict": "pass",
+      "reason": "one declared degree of freedom, one joint",
+      "measured": {
+        "joints_on_body": 1
+      },
+      "threshold": {
+        "expected": 1
+      },
+      "evidence": {
+        "joint_names": [
+          "base_to_clickpad"
+        ],
+        "body": "clickpad"
+      }
+    },
+    {
+      "predicate": "KF1.axis_semantic",
+      "subject": "display_hinge",
+      "verdict": "pass",
+      "reason": "axis is horizontal (perpendicular to up), off by 0.0 deg",
+      "measured": {
+        "angle_to_up_deg": 90.0,
+        "deviation_deg": 0.0
+      },
+      "threshold": {
+        "axis_angle_deg": 15.0
+      },
+      "evidence": {
+        "axis_world": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "up": [
+          -0.0,
+          -0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.axis_semantic",
+      "subject": "clickpad_rock",
+      "verdict": "pass",
+      "reason": "axis is horizontal (perpendicular to up), off by 0.0 deg",
+      "measured": {
+        "angle_to_up_deg": 90.0,
+        "deviation_deg": 0.0
+      },
+      "threshold": {
+        "axis_angle_deg": 15.0
+      },
+      "evidence": {
+        "axis_world": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "up": [
+          -0.0,
+          -0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.axis_admits_motion",
+      "subject": "display_hinge",
+      "verdict": "na",
+      "reason": "only meaningful for a slide; hinge travel is an arc and is KF3's to sweep",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.axis_admits_motion",
+      "subject": "clickpad_rock",
+      "verdict": "na",
+      "reason": "only meaningful for a slide; hinge travel is an arc and is KF3's to sweep",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.anchor",
+      "subject": "display_hinge",
+      "verdict": "pass",
+      "reason": "100% of 'display' lies on one side of the axis, so the line runs along its edge",
+      "measured": {
+        "side_fraction": 1.0,
+        "positive": 72,
+        "negative": 0,
+        "on_axis": 0
+      },
+      "threshold": {
+        "anchor_side_fraction_min": 0.95
+      },
+      "evidence": {
+        "part": "display",
+        "anchor_world": [
+          0.0,
+          0.149,
+          0.067
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.anchor",
+      "subject": "clickpad_rock",
+      "verdict": "pass",
+      "reason": "100% of 'clickpad' lies on one side of the axis, so the line runs along its edge",
+      "measured": {
+        "side_fraction": 1.0,
+        "positive": 14,
+        "negative": 0,
+        "on_axis": 2
+      },
+      "threshold": {
+        "anchor_side_fraction_min": 0.95
+      },
+      "evidence": {
+        "part": "clickpad",
+        "anchor_world": [
+          0.0,
+          -0.113,
+          0.048
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.range_and_reference",
+      "subject": "display_hinge",
+      "verdict": "fail",
+      "reason": "P0 declares 2.1 rad of travel and the model gives 2.04, off by 3%",
+      "measured": {
+        "model_span": 2.04,
+        "model_range": [
+          -0.42,
+          1.62
+        ]
+      },
+      "threshold": {
+        "declared_span": 2.1,
+        "state_match_relative": 0.02
+      },
+      "evidence": {
+        "unit": "rad",
+        "declared_states": {
+          "shut": 0.0,
+          "open": 2.1
+        }
+      }
+    },
+    {
+      "predicate": "KF1.range_and_reference",
+      "subject": "clickpad_rock",
+      "verdict": "fail",
+      "reason": "P0 declares 0.05 rad of travel and the model gives 0.065, off by 30%",
+      "measured": {
+        "model_span": 0.065,
+        "model_range": [
+          -0.055,
+          0.01
+        ]
+      },
+      "threshold": {
+        "declared_span": 0.05,
+        "state_match_relative": 0.02
+      },
+      "evidence": {
+        "unit": "rad",
+        "declared_states": {
+          "rest": 0.0,
+          "clicked": 0.05
+        }
+      }
+    },
+    {
+      "predicate": "KF1.travel_scale",
+      "subject": "display_hinge",
+      "verdict": "na",
+      "reason": "a hinge range is an angle, with no length to compare a size against",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.travel_scale",
+      "subject": "clickpad_rock",
+      "verdict": "na",
+      "reason": "a hinge range is an angle, with no length to compare a size against",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.state_reachability",
+      "subject": "clicked",
+      "verdict": "fail",
+      "reason": "state 'clicked' cannot be held cleanly: 'display' and 'clickpad' overlap by 0.0073 m at halton[323]",
+      "measured": {
+        "max_penetration_m": 0.007266,
+        "configurations_in_state": 21
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": "halton[323]",
+        "worst_pair": [
+          "display",
+          "clickpad"
+        ]
+      }
+    },
+    {
+      "predicate": "KF3.state_reachability",
+      "subject": "open",
+      "verdict": "pass",
+      "reason": "state 'open' is held with no forbidden interference",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "configurations_in_state": 22
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "worst_pair": null
+      }
+    },
+    {
+      "predicate": "KF3.state_reachability",
+      "subject": "rest",
+      "verdict": "fail",
+      "reason": "state 'rest' cannot be held cleanly: 'display' and 'clickpad' overlap by 0.0155 m at display_hinge=+1.641",
+      "measured": {
+        "max_penetration_m": 0.015544,
+        "configurations_in_state": 56
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": "display_hinge=+1.641",
+        "worst_pair": [
+          "display",
+          "clickpad"
+        ]
+      }
+    },
+    {
+      "predicate": "KF3.state_reachability",
+      "subject": "shut",
+      "verdict": "pass",
+      "reason": "state 'shut' is held with no forbidden interference",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "configurations_in_state": 57
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "worst_pair": null
+      }
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "display+clickpad@all",
+      "verdict": "fail",
+      "reason": "'display' passes 0.1318 m into 'clickpad' at halton[122], first exceeding 0.001 m at display_hinge=+1.575",
+      "measured": {
+        "max_penetration_m": 0.131793,
+        "min_clearance_m": -0.131793,
+        "samples_evaluated": 664
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": "halton[122]",
+        "first_failing_configuration": "display_hinge=+1.575",
+        "closest_configuration": "halton[122]",
+        "distmax": 0.5
+      }
+    },
+    {
+      "predicate": "KF3.required_contact",
+      "subject": "display+chassis@shut",
+      "verdict": "pass",
+      "reason": "'display' and 'chassis' meet in state 'shut', closest -0.0000 m",
+      "measured": {
+        "min_clearance_m": -0.0,
+        "samples_evaluated": 57
+      },
+      "threshold": {
+        "required_contact_m": 0.005
+      },
+      "evidence": {
+        "relation": "stop_contact",
+        "closest_configuration": "halton[64]",
+        "state": "shut"
+      }
+    },
+    {
+      "predicate": "KF3.required_contact",
+      "subject": "clickpad+chassis@all",
+      "verdict": "pass",
+      "reason": "'clickpad' and 'chassis' meet in state 'all', closest 0.0000 m",
+      "measured": {
+        "min_clearance_m": 0.0,
+        "samples_evaluated": 664
+      },
+      "threshold": {
+        "required_contact_m": 0.005
+      },
+      "evidence": {
+        "relation": "mesh_contact",
+        "closest_configuration": "reference",
+        "state": "all"
+      }
+    }
+  ]
+}

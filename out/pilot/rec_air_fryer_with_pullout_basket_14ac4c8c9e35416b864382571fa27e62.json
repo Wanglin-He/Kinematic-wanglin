@@ -1,0 +1,1022 @@
+{
+  "record_id": "rec_air_fryer_with_pullout_basket_14ac4c8c9e35416b864382571fa27e62",
+  "contract_id": "rec_air_fryer_with_pullout_basket_14ac4c8c9e35416b864382571fa27e62",
+  "admitted": true,
+  "gate": [
+    {
+      "check": "G0",
+      "status": "pass",
+      "detail": "compiled: 11 bodies, 5 joints, 10 geoms"
+    },
+    {
+      "check": "G1",
+      "status": "pass",
+      "detail": "all 9 required parts have geometry"
+    },
+    {
+      "check": "G2",
+      "status": "pass",
+      "detail": "every required part has a motion chain matching its declared role"
+    },
+    {
+      "check": "G3",
+      "status": "fail",
+      "detail": "the source declares no <inertial>; mass and inertia were synthesised to satisfy the compiler. Reported, but not a precondition for P3, whose scope excludes mass entirely"
+    }
+  ],
+  "profile": {
+    "KF1": 0.8387096774193549,
+    "KF2": null,
+    "KF3": 1.0
+  },
+  "sub_scores": {
+    "KF1.declared": 0.625,
+    "KF1.measured": 0.9130434782608695
+  },
+  "applicability": {
+    "KF1": "31/42",
+    "KF2": "0/0",
+    "KF3": "10/10"
+  },
+  "tolerance_digest": "f9f12e6afa23c9a0",
+  "provenance": {
+    "record_id": "rec_air_fryer_with_pullout_basket_14ac4c8c9e35416b864382571fa27e62",
+    "source": "/Users/wanglin/Desktop/articraft-data/cache/record_materialization/rec_air_fryer_with_pullout_basket_14ac4c8c9e35416b864382571fa27e62/model.urdf",
+    "inertia_synthesized": true,
+    "collidable_geoms": 0,
+    "distance_backend": "mj_geomDistance",
+    "mimics_translated": [],
+    "notes": [
+      "no <inertial> in source; mass and inertia synthesised to satisfy the compiler. Never used in scoring.",
+      "no <collision> in source; all geoms are visual-only, so mjData.contact is always empty and every distance goes through mj_geomDistance."
+    ]
+  },
+  "coverage": {
+    "samples": 1697,
+    "by_layer": {
+      "reference": 1,
+      "scan": 165,
+      "pair": 243,
+      "states": 8,
+      "fill": 1280
+    },
+    "driven_dofs": [
+      "drawer_slide",
+      "temperature_dial_turn",
+      "time_dial_turn",
+      "keep_warm_press",
+      "release_press"
+    ],
+    "dependent_dofs": [],
+    "pairs_swept": [
+      [
+        "drawer_slide",
+        "temperature_dial_turn"
+      ],
+      [
+        "drawer_slide",
+        "release_press"
+      ],
+      [
+        "temperature_dial_turn",
+        "time_dial_turn"
+      ]
+    ],
+    "pairs_skipped": [
+      [
+        "drawer_slide",
+        "time_dial_turn"
+      ],
+      [
+        "drawer_slide",
+        "keep_warm_press"
+      ],
+      [
+        "temperature_dial_turn",
+        "keep_warm_press"
+      ],
+      [
+        "temperature_dial_turn",
+        "release_press"
+      ],
+      [
+        "time_dial_turn",
+        "keep_warm_press"
+      ],
+      [
+        "time_dial_turn",
+        "release_press"
+      ],
+      [
+        "keep_warm_press",
+        "release_press"
+      ]
+    ],
+    "scan_points": 33,
+    "pair_points": 9,
+    "fill_per_dof": 256,
+    "notes": [
+      "7 joint pair(s) were not swept together because their swept bounds cannot reach each other: drawer_slide+time_dial_turn, drawer_slide+keep_warm_press, temperature_dial_turn+keep_warm_press, temperature_dial_turn+release_press, time_dial_turn+keep_warm_press, time_dial_turn+release_press, keep_warm_press+release_press"
+    ]
+  },
+  "claims": [
+    {
+      "predicate": "KF1.parent",
+      "subject": "drawer_slide",
+      "verdict": "pass",
+      "reason": "'drawer' moves relative to 'body' as declared",
+      "measured": {
+        "nearest_declared_ancestor": "body",
+        "links_up": 1
+      },
+      "threshold": {},
+      "evidence": {
+        "part": "drawer",
+        "child_body": "drawer",
+        "body_chain_upward": [
+          "body"
+        ],
+        "binding_source": "table"
+      }
+    },
+    {
+      "predicate": "KF1.parent",
+      "subject": "temperature_dial_turn",
+      "verdict": "pass",
+      "reason": "'temperature_dial' moves relative to 'control_tower' as declared",
+      "measured": {
+        "nearest_declared_ancestor": "control_tower",
+        "links_up": 1
+      },
+      "threshold": {},
+      "evidence": {
+        "part": "temperature_dial",
+        "child_body": "temperature_dial",
+        "body_chain_upward": [
+          "control_panel"
+        ],
+        "binding_source": "table"
+      }
+    },
+    {
+      "predicate": "KF1.parent",
+      "subject": "time_dial_turn",
+      "verdict": "pass",
+      "reason": "'time_dial' moves relative to 'control_tower' as declared",
+      "measured": {
+        "nearest_declared_ancestor": "control_tower",
+        "links_up": 1
+      },
+      "threshold": {},
+      "evidence": {
+        "part": "time_dial",
+        "child_body": "time_dial",
+        "body_chain_upward": [
+          "control_panel"
+        ],
+        "binding_source": "table"
+      }
+    },
+    {
+      "predicate": "KF1.parent",
+      "subject": "keep_warm_press",
+      "verdict": "fail",
+      "reason": "'keep_warm_button' moves relative to 'body', but P0 declares 'control_tower'; driving 'body' therefore carries 'keep_warm_button' with it",
+      "measured": {
+        "nearest_declared_ancestor": "body",
+        "links_up": 2
+      },
+      "threshold": {},
+      "evidence": {
+        "part": "keep_warm_button",
+        "child_body": "keep_warm_button",
+        "body_chain_upward": [
+          "keep_warm_bezel",
+          "body"
+        ],
+        "binding_source": "table"
+      }
+    },
+    {
+      "predicate": "KF1.parent",
+      "subject": "release_press",
+      "verdict": "pass",
+      "reason": "'release_button' moves relative to 'basket_handle' as declared",
+      "measured": {
+        "nearest_declared_ancestor": "basket_handle",
+        "links_up": 1
+      },
+      "threshold": {},
+      "evidence": {
+        "part": "release_button",
+        "child_body": "release_button",
+        "body_chain_upward": [
+          "handle"
+        ],
+        "binding_source": "table"
+      }
+    },
+    {
+      "predicate": "KF1.type",
+      "subject": "drawer_slide",
+      "verdict": "pass",
+      "reason": "declared and built as slide",
+      "measured": {
+        "joint_type": "slide"
+      },
+      "threshold": {
+        "declared": "slide"
+      },
+      "evidence": {
+        "mj_joint": "body_to_drawer"
+      }
+    },
+    {
+      "predicate": "KF1.type",
+      "subject": "temperature_dial_turn",
+      "verdict": "pass",
+      "reason": "declared and built as hinge",
+      "measured": {
+        "joint_type": "hinge"
+      },
+      "threshold": {
+        "declared": "hinge"
+      },
+      "evidence": {
+        "mj_joint": "control_panel_to_temperature_dial"
+      }
+    },
+    {
+      "predicate": "KF1.type",
+      "subject": "time_dial_turn",
+      "verdict": "pass",
+      "reason": "declared and built as hinge",
+      "measured": {
+        "joint_type": "hinge"
+      },
+      "threshold": {
+        "declared": "hinge"
+      },
+      "evidence": {
+        "mj_joint": "control_panel_to_time_dial"
+      }
+    },
+    {
+      "predicate": "KF1.type",
+      "subject": "keep_warm_press",
+      "verdict": "pass",
+      "reason": "declared and built as slide",
+      "measured": {
+        "joint_type": "slide"
+      },
+      "threshold": {
+        "declared": "slide"
+      },
+      "evidence": {
+        "mj_joint": "keep_warm_bezel_to_button"
+      }
+    },
+    {
+      "predicate": "KF1.type",
+      "subject": "release_press",
+      "verdict": "pass",
+      "reason": "declared and built as slide",
+      "measured": {
+        "joint_type": "slide"
+      },
+      "threshold": {
+        "declared": "slide"
+      },
+      "evidence": {
+        "mj_joint": "handle_to_release_button"
+      }
+    },
+    {
+      "predicate": "KF1.dof_composition",
+      "subject": "drawer_slide",
+      "verdict": "pass",
+      "reason": "one declared degree of freedom, one joint",
+      "measured": {
+        "joints_on_body": 1
+      },
+      "threshold": {
+        "expected": 1
+      },
+      "evidence": {
+        "joint_names": [
+          "body_to_drawer"
+        ],
+        "body": "drawer"
+      }
+    },
+    {
+      "predicate": "KF1.dof_composition",
+      "subject": "temperature_dial_turn",
+      "verdict": "pass",
+      "reason": "one declared degree of freedom, one joint",
+      "measured": {
+        "joints_on_body": 1
+      },
+      "threshold": {
+        "expected": 1
+      },
+      "evidence": {
+        "joint_names": [
+          "control_panel_to_temperature_dial"
+        ],
+        "body": "temperature_dial"
+      }
+    },
+    {
+      "predicate": "KF1.dof_composition",
+      "subject": "time_dial_turn",
+      "verdict": "pass",
+      "reason": "one declared degree of freedom, one joint",
+      "measured": {
+        "joints_on_body": 1
+      },
+      "threshold": {
+        "expected": 1
+      },
+      "evidence": {
+        "joint_names": [
+          "control_panel_to_time_dial"
+        ],
+        "body": "time_dial"
+      }
+    },
+    {
+      "predicate": "KF1.dof_composition",
+      "subject": "keep_warm_press",
+      "verdict": "pass",
+      "reason": "one declared degree of freedom, one joint",
+      "measured": {
+        "joints_on_body": 1
+      },
+      "threshold": {
+        "expected": 1
+      },
+      "evidence": {
+        "joint_names": [
+          "keep_warm_bezel_to_button"
+        ],
+        "body": "keep_warm_button"
+      }
+    },
+    {
+      "predicate": "KF1.dof_composition",
+      "subject": "release_press",
+      "verdict": "pass",
+      "reason": "one declared degree of freedom, one joint",
+      "measured": {
+        "joints_on_body": 1
+      },
+      "threshold": {
+        "expected": 1
+      },
+      "evidence": {
+        "joint_names": [
+          "handle_to_release_button"
+        ],
+        "body": "release_button"
+      }
+    },
+    {
+      "predicate": "KF1.axis_semantic",
+      "subject": "drawer_slide",
+      "verdict": "pass",
+      "reason": "axis is horizontal (perpendicular to up), off by 0.0 deg",
+      "measured": {
+        "angle_to_up_deg": 90.0,
+        "deviation_deg": 0.0
+      },
+      "threshold": {
+        "axis_angle_deg": 15.0
+      },
+      "evidence": {
+        "axis_world": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "up": [
+          -0.0,
+          -0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.axis_semantic",
+      "subject": "temperature_dial_turn",
+      "verdict": "pass",
+      "reason": "axis is horizontal (perpendicular to up), off by 0.0 deg",
+      "measured": {
+        "angle_to_up_deg": 90.0,
+        "deviation_deg": 0.0
+      },
+      "threshold": {
+        "axis_angle_deg": 15.0
+      },
+      "evidence": {
+        "axis_world": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "up": [
+          -0.0,
+          -0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.axis_semantic",
+      "subject": "time_dial_turn",
+      "verdict": "pass",
+      "reason": "axis is horizontal (perpendicular to up), off by 0.0 deg",
+      "measured": {
+        "angle_to_up_deg": 90.0,
+        "deviation_deg": 0.0
+      },
+      "threshold": {
+        "axis_angle_deg": 15.0
+      },
+      "evidence": {
+        "axis_world": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "up": [
+          -0.0,
+          -0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.axis_semantic",
+      "subject": "keep_warm_press",
+      "verdict": "fail",
+      "reason": "P0 declares a horizontal axis, but the axis sits 0.0 deg from up, 90.0 deg outside the 15.0 deg tolerance",
+      "measured": {
+        "angle_to_up_deg": 0.0,
+        "deviation_deg": 90.0
+      },
+      "threshold": {
+        "axis_angle_deg": 15.0
+      },
+      "evidence": {
+        "axis_world": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "up": [
+          -0.0,
+          -0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.axis_semantic",
+      "subject": "release_press",
+      "verdict": "pass",
+      "reason": "axis is vertical (parallel to up), off by 0.0 deg",
+      "measured": {
+        "angle_to_up_deg": 0.0,
+        "deviation_deg": 0.0
+      },
+      "threshold": {
+        "axis_angle_deg": 15.0
+      },
+      "evidence": {
+        "axis_world": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "up": [
+          -0.0,
+          -0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.axis_admits_motion",
+      "subject": "drawer_slide",
+      "verdict": "na",
+      "reason": "'drawer' already overlaps 'body' by 0.1608 m at the reference pose, so no direction can be judged clear; that overlap is a static-geometry finding",
+      "measured": {},
+      "threshold": {},
+      "evidence": {
+        "clearance_before": -0.160762
+      }
+    },
+    {
+      "predicate": "KF1.axis_admits_motion",
+      "subject": "temperature_dial_turn",
+      "verdict": "na",
+      "reason": "only meaningful for a slide; hinge travel is an arc and is KF3's to sweep",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.axis_admits_motion",
+      "subject": "time_dial_turn",
+      "verdict": "na",
+      "reason": "only meaningful for a slide; hinge travel is an arc and is KF3's to sweep",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.axis_admits_motion",
+      "subject": "keep_warm_press",
+      "verdict": "pass",
+      "reason": "moving 0.001 m along the declared axis keeps 'keep_warm_button' clear of 'control_tower'",
+      "measured": {
+        "clearance_before": 0.059203,
+        "clearance_after": 0.058941,
+        "penetration_gained": 0.000262,
+        "step_m": 0.001
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "parent": "control_tower",
+        "part": "keep_warm_button"
+      }
+    },
+    {
+      "predicate": "KF1.axis_admits_motion",
+      "subject": "release_press",
+      "verdict": "na",
+      "reason": "'release_button' already overlaps 'basket_handle' by 0.0100 m at the reference pose, so no direction can be judged clear; that overlap is a static-geometry finding",
+      "measured": {},
+      "threshold": {},
+      "evidence": {
+        "clearance_before": -0.01
+      }
+    },
+    {
+      "predicate": "KF1.anchor",
+      "subject": "drawer_slide",
+      "verdict": "na",
+      "reason": "a slide joint has no pivot the kinematics depend on",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.anchor",
+      "subject": "temperature_dial_turn",
+      "verdict": "pass",
+      "reason": "the axis passes within 0.0% of 'temperature_dial''s own size of its centroid",
+      "measured": {
+        "offset_over_diagonal": 0.0,
+        "offset_m": 0.0,
+        "part_diagonal_m": 0.054691
+      },
+      "threshold": {
+        "anchor_center_offset_max": 0.05
+      },
+      "evidence": {
+        "part": "temperature_dial",
+        "anchor_world": [
+          0.112,
+          0.0,
+          0.285
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.anchor",
+      "subject": "time_dial_turn",
+      "verdict": "pass",
+      "reason": "the axis passes within 0.0% of 'time_dial''s own size of its centroid",
+      "measured": {
+        "offset_over_diagonal": 0.0,
+        "offset_m": 0.0,
+        "part_diagonal_m": 0.054691
+      },
+      "threshold": {
+        "anchor_center_offset_max": 0.05
+      },
+      "evidence": {
+        "part": "time_dial",
+        "anchor_world": [
+          0.112,
+          0.0,
+          0.327
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.anchor",
+      "subject": "keep_warm_press",
+      "verdict": "na",
+      "reason": "a slide joint has no pivot the kinematics depend on",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.anchor",
+      "subject": "release_press",
+      "verdict": "na",
+      "reason": "a slide joint has no pivot the kinematics depend on",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.range_and_reference",
+      "subject": "drawer_slide",
+      "verdict": "fail",
+      "reason": "P0 declares 0.14 m of travel and the model gives 0.112, off by 20%",
+      "measured": {
+        "model_span": 0.112,
+        "model_range": [
+          0.0,
+          0.112
+        ]
+      },
+      "threshold": {
+        "declared_span": 0.14,
+        "state_match_relative": 0.02
+      },
+      "evidence": {
+        "unit": "m",
+        "declared_states": {
+          "shut": 0.0,
+          "open": 0.14
+        }
+      }
+    },
+    {
+      "predicate": "KF1.range_and_reference",
+      "subject": "temperature_dial_turn",
+      "verdict": "na",
+      "reason": "the joint is unlimited (URDF 'continuous'), so there is no declared travel to compare against",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.range_and_reference",
+      "subject": "time_dial_turn",
+      "verdict": "na",
+      "reason": "the joint is unlimited (URDF 'continuous'), so there is no declared travel to compare against",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.range_and_reference",
+      "subject": "keep_warm_press",
+      "verdict": "fail",
+      "reason": "P0 declares 0.004 m of travel and the model gives 0.003, off by 25%",
+      "measured": {
+        "model_span": 0.003,
+        "model_range": [
+          0.0,
+          0.003
+        ]
+      },
+      "threshold": {
+        "declared_span": 0.004,
+        "state_match_relative": 0.02
+      },
+      "evidence": {
+        "unit": "m",
+        "declared_states": {
+          "out": 0.0,
+          "pressed": 0.004
+        }
+      }
+    },
+    {
+      "predicate": "KF1.range_and_reference",
+      "subject": "release_press",
+      "verdict": "fail",
+      "reason": "P0 declares 0.005 m of travel and the model gives 0.003, off by 40%",
+      "measured": {
+        "model_span": 0.003,
+        "model_range": [
+          0.0,
+          0.003
+        ]
+      },
+      "threshold": {
+        "declared_span": 0.005,
+        "state_match_relative": 0.02
+      },
+      "evidence": {
+        "unit": "m",
+        "declared_states": {
+          "out": 0.0,
+          "pressed": 0.005
+        }
+      }
+    },
+    {
+      "predicate": "KF1.rigid_follower",
+      "subject": "basket<-drawer",
+      "verdict": "pass",
+      "reason": "'basket' is fixed to 'drawer' and moves with it",
+      "measured": {
+        "in_leader_rigid_subtree": true,
+        "nearest_declared_ancestor": "drawer"
+      },
+      "threshold": {},
+      "evidence": {
+        "leader_rigid_subtree": [
+          "drawer",
+          "basket",
+          "handle"
+        ],
+        "follower_body": "basket"
+      }
+    },
+    {
+      "predicate": "KF1.rigid_follower",
+      "subject": "basket_handle<-drawer",
+      "verdict": "pass",
+      "reason": "'basket_handle' is fixed to 'drawer' and moves with it",
+      "measured": {
+        "in_leader_rigid_subtree": true,
+        "nearest_declared_ancestor": "drawer"
+      },
+      "threshold": {},
+      "evidence": {
+        "leader_rigid_subtree": [
+          "drawer",
+          "basket",
+          "handle"
+        ],
+        "follower_body": "handle"
+      }
+    },
+    {
+      "predicate": "KF1.travel_scale",
+      "subject": "drawer_slide",
+      "verdict": "pass",
+      "reason": "the geometry that moves is 0.322 m across against 0.140 m of declared travel",
+      "measured": {
+        "moving_geometry_diagonal_m": 0.321515,
+        "size_over_travel": 2.2965
+      },
+      "threshold": {
+        "travel_scale_min": 0.5,
+        "declared_travel_m": 0.14
+      },
+      "evidence": {
+        "measured_bodies": [
+          "drawer"
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.travel_scale",
+      "subject": "temperature_dial_turn",
+      "verdict": "na",
+      "reason": "a hinge range is an angle, with no length to compare a size against",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.travel_scale",
+      "subject": "time_dial_turn",
+      "verdict": "na",
+      "reason": "a hinge range is an angle, with no length to compare a size against",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.travel_scale",
+      "subject": "keep_warm_press",
+      "verdict": "pass",
+      "reason": "the geometry that moves is 0.040 m across against 0.004 m of declared travel",
+      "measured": {
+        "moving_geometry_diagonal_m": 0.039648,
+        "size_over_travel": 9.9121
+      },
+      "threshold": {
+        "travel_scale_min": 0.5,
+        "declared_travel_m": 0.004
+      },
+      "evidence": {
+        "measured_bodies": [
+          "keep_warm_button"
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.travel_scale",
+      "subject": "release_press",
+      "verdict": "pass",
+      "reason": "the geometry that moves is 0.047 m across against 0.005 m of declared travel",
+      "measured": {
+        "moving_geometry_diagonal_m": 0.046861,
+        "size_over_travel": 9.3723
+      },
+      "threshold": {
+        "travel_scale_min": 0.5,
+        "declared_travel_m": 0.005
+      },
+      "evidence": {
+        "measured_bodies": [
+          "release_button"
+        ]
+      }
+    },
+    {
+      "predicate": "KF3.state_reachability",
+      "subject": "home",
+      "verdict": "pass",
+      "reason": "state 'home' is held with no forbidden interference",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "configurations_in_state": 203
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "worst_pair": null
+      }
+    },
+    {
+      "predicate": "KF3.state_reachability",
+      "subject": "open",
+      "verdict": "pass",
+      "reason": "state 'open' is held with no forbidden interference",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "configurations_in_state": 48
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "worst_pair": null
+      }
+    },
+    {
+      "predicate": "KF3.state_reachability",
+      "subject": "out",
+      "verdict": "pass",
+      "reason": "state 'out' is held with no forbidden interference",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "configurations_in_state": 275
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "worst_pair": null
+      }
+    },
+    {
+      "predicate": "KF3.state_reachability",
+      "subject": "pressed",
+      "verdict": "pass",
+      "reason": "state 'pressed' is held with no forbidden interference",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "configurations_in_state": 3
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "worst_pair": null
+      }
+    },
+    {
+      "predicate": "KF3.state_reachability",
+      "subject": "shut",
+      "verdict": "pass",
+      "reason": "state 'shut' is held with no forbidden interference",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "configurations_in_state": 263
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "worst_pair": null
+      }
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "temperature_dial+time_dial@all",
+      "verdict": "pass",
+      "reason": "'temperature_dial' and 'time_dial' stay clear across 1697 configurations, closest approach 0.0000 m",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "min_clearance_m": 0.0,
+        "samples_evaluated": 1697
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "first_failing_configuration": null,
+        "closest_configuration": "halton[696]",
+        "distmax": 0.5
+      }
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "drawer+control_tower@all",
+      "verdict": "pass",
+      "reason": "'drawer' and 'control_tower' stay clear across 1697 configurations, closest approach 0.0000 m",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "min_clearance_m": 0.0,
+        "samples_evaluated": 1697
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "first_failing_configuration": null,
+        "closest_configuration": "drawer_slide=+0.07875",
+        "distmax": 0.5
+      }
+    },
+    {
+      "predicate": "KF3.required_contact",
+      "subject": "drawer+body@shut",
+      "verdict": "pass",
+      "reason": "'drawer' and 'body' meet in state 'shut', closest -0.1608 m",
+      "measured": {
+        "min_clearance_m": -0.160762,
+        "samples_evaluated": 263
+      },
+      "threshold": {
+        "required_contact_m": 0.005
+      },
+      "evidence": {
+        "relation": "stop_contact",
+        "closest_configuration": "reference",
+        "state": "shut"
+      }
+    },
+    {
+      "predicate": "KF3.required_contact",
+      "subject": "temperature_dial+control_tower@all",
+      "verdict": "pass",
+      "reason": "'temperature_dial' and 'control_tower' meet in state 'all', closest -0.0040 m",
+      "measured": {
+        "min_clearance_m": -0.004,
+        "samples_evaluated": 1697
+      },
+      "threshold": {
+        "required_contact_m": 0.005
+      },
+      "evidence": {
+        "relation": "mesh_contact",
+        "closest_configuration": "temperature_dial_turn=-5.105",
+        "state": "all"
+      }
+    },
+    {
+      "predicate": "KF3.required_contact",
+      "subject": "time_dial+control_tower@all",
+      "verdict": "pass",
+      "reason": "'time_dial' and 'control_tower' meet in state 'all', closest -0.0040 m",
+      "measured": {
+        "min_clearance_m": -0.004,
+        "samples_evaluated": 1697
+      },
+      "threshold": {
+        "required_contact_m": 0.005
+      },
+      "evidence": {
+        "relation": "mesh_contact",
+        "closest_configuration": "time_dial_turn=-3.927",
+        "state": "all"
+      }
+    }
+  ]
+}

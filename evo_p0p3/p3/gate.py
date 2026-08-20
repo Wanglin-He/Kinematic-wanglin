@@ -215,7 +215,11 @@ def admit(
     for coupling in contract.kinematic_claims.couplings:
         for role in (coupling.relation.dependent, coupling.relation.independent):
             joint = contract.kinematic_claims.joint(role)
-            if joint is None or asset.body_id(joint.part) is None:
+            # Resolved through the binding, not by looking up the contract's part name as
+            # a link name. Bypassing the table here made a coupling look unresolvable
+            # whenever the asset simply used different names, which is the confusion
+            # between contract fault and asset fault the binding exists to remove.
+            if joint is None or joint.part not in binding.parts:
                 problems.append(f"coupling {coupling.id} references unresolvable {role}")
     checks.append(GateCheck(
         "G2",

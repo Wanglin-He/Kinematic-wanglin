@@ -1,0 +1,18 @@
+# Link names only; no geometry read.
+mounting_structure: mount
+work_surface:       table
+lock_handle:        left_lock_handle
+#
+# THE CONTRACT IS WRONG HERE, not the asset.
+# The prompt says "standard locking features", plural and unnumbered. The contract declared
+# one lock handle; the asset has two, left_lock_handle and right_lock_handle. Binding to the
+# left one and ignoring the right is a choice made to let the run proceed, and it means
+# right_lock_handle's joint is never evaluated.
+#
+# The honest reading is that the prompt is under-specified and the contract guessed a
+# number. Under the granularity ruling a count mismatch is a failure -- but that ruling was
+# written for an asset with FEWER parts than the prompt names. Here the asset has more, and
+# the count the contract chose was never in the prompt to begin with.
+#
+# NOT DECLARED BY THE CONTRACT, present in the asset:
+#   yoke -- an intermediate mounting member, fixed to the mount.

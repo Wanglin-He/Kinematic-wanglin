@@ -1,0 +1,6 @@
+# Link names only; no geometry read. Pure naming difference -- every declared part exists.
+body_shell:   body
+objective:    objective
+screen_door:  screen_door
+screen_panel: screen_panel
+mode_dial:    mode_dial

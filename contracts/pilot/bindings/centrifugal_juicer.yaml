@@ -1,0 +1,14 @@
+# Link names only; no geometry read.
+base:        base
+chamber:     chamber
+lid:         lid
+feed_pusher: feed_pusher
+drip_tray:   drip_tray
+basket:      basket
+clamp_left:  side_clamp_0
+clamp_right: side_clamp_1
+#
+# NOT BOUND: spout. The prompt says the drip tray sits "under the front spout", so a spout
+# is named; the asset has no such link. Under the granularity ruling this is a failure.
+#
+# RECORDED ASSUMPTION: left/right mapped to 0/1 by declaration order, as elsewhere.

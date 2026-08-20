@@ -1,0 +1,14 @@
+# Link names only; no geometry read. Naming differences only; every declared part exists.
+body:             body
+control_tower:    control_panel
+drawer:           drawer
+basket:           basket
+basket_handle:    handle
+temperature_dial: temperature_dial
+time_dial:        time_dial
+keep_warm_button: keep_warm_button
+release_button:   release_button
+#
+# NOT DECLARED BY THE CONTRACT, present in the asset:
+#   keep_warm_bezel -- a surround the prompt never mentions. Extra parts are not a
+#   violation; recorded so the asymmetry is visible.

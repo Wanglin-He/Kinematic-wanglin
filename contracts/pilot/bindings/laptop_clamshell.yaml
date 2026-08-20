@@ -1,0 +1,15 @@
+# Link names only; no geometry read.
+chassis:  base
+display:  display
+clickpad: clickpad
+#
+# THE FINDING THIS ASSET CARRIES.
+# The asset models 48 keys as separate links -- key_0_0 through key_4_7, plus space and two
+# fn keys -- each on its own prismatic joint. The contract declares none, because "the
+# keyboard keys move as short vertical prismatic sliders" is an unbounded plural and P0 has
+# no way to express one since `count` was removed.
+#
+# So the asset is MORE decomposed than the contract here, the reverse of the crankset. The
+# keyboard is simply unevaluated: 48 real degrees of freedom that no claim reaches. That is
+# a gap in P0, not a defect in the asset, and it is the sharpest evidence yet that removing
+# `count` without replacing it left a hole.

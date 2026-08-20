@@ -1,0 +1,18 @@
+# Link names only; no geometry read.
+motor_housing: housing
+axle:          rotor
+light_tray:    light_tray
+#
+# NOT BOUND, and this is the clearest granularity case in the set.
+# The asset has three links: housing, rotor, light_tray. The prompt names a ceiling canopy,
+# a motor housing, a central axle and four blades. The four blades and the axle are one
+# body called rotor; the canopy does not exist separately at all.
+#
+#   canopy   -- no link
+#   blade_1..4 -- merged into rotor
+#
+# Binding axle -> rotor is itself lossy: the contract says four blades ride the axle, and
+# in the asset there is nothing riding anything, because they are the same body. So every
+# rigid_attachment claim here is unevaluable, and so is every forbidden pair naming a blade
+# -- which is the whole reason this record was chosen, since human annotators failed it on
+# swept interference.

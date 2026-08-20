@@ -1,0 +1,634 @@
+{
+  "record_id": "rec_ceiling_fan_a743cb8b7b834f689d8e18995b53306a",
+  "contract_id": "rec_ceiling_fan_a743cb8b7b834f689d8e18995b53306a",
+  "admitted": true,
+  "gate": [
+    {
+      "check": "G0",
+      "status": "pass",
+      "detail": "compiled: 4 bodies, 2 joints, 28 geoms"
+    },
+    {
+      "check": "G1",
+      "status": "pass",
+      "detail": "diagnostic run: 3 of 8 required parts bound; ['canopy', 'blade_1', 'blade_2', 'blade_3', 'blade_4'] are unbound and every claim about them is reported N/A. NOT A SCORE -- the faithful reading is that these fail the Gate"
+    },
+    {
+      "check": "G2",
+      "status": "pass",
+      "detail": "every required part has a motion chain matching its declared role"
+    },
+    {
+      "check": "G3",
+      "status": "pass",
+      "detail": "declared masses and inertias compile"
+    }
+  ],
+  "profile": {
+    "KF1": 0.8181818181818182,
+    "KF2": null,
+    "KF3": 1.0
+  },
+  "sub_scores": {
+    "KF1.declared": 0.6666666666666666,
+    "KF1.measured": 0.875
+  },
+  "applicability": {
+    "KF1": "11/20",
+    "KF2": "0/0",
+    "KF3": "5/23"
+  },
+  "tolerance_digest": "f9f12e6afa23c9a0",
+  "provenance": {
+    "record_id": "rec_ceiling_fan_a743cb8b7b834f689d8e18995b53306a",
+    "source": "/Users/wanglin/Desktop/articraft-data/cache/record_materialization/rec_ceiling_fan_a743cb8b7b834f689d8e18995b53306a/model.urdf",
+    "inertia_synthesized": false,
+    "collidable_geoms": 0,
+    "distance_backend": "mj_geomDistance",
+    "mimics_translated": [],
+    "notes": [
+      "no <collision> in source; all geoms are visual-only, so mjData.contact is always empty and every distance goes through mj_geomDistance."
+    ]
+  },
+  "coverage": {
+    "samples": 662,
+    "by_layer": {
+      "reference": 1,
+      "scan": 66,
+      "pair": 81,
+      "states": 2,
+      "fill": 512
+    },
+    "driven_dofs": [
+      "axle_spin",
+      "light_tray_hinge"
+    ],
+    "dependent_dofs": [],
+    "pairs_swept": [
+      [
+        "axle_spin",
+        "light_tray_hinge"
+      ]
+    ],
+    "pairs_skipped": [],
+    "scan_points": 33,
+    "pair_points": 9,
+    "fill_per_dof": 256,
+    "notes": []
+  },
+  "claims": [
+    {
+      "predicate": "KF1.parent",
+      "subject": "axle_spin",
+      "verdict": "pass",
+      "reason": "'axle' moves relative to 'motor_housing' as declared",
+      "measured": {
+        "nearest_declared_ancestor": "motor_housing",
+        "links_up": 1
+      },
+      "threshold": {},
+      "evidence": {
+        "part": "axle",
+        "child_body": "rotor",
+        "body_chain_upward": [
+          "housing"
+        ],
+        "binding_source": "table"
+      }
+    },
+    {
+      "predicate": "KF1.parent",
+      "subject": "light_tray_hinge",
+      "verdict": "pass",
+      "reason": "'light_tray' moves relative to 'motor_housing' as declared",
+      "measured": {
+        "nearest_declared_ancestor": "motor_housing",
+        "links_up": 1
+      },
+      "threshold": {},
+      "evidence": {
+        "part": "light_tray",
+        "child_body": "light_tray",
+        "body_chain_upward": [
+          "housing"
+        ],
+        "binding_source": "table"
+      }
+    },
+    {
+      "predicate": "KF1.type",
+      "subject": "axle_spin",
+      "verdict": "pass",
+      "reason": "declared and built as hinge",
+      "measured": {
+        "joint_type": "hinge"
+      },
+      "threshold": {
+        "declared": "hinge"
+      },
+      "evidence": {
+        "mj_joint": "housing_to_rotor"
+      }
+    },
+    {
+      "predicate": "KF1.type",
+      "subject": "light_tray_hinge",
+      "verdict": "pass",
+      "reason": "declared and built as hinge",
+      "measured": {
+        "joint_type": "hinge"
+      },
+      "threshold": {
+        "declared": "hinge"
+      },
+      "evidence": {
+        "mj_joint": "housing_to_light_tray"
+      }
+    },
+    {
+      "predicate": "KF1.dof_composition",
+      "subject": "axle_spin",
+      "verdict": "pass",
+      "reason": "one declared degree of freedom, one joint",
+      "measured": {
+        "joints_on_body": 1
+      },
+      "threshold": {
+        "expected": 1
+      },
+      "evidence": {
+        "joint_names": [
+          "housing_to_rotor"
+        ],
+        "body": "rotor"
+      }
+    },
+    {
+      "predicate": "KF1.dof_composition",
+      "subject": "light_tray_hinge",
+      "verdict": "pass",
+      "reason": "one declared degree of freedom, one joint",
+      "measured": {
+        "joints_on_body": 1
+      },
+      "threshold": {
+        "expected": 1
+      },
+      "evidence": {
+        "joint_names": [
+          "housing_to_light_tray"
+        ],
+        "body": "light_tray"
+      }
+    },
+    {
+      "predicate": "KF1.axis_semantic",
+      "subject": "axle_spin",
+      "verdict": "pass",
+      "reason": "axis is vertical (parallel to up), off by 0.0 deg",
+      "measured": {
+        "angle_to_up_deg": 0.0,
+        "deviation_deg": 0.0
+      },
+      "threshold": {
+        "axis_angle_deg": 15.0
+      },
+      "evidence": {
+        "axis_world": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "up": [
+          -0.0,
+          -0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.axis_semantic",
+      "subject": "light_tray_hinge",
+      "verdict": "pass",
+      "reason": "axis is horizontal (perpendicular to up), off by 0.0 deg",
+      "measured": {
+        "angle_to_up_deg": 90.0,
+        "deviation_deg": 0.0
+      },
+      "threshold": {
+        "axis_angle_deg": 15.0
+      },
+      "evidence": {
+        "axis_world": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "up": [
+          -0.0,
+          -0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.axis_admits_motion",
+      "subject": "axle_spin",
+      "verdict": "na",
+      "reason": "only meaningful for a slide; hinge travel is an arc and is KF3's to sweep",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.axis_admits_motion",
+      "subject": "light_tray_hinge",
+      "verdict": "na",
+      "reason": "only meaningful for a slide; hinge travel is an arc and is KF3's to sweep",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.anchor",
+      "subject": "axle_spin",
+      "verdict": "pass",
+      "reason": "the axis passes within 0.0% of 'axle''s own size of its centroid",
+      "measured": {
+        "offset_over_diagonal": 0.0,
+        "offset_m": 0.0,
+        "part_diagonal_m": 2.745251
+      },
+      "threshold": {
+        "anchor_center_offset_max": 0.05
+      },
+      "evidence": {
+        "part": "axle",
+        "anchor_world": [
+          0.0,
+          0.0,
+          -0.145
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.anchor",
+      "subject": "light_tray_hinge",
+      "verdict": "fail",
+      "reason": "the axis splits 'light_tray' 24/8; only 75% lies on one side, so it turns about its middle rather than its edge",
+      "measured": {
+        "side_fraction": 0.75,
+        "positive": 24,
+        "negative": 8,
+        "on_axis": 0
+      },
+      "threshold": {
+        "anchor_side_fraction_min": 0.95
+      },
+      "evidence": {
+        "part": "light_tray",
+        "anchor_world": [
+          -0.105,
+          0.0,
+          -0.225
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.range_and_reference",
+      "subject": "axle_spin",
+      "verdict": "na",
+      "reason": "the joint is unlimited (URDF 'continuous'), so there is no declared travel to compare against",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.range_and_reference",
+      "subject": "light_tray_hinge",
+      "verdict": "fail",
+      "reason": "P0 declares 1.571 rad of travel and the model gives 1.05, off by 33%",
+      "measured": {
+        "model_span": 1.05,
+        "model_range": [
+          0.0,
+          1.05
+        ]
+      },
+      "threshold": {
+        "declared_span": 1.5708,
+        "state_match_relative": 0.02
+      },
+      "evidence": {
+        "unit": "rad",
+        "declared_states": {
+          "shut": 0.0,
+          "swung": 1.5708
+        }
+      }
+    },
+    {
+      "predicate": "KF1.rigid_follower",
+      "subject": "blade_1<-axle",
+      "verdict": "na",
+      "reason": "part 'blade_1' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.rigid_follower",
+      "subject": "blade_2<-axle",
+      "verdict": "na",
+      "reason": "part 'blade_2' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.rigid_follower",
+      "subject": "blade_3<-axle",
+      "verdict": "na",
+      "reason": "part 'blade_3' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.rigid_follower",
+      "subject": "blade_4<-axle",
+      "verdict": "na",
+      "reason": "part 'blade_4' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.travel_scale",
+      "subject": "axle_spin",
+      "verdict": "na",
+      "reason": "a hinge range is an angle, with no length to compare a size against",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.travel_scale",
+      "subject": "light_tray_hinge",
+      "verdict": "na",
+      "reason": "a hinge range is an angle, with no length to compare a size against",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.state_reachability",
+      "subject": "rest",
+      "verdict": "pass",
+      "reason": "state 'rest' is held with no forbidden interference",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "configurations_in_state": 33
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "worst_pair": null
+      }
+    },
+    {
+      "predicate": "KF3.state_reachability",
+      "subject": "shut",
+      "verdict": "pass",
+      "reason": "state 'shut' is held with no forbidden interference",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "configurations_in_state": 55
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "worst_pair": null
+      }
+    },
+    {
+      "predicate": "KF3.state_reachability",
+      "subject": "swung",
+      "verdict": "pass",
+      "reason": "state 'swung' is held with no forbidden interference",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "configurations_in_state": 20
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "worst_pair": null
+      }
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "blade_1+light_tray@all",
+      "verdict": "na",
+      "reason": "part 'blade_1' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "blade_2+light_tray@all",
+      "verdict": "na",
+      "reason": "part 'blade_2' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "blade_3+light_tray@all",
+      "verdict": "na",
+      "reason": "part 'blade_3' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "blade_4+light_tray@all",
+      "verdict": "na",
+      "reason": "part 'blade_4' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "blade_1+canopy@all",
+      "verdict": "na",
+      "reason": "part 'blade_1' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "blade_2+canopy@all",
+      "verdict": "na",
+      "reason": "part 'blade_2' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "blade_3+canopy@all",
+      "verdict": "na",
+      "reason": "part 'blade_3' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "blade_4+canopy@all",
+      "verdict": "na",
+      "reason": "part 'blade_4' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "blade_1+motor_housing@all",
+      "verdict": "na",
+      "reason": "part 'blade_1' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "blade_2+motor_housing@all",
+      "verdict": "na",
+      "reason": "part 'blade_2' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "blade_3+motor_housing@all",
+      "verdict": "na",
+      "reason": "part 'blade_3' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "blade_4+motor_housing@all",
+      "verdict": "na",
+      "reason": "part 'blade_4' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "blade_1+blade_2@all",
+      "verdict": "na",
+      "reason": "part 'blade_1' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "blade_1+blade_3@all",
+      "verdict": "na",
+      "reason": "part 'blade_1' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "blade_1+blade_4@all",
+      "verdict": "na",
+      "reason": "part 'blade_1' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "blade_2+blade_3@all",
+      "verdict": "na",
+      "reason": "part 'blade_2' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "blade_2+blade_4@all",
+      "verdict": "na",
+      "reason": "part 'blade_2' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "blade_3+blade_4@all",
+      "verdict": "na",
+      "reason": "part 'blade_3' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.required_contact",
+      "subject": "axle+motor_housing@all",
+      "verdict": "pass",
+      "reason": "'axle' and 'motor_housing' meet in state 'all', closest -0.0410 m",
+      "measured": {
+        "min_clearance_m": -0.041,
+        "samples_evaluated": 662
+      },
+      "threshold": {
+        "required_contact_m": 0.005
+      },
+      "evidence": {
+        "relation": "mesh_contact",
+        "closest_configuration": "halton[76]",
+        "state": "all"
+      }
+    },
+    {
+      "predicate": "KF3.required_contact",
+      "subject": "light_tray+motor_housing@shut",
+      "verdict": "pass",
+      "reason": "'light_tray' and 'motor_housing' meet in state 'shut', closest -0.0143 m",
+      "measured": {
+        "min_clearance_m": -0.014325,
+        "samples_evaluated": 55
+      },
+      "threshold": {
+        "required_contact_m": 0.005
+      },
+      "evidence": {
+        "relation": "stop_contact",
+        "closest_configuration": "halton[243]",
+        "state": "shut"
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+# Link names only; no geometry read.
+storage_bin:        storage_bin
+door:               door
+limiter_link_left:  limiter_0
+limiter_link_right: limiter_1
+#
+# RECORDED ASSUMPTION: left/right mapped to 0/1 by declaration order. The asset's names
+# carry no side, so nothing in either file resolves it. Any verdict that depends on which
+# link is which is unsafe, and this asset is here to test a coupling between them -- for
+# which the pairing does not matter, since the declared ratio is 1 and symmetric.
