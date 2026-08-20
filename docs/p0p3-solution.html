@@ -4,756 +4,655 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
-<title>P0 与 P3 的实现｜Evo-Articraft</title>
+<title>P0 与 P3 的解法｜Evo-Articraft</title>
 <style>
-:root{--ink:#172337;--muted:#637186;--navy:#15314e;--teal:#087f78;--teal-s:#e1f3ef;
---paper:#f5f3ed;--card:#fffefa;--line:#d8d5cd;--gold:#a56f18;--gold-s:#f8efd9;
---red:#a2402f;--red-s:#fae9e4;--green:#237257;--green-s:#e5f3ec;
---shadow:0 14px 38px rgba(23,35,55,.08);--content:1140px;
+:root{--ink:#172337;--muted:#66748a;--navy:#15314e;--teal:#087f78;--teal-s:#e3f4f0;
+--paper:#f5f3ed;--card:#fffefa;--line:#dad7cf;--gold:#a56f18;--gold-s:#faf1dc;
+--red:#a2402f;--red-s:#fbeae5;--green:#237257;--green-s:#e7f4ed;--content:1180px;
 --mono:"SFMono-Regular",Consolas,Menlo,monospace;}
 *{box-sizing:border-box}html{scroll-behavior:smooth}
-body{margin:0;color:var(--ink);line-height:1.72;background:
-radial-gradient(circle at 8% 1%,rgba(8,127,120,.10),transparent 27rem),var(--paper);
+body{margin:0;color:var(--ink);line-height:1.62;background:var(--paper);
 font-family:Inter,ui-sans-serif,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
-code,.f{font-family:var(--mono)}
-code{padding:.12em .34em;border-radius:5px;color:#075f5b;background:var(--teal-s);font-size:.9em}
-header{color:#fff;background:linear-gradient(125deg,#132e4b,#126862)}
-.hero{max-width:var(--content);margin:0 auto;padding:52px 28px 44px}
-.eyebrow{display:inline-block;margin-bottom:14px;padding:5px 10px;border:1px solid rgba(255,255,255,.26);
-border-radius:999px;color:#d3f0eb;font-size:.75rem;font-weight:850;letter-spacing:.12em;text-transform:uppercase}
-h1{margin:0;font-family:Georgia,"Songti SC",serif;font-size:clamp(1.9rem,4.4vw,3.4rem);
-font-weight:600;line-height:1.1;letter-spacing:-.03em}
-.lede{max-width:850px;margin:18px 0 0;color:#dce9ef;font-size:1.04rem}
-.tags{display:flex;flex-wrap:wrap;gap:9px;margin-top:20px}
-.tags span{padding:5px 13px;border:1px solid rgba(255,255,255,.3);border-radius:999px;font-size:13px;color:#d3f0eb}
-nav.toc{max-width:var(--content);margin:22px auto 0;padding:0 28px}
-nav.toc>div{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:15px 20px}
-nav.toc b{font-size:13px;color:var(--muted);letter-spacing:.06em}
-nav.toc ol{margin:8px 0 0;padding-left:20px;columns:2;column-gap:30px}
-nav.toc a{color:var(--teal);text-decoration:none;font-size:.92rem}
-nav.toc a:hover{text-decoration:underline}
-main{display:grid;gap:22px;max-width:var(--content);margin:0 auto;padding:26px 28px 60px}
-.panel{padding:26px;border:1px solid var(--line);border-radius:18px;background:var(--card);
-box-shadow:var(--shadow);scroll-margin-top:16px}
-.kicker{margin:0 0 6px;color:var(--teal);font-size:.74rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
-h2{margin:0 0 10px;color:var(--navy);font-family:Georgia,"Songti SC",serif;
-font-size:clamp(1.4rem,2.7vw,1.95rem);line-height:1.18}
-h3{margin:26px 0 6px;color:var(--navy);font-size:1.05rem}
-h3 .id{font-family:var(--mono);font-size:.9em;color:var(--teal)}
-h4{margin:16px 0 4px;color:var(--muted);font-size:.79rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
-p{margin:9px 0}ul,ol{margin:9px 0;padding-left:1.2rem}li+li{margin-top:4px}
-pre{overflow-x:auto;margin:10px 0;padding:15px 17px;border-radius:11px;color:#e9edf5;
-background:#16243a;font-size:.81rem;line-height:1.6;white-space:pre}
-pre .c{color:#8fa4bd}pre .s{color:#9fd9b6}
-.f-block{margin:10px 0;padding:13px 16px;border-radius:10px;background:var(--teal-s);
-color:#0d4a46;font-family:var(--mono);font-size:.85rem;white-space:pre-wrap;line-height:1.75}
-.why{margin:10px 0;padding:13px 16px;border-left:4px solid var(--gold);border-radius:8px;
-background:var(--gold-s);color:#674711;font-size:.93rem}
-.why b{color:#5a3d0e}
-.ok{border-left-color:var(--green);background:var(--green-s);color:#1b5443}
-.ok b{color:#14553f}
-.bad{border-left-color:var(--red);background:var(--red-s);color:#7a2f22}
-.bad b{color:#6d281c}
-.tw{overflow-x:auto;margin:12px 0;border:1px solid var(--line);border-radius:12px;background:#fcfbf8}
-table{width:100%;border-collapse:collapse;min-width:560px;font-size:.88rem}
-th,td{border-bottom:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
-th{background:#f2f0e9;color:var(--muted);font-weight:800;white-space:nowrap}
-tr:last-child td{border-bottom:none}td code{font-size:.84em}
-td.id{font-family:var(--mono);font-size:.7rem;color:var(--muted);word-break:break-all;min-width:230px}
+code{font-family:var(--mono);padding:.1em .3em;border-radius:4px;color:#075f5b;
+background:var(--teal-s);font-size:.9em}
+header{color:#fff;background:linear-gradient(120deg,#132e4b,#0f6b65)}
+.hero{max-width:var(--content);margin:0 auto;padding:40px 26px 34px}
+.eyebrow{display:inline-block;margin-bottom:11px;padding:4px 10px;border:1px solid rgba(255,255,255,.28);
+border-radius:999px;color:#cfeee9;font-size:.72rem;font-weight:850;letter-spacing:.11em}
+h1{margin:0;font-family:Georgia,"Songti SC",serif;font-size:clamp(1.7rem,3.6vw,2.7rem);
+font-weight:600;line-height:1.14;letter-spacing:-.02em}
+.lede{max-width:720px;margin:12px 0 0;color:#d7e6ec;font-size:.97rem}
+.tags{display:flex;flex-wrap:wrap;gap:7px;margin-top:15px}
+.tags span{padding:4px 11px;border:1px solid rgba(255,255,255,.3);border-radius:999px;
+font-size:12px;color:#cfeee9}
+main{max-width:var(--content);margin:0 auto;padding:22px 26px 52px}
+.band{margin:26px 0 12px}
+.band h2{margin:0;color:var(--navy);font-family:Georgia,"Songti SC",serif;
+font-size:1.5rem;letter-spacing:-.01em}
+.band p{margin:3px 0 0;color:var(--muted);font-size:.88rem}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.grid.wide{grid-template-columns:1fr}
+.c{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:13px;
+background:var(--card);overflow:hidden}
+.c>header{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;padding:11px 15px;
+border-bottom:1px solid var(--line);background:#f7f5ef;color:var(--ink)}
+.c>header .n{font-family:var(--mono);font-size:.93rem;font-weight:700;color:var(--navy)}
+.c>header .to{font-size:.72rem;color:var(--muted);letter-spacing:.03em}
+.c>header .tag{margin-left:auto;padding:1px 8px;border-radius:999px;font-size:10.5px;font-weight:800}
+.t-lit{color:#14553f;background:var(--green-s);border:1px solid #a8cebe}
+.t-new{color:#6b4a12;background:var(--gold-s);border:1px solid #dcc189}
+.t-rep{color:#7a2f22;background:var(--red-s);border:1px solid #dcaaa3}
+.t-out{color:var(--muted);background:#eeece6;border:1px solid var(--line)}
+.b{padding:12px 15px}
+.b>p{margin:0 0 8px;font-size:.9rem}
+.b>p:last-child{margin-bottom:0}
+.f{margin:0 0 8px;padding:10px 12px;border-radius:8px;background:var(--teal-s);
+color:#0c4744;font-family:var(--mono);font-size:.795rem;line-height:1.62;
+white-space:pre-wrap;overflow-x:auto}
+.f:last-child{margin-bottom:0}
+pre{margin:0 0 8px;padding:11px 13px;border-radius:8px;color:#e8edf4;background:#16243a;
+font-size:.775rem;line-height:1.56;overflow-x:auto;white-space:pre}
+pre:last-child{margin-bottom:0}
+pre .c2{color:#8ea3bc}
+.note{margin:8px 0 0;padding:8px 11px;border-left:3px solid var(--gold);border-radius:6px;
+background:var(--gold-s);color:#66460f;font-size:.83rem}
+.note.bad{border-left-color:var(--red);background:var(--red-s);color:#79301f}
+.note.ok{border-left-color:var(--green);background:var(--green-s);color:#1c5443}
+.note b{font-weight:800}
+h3{margin:14px 0 6px;color:var(--navy);font-size:.95rem}
+h3:first-child{margin-top:0}
+table{width:100%;border-collapse:collapse;font-size:.83rem}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:#fdfcf9;margin:0 0 8px}
+th,td{border-bottom:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:#f3f1ea;color:var(--muted);font-weight:800;white-space:nowrap;font-size:.78rem}
+tr:last-child td{border-bottom:none}
+td.m{font-family:var(--mono);font-size:.76rem}
+td.id{font-family:var(--mono);font-size:.66rem;color:var(--muted);word-break:break-all}
 .num{text-align:right;font-family:var(--mono);white-space:nowrap}
 .lo{color:var(--red);font-weight:800}.hi{color:var(--green)}
-.pill{display:inline-block;padding:1px 9px;border-radius:999px;font-size:11px;font-weight:800;
-letter-spacing:.04em;vertical-align:middle;margin-left:6px}
-.p-lit{color:#14553f;background:var(--green-s);border:1px solid #a6cdbd}
-.p-new{color:#6b4a12;background:var(--gold-s);border:1px solid #ddc088}
-.p-rep{color:#7a2f22;background:var(--red-s);border:1px solid #dda9a2}
-footer{padding:22px 28px;color:#dce8ee;background:var(--navy);text-align:center}
+footer{padding:18px 26px;color:#d4e3ea;background:var(--navy);text-align:center;font-size:.85rem}
 footer p{margin:0}
-@media(max-width:820px){nav.toc ol{columns:1}}
-@media(max-width:500px){.hero{padding:38px 18px 32px}main,nav.toc{padding-left:18px;padding-right:18px}.panel{padding:20px 18px}}
+@media(max-width:520px){.hero{padding:30px 16px 26px}main{padding:16px}.grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <header><div class="hero">
-  <div class="eyebrow">Evo-Articraft · P0 + P3 · 实现报告</div>
-  <h1>16 条检查，<br>每一条都能被判错</h1>
-  <p class="lede">P0（提示词契约）与 P3（运动学保真度）的完整实现。判分过程不调用任何大模型——
-  全部由查表、点积、计数、距离决定，并有 24 个测试守着这一点。本文逐项交代原始方案里的每个条目
-  是怎么落地的：讲法、公式、代码，以及能让它判负的反例。最后附上十条实测记录。</p>
-  <div class="tags"><span>16 条检查</span><span>16 条准入规则</span><span>266 个测试</span>
-  <span>13 份标准资产</span><span>10 条真实记录</span><span>判分不用大模型</span></div>
+  <div class="eyebrow">EVO-ARTICRAFT · P0 + P3</div>
+  <h1>每张卡片，一条能被判错的公式</h1>
+  <p class="lede">按原方案的卡片顺序，逐张给出落地的数学式或核心代码。判分过程不调用大模型——
+  只有查表、点积、计数、距离，24 个测试守着这一点。</p>
+  <div class="tags"><span>16 条检查</span><span>16 条准入规则</span><span>268 个测试</span>
+  <span>13 份标准资产</span><span>10 条实测记录</span></div>
 </div></header>
-
-<nav class="toc"><div><b>目录</b><ol>
-<li><a href="#s0">00 · 总览</a></li>
-<li><a href="#s1">01 · P0：契约的每个字段</a></li>
-<li><a href="#s2">02 · P0：准入规则 A1–A16</a></li>
-<li><a href="#s3">03 · 三件共用的东西</a></li>
-<li><a href="#s4">04 · KF1 的 9 条检查</a></li>
-<li><a href="#s5">05 · KF2 的 4 条检查</a></li>
-<li><a href="#s6">06 · KF3：四层采样</a></li>
-<li><a href="#s7">07 · KF3 的 3 条检查</a></li>
-<li><a href="#s8">08 · 打分与报告</a></li>
-<li><a href="#s9">09 · 标准资产验证</a></li>
-<li><a href="#s10">10 · 十条实测记录</a></li>
-<li><a href="#s11">11 · 还没解决的</a></li>
-</ol></div></nav>
 
 <main>
 
-<!-- 00 -->
-<section class="panel" id="s0">
-<p class="kicker">00 · 总览</p>
-<h2>流水线，以及哪一段属于这里</h2>
-<pre><span class="c">P0 契约（人写，生成之前冻结）</span>
-      │
-      ├─► 准入检查 A1–A16          <span class="s">✅ 本实现</span>  契约本身能不能被检查
-      │
-   P1 Gate G0–G3                   <span class="s">✅ 替身</span>    资产能不能进入打分
-      │
-      ├──────────────┬──────────────
-      ▼              ▼
- P2 GF1–GF4     P3 KF1/KF2/KF3     <span class="s">✅ 本实现</span>
- <span class="c">（另一组负责，未实现）</span>
-</pre>
-<p><b>P2 不是 P3 的前置。</b>按原方案，两者是并列关系，都只依赖 Gate。跳过 P2 只意味着没有几何分数，
-不影响 P3 结论是否成立。</p>
-<h4>判分过程里有什么</h4>
-<div class="f-block">全包只有三类运算：比较 87 处 · 加减乘除 69 处 · 逻辑判断 35 处
-第三方库只有 mujoco / numpy / pyyaml —— 三个都跑不了模型</div>
-<div class="why ok"><b>这一条是能验证的，不是口头保证。</b>
-<code>tests/test_no_model_in_the_scoring_path.py</code> 逐个模块扫 import：任何模型客户端、
-网络请求、socket、<b>没有固定顺序的随机源</b>一律判失败；再断言依赖清单只能是那三个；
-另有三个可复现测试，同一份输入连跑三遍，结论和测量必须<b>一个字节都不差</b>。
-<br><br>把 <code>random</code> 和模型库放在一起禁用是有意的——<b>分数在两次运行之间会变，
-和分数取决于模型当天状态一样没法追究</b>。所以 KF3 的填充层用 Halton 序列，没有种子可设。
-<br><br>这套守卫验过管用：塞一个 <code>import openai</code> 的文件进去，两个测试立刻红。</div>
-</section>
+<!-- ================= P0 ================= -->
+<div class="band"><h2>P0 · 契约的八张卡</h2>
+<p>标签：<b>照做</b>＝按原文实现 · <b>改</b>＝原写法无法实现，已替换 · <b>补</b>＝原方案缺这个字段 · <b>他组</b>＝不由 P3 评分</p></div>
 
-<!-- 01 -->
-<section class="panel" id="s1">
-<p class="kicker">01 · P0</p>
-<h2>契约的每个字段：原方案怎么写的，改成了什么</h2>
+<div class="grid">
 
-<h3><span class="id">required_parts</span> 逐个列实例 <span class="pill p-rep">替换</span></h3>
-<p><b>原方案：</b><code>{id: drawer, count: 3}</code>，而下游用的是 <code>drawer_1</code>。</p>
-<p><b>问题：</b>方案里<b>没有一处</b>规定 count 怎么展开成实例。示例里三个抽屉一模一样所以看不出来，
-但对左右门这种<b>不一样</b>的集合，实例配错就直接改变判定。</p>
+<div class="c"><header><span class="n">overall_description</span>
+<span class="to">→ 人类可读来源</span><span class="tag t-lit">照做</span></header><div class="b">
+<p>不参与任何评分，只提供上下文。</p>
+<div class="f">准入：非空字符串即可
+不进入任何 score() 的分子或分母</div>
+</div></div>
+
+<div class="c"><header><span class="n">required_parts</span>
+<span class="to">→ Gate 输入</span><span class="tag t-rep">改</span></header><div class="b">
+<p>原写法 <code>{id: drawer, count: 3}</code>，但下游用 <code>drawer_1</code>，而方案没规定 count 怎么展开成实例。</p>
 <pre>required_parts:
   - {id: drawer_1, role: movable, group: drawer}
   - {id: drawer_2, role: movable, group: drawer}
-<span class="c"># group 只是个可选标签：成员是明写的，所以 {group: drawer} 怎么展开是确定的</span></pre>
-<p><code>count</code> 现在直接报加载错误，错误信息里说明理由。</p>
+<span class="c2"># count 现在直接报加载错误</span></pre>
+<div class="f">role ∈ {fixed, movable, attached}
 
-<h3><span class="id">role</span> 三个取值 + rigid_attachments <span class="pill p-rep">替换</span></h3>
-<p><b>原方案：</b>「fixed 或 movable」——但它自己的示例里出现了第三个值 <code>role: follows_drawer</code>。</p>
-<div class="why"><b>两个毛病：</b>那个字符串<b>说不清哪个把手跟着哪个抽屉</b>（handle_3 跟着 drawer_2 也能全绿）；
-而且把手要是记成 <code>movable</code>，Gate 会要求它有自己的关节，可正确的把手<b>不该有</b>。</div>
-<div class="tw"><table>
-<thead><tr><th>role</th><th>含义</th><th>Gate 的期望</th></tr></thead><tbody>
-<tr><td><code>fixed</code></td><td>不动</td><td>不要求关节</td></tr>
-<tr><td><code>movable</code></td><td>有自己的关节</td><td>恰好一条</td></tr>
-<tr><td><code>attached</code></td><td>会动，但没有自己的关节</td><td><b>不</b>要求关节；必须在 rigid_attachments 里出现一次</td></tr>
+fixed    → 不要求关节
+movable  → 恰好一条关节声明
+attached → <b>不</b>要求关节，且必须在
+           rigid_attachments 里作 follower 出现一次</div>
+<div class="note">原方案只有 fixed/movable，示例却出现了第三个值 <code>follows_drawer</code>。
+那个字符串<b>说不清哪个把手跟哪个抽屉</b>，而且把手记成 movable 会被 Gate 要求有自己的关节——正确的把手不该有。</div>
+</div></div>
+
+<div class="c"><header><span class="n">global_form</span>
+<span class="to">→ GF1</span><span class="tag t-out">他组</span></header><div class="b">
+<p>整体类别、轮廓、粗结构。P3 不评分，P0 只做准入。</p>
+<div class="f">A2: 字段存在且非空
+不与 part_geometry 重复声明逐部件内容</div>
+</div></div>
+
+<div class="c"><header><span class="n">part_geometry</span>
+<span class="to">→ GF2</span><span class="tag t-out">他组</span></header><div class="b">
+<p>每个部件自身的形状。</p>
+<div class="f">A2: ∀ p ∈ required_parts, ∃ part_geometry[p]
+缺一个就拒绝契约</div>
+</div></div>
+
+<div class="c"><header><span class="n">part_relations</span>
+<span class="to">→ GF3</span><span class="tag t-out">他组</span></header><div class="b">
+<p>subject–relation–object 三元组。</p>
+<div class="f">A1: subject, object ∈ 已声明的 part id
+引用不存在的部件 → 拒绝</div>
+</div></div>
+
+<div class="c"><header><span class="n">proportion_claims</span>
+<span class="to">→ GF4</span><span class="tag t-out">他组</span></header><div class="b">
+<p>比例声明。</p>
+<div class="f">A1: subject, object 必须已声明
+A11: tolerance &gt; 0</div>
+</div></div>
+
+<div class="c"><header><span class="n">dynamics_claims</span>
+<span class="to">→ P4</span><span class="tag t-out">他组</span></header><div class="b">
+<p>质量、摩擦、驱动。<b>P3 明确不碰</b>——KF1/KF2/KF3 全部只在位置层
+（<code>mj_forward</code>），不步进、不涉及动力学。</p>
+</div></div>
+
+<div class="c"><header><span class="n">冻结</span>
+<span class="to">→ 生成前</span><span class="tag t-new">补</span></header><div class="b">
+<div class="f">FROZEN.json = { 契约路径: sha256 }
+提交时间必须早于任何一次评测
+
+tolerances.digest() = sha256[:16]
+随每份结果一起输出</div>
+<div class="note bad">哈希防的是「看了资产再改契约」，<b>防不了「一开始就读错提示词」</b>。
+钻床的提示词写 locking <b>features</b>（复数、没给数），契约写成 1 个锁柄，资产有 2 个——
+<b>那是契约作者的错</b>。所以流程必须是：起草 → 逐条签字 → 再冻结。</div>
+</div></div>
+
+</div>
+
+<!-- kinematic_claims 展开 -->
+<div class="band"><h2>kinematic_claims · 我们这一环的输入</h2>
+<p>八张卡里唯一进入 P3 的。下面是它的每个子字段。</p></div>
+
+<div class="grid">
+
+<div class="c"><header><span class="n">canonical_frame</span><span class="tag t-new">补</span></header><div class="b">
+<div class="f">up:    gravity        ← 总是可用，免费
+front: null | 部件 id  ← 没锚定则 numeric 轴向记 N/A</div>
+</div></div>
+
+<div class="c"><header><span class="n">joints[].axis</span><span class="tag t-rep">改</span></header><div class="b">
+<p>原写法 <code>axis: depth</code>，而方案<b>从未定义物体坐标系</b>。</p>
+<div class="f">三选一，至少给一种：
+
+semantic:   vertical | horizontal      ← 对重力算
+relational: 部件之间的关系              ← 免坐标系
+numeric:    [x,y,z]                    ← front 未锚定 → N/A</div>
+<div class="note">要求「按规定朝向输出」会把<b>没按约定摆</b>变成<b>运动学做错</b>——
+一个正确但转了 90° 的柜子每条轴向全错。用来比生成器时，测到的是谁读了坐标系说明。</div>
+</div></div>
+
+<div class="c"><header><span class="n">joints[].anchor</span><span class="tag t-rep">改</span></header><div class="b">
+<p>原方案正文说要声明，<b>schema 示例里没有这个字段</b>，且示例三个关节全是 slide——绕开了唯一重要的场景。</p>
+<div class="f">实测：关节 pos 挪 0.25 m，子部件位移
+  slide 0.000000   hinge 0.171449
+  ball  0.191345   free  0.000000
+
+⇒ 只对 hinge / ball 可检，slide / free 恒 N/A</div>
+<pre>anchor: {on_edge_of: door}          <span class="c2"># 门</span>
+anchor: {through_center_of: gear}   <span class="c2"># 齿轮</span></pre>
+<div class="note">两条必须都有，<b>它们互为相反</b>：用门那条判齿轮会必然判负——
+过对称轴的任何平面都把圆盘切成一半一半。</div>
+</div></div>
+
+<div class="c"><header><span class="n">rigid_attachments</span><span class="tag t-new">补</span></header><div class="b">
+<div class="f">- {follower: handle_1, leader: drawer_1}
+
+A4: 每个 attached 部件必须作 follower 恰好出现一次</div>
+</div></div>
+
+<div class="c"><header><span class="n">couplings</span><span class="tag t-new">补</span></header><div class="b">
+<p>原方案是 <code>couplings: []</code>——KF2 要核的六项<b>一样都没有写法</b>。</p>
+<pre>relation:
+  dependent:   gear_small_spin
+  independent: gear_large_spin
+  coefficient: -3.0   <span class="c2"># 外啮合反转，负号是机构不是约定</span>
+  offset:      0.0
+expected_dof:  1
+residual_norm: {by: absolute}
+epsilon:       0.005</pre>
+<div class="f">逐字段对上 MuJoCo polycoef:
+  q₁ = a₀ + a₁q₂ + a₂q² + …
+
+mechanism: any —— 声明<b>关系</b>，不声明<b>实现</b></div>
+<div class="note">归一化方式必须逐条写。齿轮行程常达 ±3 圈（37.7 rad），
+相对容差 0.02 等于容忍 <b>43° 相位误差</b>。</div>
+</div></div>
+
+<div class="c"><header><span class="n">asset_states</span><span class="tag t-new">补</span></header><div class="b">
+<p><code>joints[].states</code> 是每个关节自己的标签，而 contact_policy 当整机属性用。</p>
+<div class="f">q ∈ 状态 s ⟺ ∀ j ∈ scope(s):
+      |q_j − states_j[s]| ≤ τ_rel × span_j
+
+scope = named_parts | all_declaring</div>
+<div class="note">容差不能省：若要求精确相等，连续采样里合格样本可能<b>一个都没有</b>，
+那条声明永远不被检查——<b>而这会读成通过</b>。</div>
+</div></div>
+
+<div class="c"><header><span class="n">contact_policy</span><span class="tag t-rep">改</span></header><div class="b">
+<p>原方案 <code>allowed</code>/<code>forbidden</code>，但<b>从没说 allowed 断言什么</b>。</p>
+<pre>required:   <span class="c2"># 义务：该状态必须接触</span>
+  - {parts: [door, cabinet_body], state: closed,
+     relation: stop_contact}
+permitted:  <span class="c2"># 许可：接触不违规，不接触也不失败</span>
+forbidden:  <span class="c2"># 禁止：全程不得穿模超阈值</span>
+  - {parts: [door, drawer_1], state: all}
+precedence: required_and_permitted_over_forbidden</pre>
+<div class="note bad">当成「允许」→ <b>永远不会失败</b>，对分数零贡献；当成「必须」→ 需要接触容差和状态判定，<b>两个都不存在</b>。
+后果：<b>没有任何检查要求声明的止挡真的发生</b>。<br>
+优先级也不是可有可无——原示例把同一对同时放进两个桶，<b>S_collision 在采样端点上没有定义</b>。</div>
+</div></div>
+
+<div class="c"><header><span class="n">tolerances</span><span class="tag t-new">补</span></header><div class="b">
+<p>原方案<b>一个容差字段都没有</b>，13 个阈值实际由写代码的人默默决定。</p>
+<div class="f">axis_angle_deg            15.0
+anchor_edge_inset_max      0.15
+anchor_center_offset_max   0.05
+travel_scale_min           0.50
+follower_drift_m           0.0005
+state_match_relative       0.02
+required_contact_m         0.002
+forbidden_penetration_m    0.001
+coupling_residual          0.02</div>
+</div></div>
+
+</div>
+
+<!-- 准入 -->
+<div class="band"><h2>准入 A1–A16 · 契约在生成之前先过这关</h2></div>
+<div class="grid wide"><div class="c"><div class="b">
+<div class="tw"><table><tbody>
+<tr><td class="m"><b>A1</b></td><td>任何字段引用的 part / joint id 必须已声明</td></tr>
+<tr><td class="m">A2–A4</td><td>每个部件有 part_geometry；movable 恰好一条关节；attached 必须在 rigid_attachments 里出现一次</td></tr>
+<tr><td class="m">A5–A7</td><td>independent_dofs 可解析；耦合的 dependent 不得同时被独立驱动；contact_policy 引用的 state 已定义</td></tr>
+<tr><td class="m">A8–A9</td><td>axis 至少一种写法；numeric 需 front 已锚定</td></tr>
+<tr><td class="m"><b>A10</b></td><td>slide / free 的 anchor 必须为空；hinge / ball 必须给判定方式</td></tr>
+<tr><td class="m">A11–A16</td><td>range.unit 与 type 相配；接触对是两个不同部件；关节不自连；耦合成员是关节声明；expected_dof 合理；free 关节警告</td></tr>
 </tbody></table></div>
-<pre>rigid_attachments:
-  - {follower: handle_1, leader: drawer_1}   <span class="c"># 明确到实例</span></pre>
+<div class="note ok"><b>A1 有实测依据。</b>上一轮用文字部件名匹配代码标识符：70 次报警 <b>63 次误报</b>，
+其中 42 次是「找不到零件」——<b>但 7 个真问题里也有 4 个来自同一信号</b>。信号和噪声是同一件事，
+配对 bootstrap 的 Δκ 95% 区间含零，<b>写更好的匹配器救不了</b>。A1 把「契约写错」这个可能性<b>在生成之前</b>消掉。</div>
+<p style="font-size:.84rem;color:var(--muted);margin-top:8px">每条规则配一个测试，只破坏标准契约的一处，断言它被触发。<b>触发不了的规则等于没写。</b></p>
+</div></div></div>
 
-<h3><span class="id">axis</span> 三种写法 <span class="pill p-rep">替换</span></h3>
-<p><b>原方案：</b><code>axis: depth</code>——一个词，而<b>全篇没有任何地方定义物体坐标系</b>。</p>
-<div class="why"><b>为什么不能简单地要求「生成器按规定朝向输出」。</b>
-URDF 里没有语义方向，只有数字；两个建模时差 90° 的相同柜子是同一个物体。规定朝向会把
-<b>「没按约定摆」变成「运动学做错了」</b>——一个完全正确但转了 90° 的柜子每条轴向判定全错。
-用来比较多个生成器时，测到的就成了<b>谁读了坐标系说明</b>，不是谁的关节做得对。</div>
-<div class="tw"><table>
-<thead><tr><th>写法</th><th>怎么判</th><th>整机绕竖直轴转一下还成立吗</th></tr></thead><tbody>
-<tr><td><code>semantic</code>：vertical / horizontal</td><td>对重力算夹角（不花钱）</td><td><b>成立</b></td></tr>
-<tr><td><code>relational</code>：部件之间的关系</td><td>从两个部件的实际几何算参照</td><td><b>成立</b></td></tr>
-<tr><td><code>numeric</code>：[x,y,z]</td><td>直接比；没锚定 front 时记 <b>N/A</b></td><td>不成立</td></tr>
-</tbody></table></div>
-<p class="why"><b>宁可少测一项，也不把朝向约定的锅算到资产头上。</b>上一个项目正是栽在这里——
-把读取方的不确定当成了资产的缺陷。</p>
+<!-- ================= P3 ================= -->
+<div class="band"><h2>P3 · 三张卡</h2>
+<p>共用前提：绑定 <code>b*(P)</code> 由 Gate 给出，P3 只读不猜名字 · 参考姿态
+<code>q_ref = closed → home → range.min</code> · 距离一律 <code>mj_geomDistance</code></p></div>
 
-<h3><span class="id">anchor</span> 两条相反的几何判定 <span class="pill p-rep">替换</span></h3>
-<p><b>原方案：</b>正文里说要声明 anchor，<b>但 schema 示例里根本没有这个字段</b>，而且示例三个关节全是
-slide——恰好绕开了唯一重要的场景。</p>
-<div class="f-block">实测：把关节 pos 挪 0.25 m，子部件几何位移多少
-  slide  0.000000   平移没有中心，pos 不起作用
-  hinge  0.171449   绕过 anchor 的那条直线转
-  ball   0.191345   绕 anchor 这个点转
-  free   0.000000   MuJoCo 直接忽略</div>
-<p>所以 anchor 对 <b>hinge 和 ball</b> 可检，对 <b>slide 和 free</b> 一律 N/A。
-（早期版本把 ball 也排除在外，等于<b>拒绝了一条模型真的能做错的声明</b>，靠上面这组实测纠正。）</p>
-<p>P0 是在资产存在<b>之前</b>写的，不知道门会多大、摆在哪，所以 anchor 写成<b>几何关系</b>而不是坐标：</p>
-<pre>anchor: {on_edge_of: door}          <span class="c"># 门：轴线在边上</span>
-anchor: {through_center_of: gear}   <span class="c"># 齿轮：轴线过中心</span></pre>
-<p class="why"><b>两条必须都有，因为它们互为相反。</b>拿门的那条去判齿轮会<b>必然</b>判负——
-过对称轴的任何一个平面都把圆盘切成一半一半。这个洞是写第二个标准资产时才发现的。</p>
+<div class="grid wide"><div class="c"><div class="b">
+<div class="note bad"><b>为什么不读 <code>mjData.contact</code>：</b>实测 546 条真实资产里有
+<code>&lt;collision&gt;</code> 的是<b>零个</b>，编译出来 <code>contype = conaffinity = 0</code>，
+<code>ncon</code> 永远是 0。而 <code>mj_geomDistance</code> 还<b>不受父子过滤影响</b>——
+MuJoCo 默认关掉有关节相连的父子碰撞，<b>那恰好是最需要看的一对</b>（门 vs 自己的柜体）。</div>
+</div></div></div>
 
-<h3><span class="id">couplings</span> 与 MuJoCo 的 polycoef 一一对应 <span class="pill p-new">补全</span></h3>
-<p><b>原方案：</b><code>couplings: []</code>——KF2 要核的六项（成员、系数、符号、固定成员、参考相位、
-剩余自由度）<b>一样都没有写法</b>，整项没法实现。</p>
-<pre>couplings:
-  - id: gear_mesh
-    mechanism: any            <span class="c"># equality / tendon / weld 都接受</span>
-    relation:
-      dependent:   gear_small_spin
-      independent: gear_large_spin
-      coefficient: -3.0       <span class="c"># q_小 = -3 × q_大 + 0；负号是因为外啮合齿轮反着转</span>
-      offset:      0.0
-    expected_dof:  1
-    residual_norm: {by: absolute, unit: rad}
-    epsilon:       0.005</pre>
-<div class="why ok"><b>为什么写成「依赖 = 系数 × 独立 + 偏移」。</b>它<b>逐字段对上</b> MuJoCo
-<code>equality/joint</code> 的 <span class="f">q₁ = a₀ + a₁q₂ + …</span>，所以比较是字段对字段，
-<b>没有解释余地</b>。但 <code>mechanism: any</code>——P0 声明的是<b>关系</b>，不是<b>实现方式</b>，
-生成器用固定腱做出同一个关系同样正确。
-<br><br><b>归一化方式必须逐条声明。</b>齿轮的行程常是 ±3 圈（跨度 37.7 rad），
-按相对值算的话 ε=0.02 等于容忍 <b>0.75 rad ≈ 43°</b> 的相位误差，对齿轮毫无意义。</div>
+<!-- KF1 -->
+<div class="band"><h2>KF1 · 关节配置保真度</h2>
+<p>Articulation Specification Fidelity — 9 条</p></div>
+<div class="grid">
 
-<h3><span class="id">asset_states</span> 整机状态 + 容差 <span class="pill p-new">新增</span></h3>
-<p><b>问题：</b><code>joints[].states</code> 是<b>每个关节自己的</b>标签，而 <code>contact_policy</code>
-把它当成<b>整机</b>的属性用。三个自由度采样到 (0.0, 0.40, 0.35) 时——它算不算 "closed"？</p>
-<div class="f-block">q 属于状态 s  ⟺  对 scope 里的每个关节 j:  |q_j − states_j[s]| ≤ τ_rel × span_j
-
-scope = named_parts    只看被声明点名的部件的关节（默认）
-      = all_declaring  所有声明了这个标签的关节</div>
-<p class="why"><b>容差不能省。</b>如果 closed 要求精确相等，连续采样里合格的样本可能<b>一个都没有</b>，
-那条声明就永远不被检查——<b>而这会被读成「通过」</b>。</p>
-
-<h3><span class="id">contact_policy</span> 三个桶 + 优先级 <span class="pill p-rep">替换</span></h3>
-<p><b>原方案：</b><code>allowed</code> / <code>forbidden</code>，但<b>从没说过 allowed 到底在声明什么</b>。</p>
-<div class="why bad"><b>两种读法都是坏的。</b>当成「允许」→ 它<b>永远不会失败</b>，对分数没有任何贡献。
-当成「必须」→ 需要接触容差和状态判定，<b>这两样都不存在</b>。
-结果是：<b>没有任何检查要求声明的止挡真的发生过</b>——一个只靠 <code>range</code> 属性限位、
-全身没有任何几何挡住的机构，和有真止挡的得分完全一样。</div>
-<pre>contact_policy:
-  required:   <span class="c"># 必须：这个状态下要接触，不接触就算失败</span>
-    - {parts: [door, cabinet_body], state: closed, relation: stop_contact}
-  permitted:  <span class="c"># 允许：接触不算违规，不接触也不算失败</span>
-  forbidden:  <span class="c"># 禁止：全程不得穿模超过阈值</span>
-    - {parts: [door, drawer_1], state: all}
-  precedence: required_and_permitted_over_forbidden</pre>
-<p class="why"><b>优先级不是可有可无的。</b>原方案自己的示例就把同一对同时放进了两个桶，
-<b>结果是 S_collision 在采样的起点和终点上没有定义。</b></p>
-
-<h3><span class="id">tolerances</span> 全部写进契约并哈希 <span class="pill p-new">新增</span></h3>
-<p>P3 要求「所有阈值在测试前冻结」，但原契约<b>一个容差字段都没有</b>，13 个没名字的阈值实际上由写代码的人默默决定。</p>
-<pre>tolerances:
-  axis_angle_deg:            15.0     anchor_edge_inset_max:     0.15
-  anchor_center_offset_max:  0.05     travel_scale_min:          0.50
-  follower_drift_m:          0.0005   state_match_relative:      0.02
-  required_contact_m:        0.002    forbidden_penetration_m:   0.001
-  coupling_residual:         0.02
-<span class="c"># tolerances.digest() → sha256 前 16 位，跟着每份结果一起输出</span></pre>
-</section>
-
-<!-- 02 -->
-<section class="panel" id="s2">
-<p class="kicker">02 · P0</p>
-<h2>准入规则 A1–A16：契约在生成之前必须先过这一关</h2>
-<div class="why ok"><b>A1 是最重要的一条，而且有实测依据。</b>
-上一轮用文字部件名去匹配代码里的标识符：70 次报警里 <b>63 次是误报</b>，其中 42 次是「找不到零件」——
-<b>但 7 个真问题里也有 4 个来自同一个信号</b>。有用的和没用的是同一件事，配对 bootstrap 算出的
-Δκ 95% 区间包含零，<b>写个更好的匹配器救不了</b>。
-<br><br>A1 的作用是把「契约写错了」这个可能性<b>在生成之前</b>消掉，让这个信号只剩一种含义。</div>
-<div class="tw"><table>
-<thead><tr><th>规则</th><th>检查什么</th><th>为什么</th></tr></thead><tbody>
-<tr><td><b>A1</b></td><td>任何字段引用的部件/关节 ID 必须已声明</td><td>见上</td></tr>
-<tr><td>A2</td><td>每个必需部件都有 part_geometry</td><td>沿用</td></tr>
-<tr><td>A3</td><td>movable 恰好一条关节声明；fixed / attached 不能有</td><td>与 Gate 对齐</td></tr>
-<tr><td>A4</td><td>attached 在 rigid_attachments 里作为 follower 恰好出现一次</td><td>否则随动检查没有输入</td></tr>
-<tr><td>A5 / A6</td><td>independent_dofs 能解析；耦合的 dependent <b>不能</b>同时被独立驱动</td><td>依赖端的值由耦合算出</td></tr>
-<tr><td>A7</td><td>contact_policy 引用的 state 已定义</td><td>否则那条声明在采样上归不了类</td></tr>
-<tr><td>A8 / A9</td><td>axis 至少给一种写法；numeric 需要已锚定 front</td><td>否则只能记 N/A</td></tr>
-<tr><td><b>A10</b></td><td>slide / free 的 anchor 必须为空；hinge / ball 必须给判定方式</td><td>平移没有作用中心</td></tr>
-<tr><td>A11</td><td>range.unit 与 type 相配；states 落在 range 里</td><td>否则数值没法比</td></tr>
-<tr><td>A12</td><td>接触对必须是两个不同部件；桶和 relation 语义相配</td><td>「允许」不能放进「必须」桶</td></tr>
-<tr><td>A13–A16</td><td>关节不能自己连自己；耦合成员必须也是关节声明；expected_dof 合理；free 关节给警告</td><td></td></tr>
-</tbody></table></div>
-<div class="why"><b>分成两层是有意的。</b><code>loader</code> 只回答「这个文件是不是契约的形状」，
-错了就抛异常并给出字段路径；<code>admission</code> 回答「格式正确的契约能不能被检查」，返回一份报告——
-因为可能同时有好几条。<b>每条规则都配一个测试，只破坏标准契约的一处，断言它被触发。触发不了的规则等于没写。</b></div>
-</section>
-
-<!-- 03 -->
-<section class="panel" id="s3">
-<p class="kicker">03 · 共用机制</p>
-<h2>三件所有检查都要用的东西</h2>
-
-<h3>绑定 <span class="f">b*(P)</span></h3>
-<p>Gate 给出「部件 ID → body ID」。P3 <b>只读，绝不自己猜名字</b>。一个部件常常是好几个 body
-（抽屉是底板加四面墙），<span class="f">b*(P)</span> 取其中在树上是其余那些的祖先的那个。</p>
-
-<h3>参考姿态 <span class="f">q_ref</span></h3>
-<div class="f-block">q_ref[j] = states_j["closed"]，没有就用 "home"，再没有就用 range_j.min
-所有跟几何有关的 KF1 检查都在这一个固定姿态上读数</div>
-<p class="why">这样，<b>两条检查结论不一致时，那是对声明本身的分歧，不是对「当时资产站在哪」的分歧</b>。</p>
-
-<h3>取点 <span class="f">P(part)</span></h3>
-<p>盒子取 8 个角（精确）；其他图元和网格取它局部包围盒的 8 个角——<b>方向是往大了取</b>：
-只会让部件显得更大，不会更小，所以不会因为取点漏掉了部件的一部分而误判它「全在一侧」。</p>
-<pre>rot = geom_xmat[g].reshape(3,3);  origin = geom_xpos[g]
-box:   local = 8 个角 × geom_size[g]
-其他:  local = geom_aabb[g][:3] + 8 个角 × geom_aabb[g][3:]
-world = origin + local @ rot.T</pre>
-
-<h3>距离：为什么不读 <code>mjData.contact</code></h3>
-<div class="why bad"><b>实测：546 条真实资产里，有 <code>&lt;collision&gt;</code> 的是零个。</b>
-所有 geom 编译出来 <code>contype = conaffinity = 0</code>，<code>mjData.ncon</code> <b>永远是 0</b>，
-基于接触点的碰撞检测在这里<b>什么都返回不了</b>。
-<br><br>所以一律用 <span class="f">mj_geomDistance</span>。它不看 contype / conaffinity，
-<b>也不受父子过滤影响</b>——后者才是关键：MuJoCo 默认关掉有关节相连的父子碰撞，
-<b>而那恰好是采样时最需要看的一对</b>（门 vs 自己的柜体）。</div>
-</section>
-
-<!-- 04 -->
-<section class="panel" id="s4">
-<p class="kicker">04 · KF1</p>
-<h2>关节配置保真度：9 条检查</h2>
-
-<h3><span class="id">KF1.parent</span> 父件 <span class="pill p-lit">照做</span></h3>
-<p><b>要判的：</b>这个关节让部件<b>相对</b> P0 指定的那个部件运动。</p>
-<div class="f-block">A(b) = 从 b 沿 body_parentid 往上找，遇到的<b>第一个已绑定部件</b>
+<div class="c"><header><span class="n">parent</span><span class="tag t-lit">照做</span></header><div class="b">
+<div class="f">A(b) = 沿 body_parentid 上溯遇到的
+       <b>第一个已绑定部件</b>
 通过 ⟺ A(b*(part)) = parent</div>
-<pre>observed, steps = binding.nearest_declared_ancestor(child)
-verdict = PASS if observed == joint.parent else FAIL</pre>
-<div class="why"><b>为什么要「最近的已声明祖先」而不是「是不是祖先」。</b>
-挂在上层抽屉下面的下层抽屉，柜体<b>仍然</b>在它的祖先链上——问「声明的父件在不在上面」会放它过去，
-而那正好是「拉开上抽屉会把下抽屉一起拖出来」这个缺陷。
-<br><br>没声明的中间 body <b>直接跳过</b>：生成器会自由插入没名字的连杆，把它当父件会因为一种
-契约根本没提的建模习惯，判负正确的资产。</div>
-<p><b>反例：</b><code>wrong_parent</code>——drawer_2 挂到 drawer_1 上，只改 <code>body_parentid</code> 一个字段。</p>
+<div class="note">不是「是不是祖先」：挂在上抽屉下的下抽屉，柜体<b>仍在</b>祖先链上，
+问「在不在上面」会放过「拉开上抽屉把下抽屉一起拖出来」。未声明的中间 body 透明跳过。</div>
+</div></div>
 
-<h3><span class="id">KF1.type</span> 关节类型 <span class="pill p-lit">照做</span></h3>
-<div class="f-block">μ: slide↦mjJNT_SLIDE, hinge↦mjJNT_HINGE, ball↦mjJNT_BALL, free↦mjJNT_FREE
-通过 ⟺ jnt_type[k] = μ(声明的类型)</div>
-<p class="why"><b>这组里最弱的一条，明说。</b>上一轮语料里关节类型几乎总是对得上，而且
-<b>有 6 条记录声明的类型和提示词一字不差、人还是判了失败</b>。留着是因为它便宜、失败时没有歧义，
-但它归进<b>「读字段」子分数</b>单独报，不和测量类混在一起把后者冲淡。</p>
+<div class="c"><header><span class="n">type</span><span class="tag t-lit">照做</span></header><div class="b">
+<div class="f">μ: slide↦mjJNT_SLIDE, hinge↦mjJNT_HINGE,
+   ball↦mjJNT_BALL,  free↦mjJNT_FREE
+通过 ⟺ jnt_type[k] = μ(声明)</div>
+<div class="note">本组最弱，明说：<b>6 条记录声明与提示词一字不差、人还是判失败</b>。
+归进「读字段」子分数单独报，不冲淡测量类。</div>
+</div></div>
 
-<h3><span class="id">KF1.dof_composition</span> 自由度构成 <span class="pill p-rep">替换原第 4 条</span></h3>
-<div class="f-block">通过 ⟺ body_jntnum[b*(part)] = 1</div>
-<div class="why bad"><b>原方案的第 4 条两半都是永远不会失败的检查。</b>
-「slide 不得产生额外旋转」——MuJoCo 的 slide 按定义就是纯平移；「hinge 的 anchor 在小扰动下保持固定」——
-<code>mj_kinematics</code> 就是<b>按声明的 jnt_pos 算出</b>锚点的。<b>没有任何模型能让这两句失败。</b>
-<br><br>但它们想抓的失败是真的：一个部件挂了 free 关节、或用 slide+hinge 组合假装单自由度，
-运动方式就不是那一个声明的自由度所描述的。<b>数关节个数是模型真的能做错的检查；问 slide 转不转不是。</b></div>
+<div class="c"><header><span class="n">dof_composition</span><span class="tag t-rep">改</span></header><div class="b">
+<div class="f">通过 ⟺ body_jntnum[b*(part)] = 1</div>
+<div class="note bad">原第 4 条两半<b>都永远不会失败</b>：「slide 不得产生旋转」——slide 按定义就是纯平移；
+「hinge 锚点在扰动下固定」——<code>mj_kinematics</code> 就是按声明的 jnt_pos 算出锚点的。
+<b>数关节个数才是模型真能做错的。</b></div>
+</div></div>
 
-<h3><span class="id">KF1.axis_semantic</span> 轴向（语义） <span class="pill p-lit">照做</span></h3>
-<div class="f-block">û = −g / |g|                g = model.opt.gravity（默认 (0,0,−9.81)）
-â = xaxis[k] / |xaxis[k]|     世界系，mj_forward 之后可以直接读
+<div class="c"><header><span class="n">axis_semantic</span><span class="tag t-lit">照做</span></header><div class="b">
+<div class="f">û = −g/|g|            g = opt.gravity
+â = xaxis[k]/|xaxis[k]|   世界系
 c = |â · û|
 
-vertical:    通过 ⟺ c ≥ cos(τ)
-horizontal:  通过 ⟺ c ≤ sin(τ)          τ = axis_angle_deg = 15°</div>
-<p class="why"><b>这是唯一不需要物体坐标系的方向判定</b>，而且<b>整机绕竖直轴转一下结果不变</b>——
-一个转了 90° 的正确柜子不会因此判负。<b>它自己承认看不见更细的方向</b>：抽屉往侧面滑和往外滑一样是水平的。</p>
+vertical   通过 ⟺ c ≥ cos(15°)
+horizontal 通过 ⟺ c ≤ sin(15°)</div>
+<div class="note ok">唯一不需要物体坐标系的方向判定，<b>整机绕竖直轴转不改变结果</b>。
+它自己承认看不见更细的方向：往侧面滑和往外滑都是水平的。</div>
+</div></div>
 
-<h3><span class="id">KF1.axis_admits_motion</span> 轴向（走不走得通） <span class="pill p-new">新增</span></h3>
-<p>更细的方向，唯一不依赖坐标系的证据：<b>往这个方向走得通吗</b>。</p>
-<div class="f-block">d₀ = 在 q_ref 处，部件与父件的最小带符号距离
-
-若 d₀ &lt; −ε:  记 N/A   ← 已经卡在一起时的挡板
-              部件本来就埋在父件里的话，「往哪个方向动会不会撞」没有意义——
-              每个方向都会撞。那是静态几何的账。
+<div class="c"><header><span class="n">axis_admits_motion</span><span class="tag t-new">补</span></header><div class="b">
+<div class="f">d₀ = 部件与父件在 q_ref 的最小带符号距离
+若 d₀ &lt; −ε → <b>N/A</b>（本来就卡在一起，
+              每个方向都会撞，是静态几何的账）
 
 δ = min(0.25 × 行程, 0.05)
-q ← q_ref + δ × (声明的轴向) ; mj_forward
-d₁ = 移动之后的最小带符号距离
+q ← q_ref + δ×声明轴向 ; mj_forward
+通过 ⟺ d₁ ≥ −ε</div>
+<div class="note">更细方向唯一不依赖坐标系的证据：<b>往这个方向走得通吗</b>。
+抓抽屉往侧面滑撞进左墙——<code>axis_semantic</code> 看不见。</div>
+</div></div>
 
-通过 ⟺ d₁ ≥ −ε          ε = forbidden_penetration_m</div>
-<p><b>反例：</b><code>axis_rotated_90</code>——抽屉往侧面滑，撞进左墙。
-<code>axis_semantic</code> 看不见它（两个方向都是水平的），这条能抓住。</p>
+<div class="c"><header><span class="n">anchor</span><span class="tag t-rep">改×2</span></header><div class="b">
+<div class="f">on_edge_of:
+  r_i = (p_i−p₀) − ((p_i−p₀)·â)â
+  s_i = r_i · d          d = 质心径向
+  inset = min(|min s|,|max s|) / (max s − min s)
+  通过 ⟺ inset ≤ 0.15      0=在边上 0.5=正中间
 
-<h3><span class="id">KF1.anchor</span> 锚点 <span class="pill p-rep">替换</span></h3>
-<h4>on_edge_of（门、盖、翻板）</h4>
-<div class="f-block">p₀ = xanchor[k],  â = xaxis[k]/|xaxis[k]|
-r_i = (p_i − p₀) − ((p_i − p₀)·â) â          去掉沿着轴的那部分
-d   = r̄/|r̄|（质心方向）；|r̄| 接近 0 时改用 {r_i} 的主方向并去掉沿轴分量
-s_i = r_i · d
+through_center_of:
+  通过 ⟺ |perp(质心−p₀)| / diag(AABB) ≤ 0.05</div>
+<div class="note bad"><b>换的是量法不是阈值。</b>旧量法「同侧顶点占比」是<b>跳变的</b>：
+门铰链往里挪 1% 读数从 1.000 直接掉到 0.500，挪 50% <b>还是 0.500</b>——盒子只有 8 个角，
+轴线进内部就永远 4 对 4。<b>而且排序反了</b>：摄像机读 0.50（最差）实际只往里 3.9%；
+钻床读 0.80 实际 27%。新量法注入验证<b>线性跟踪位移，误差 &lt; 0.005</b>。<br>
+阈值 0.15 <b>从硬件推</b>：合页轴 15–25 mm、门宽 400–800 mm，往里 2–6%。<b>不从样本挑。</b></div>
+</div></div>
 
-inset = min(|min s|, |max s|) / (max s − min s)
+<div class="c"><header><span class="n">range_and_reference</span><span class="tag t-rep">合并</span></header><div class="b">
+<div class="f">通过 ⟺ |span_model − span_declared| / span_declared
+                    ≤ state_match_relative
 
-通过 ⟺ inset ≤ anchor_edge_inset_max = 0.15
-        0 = 轴线正好在边上      0.5 = 轴线在正中间</div>
-<div class="why bad"><b>这条被换过一次，而且换掉的是「量法」不是「阈值」。</b>
-最早的量法是「同侧顶点占比 ≥ 0.95」。校准发现它是<b>跳变的</b>：
-把已知正确的门铰链往里挪 1%，读数从 1.000 <b>直接掉到 0.500</b>；挪 2%、5%、50% <b>读数全是 0.500</b>——
-一个盒子只有 8 个角，轴线一旦进到内部就永远是 4 对 4。真实资产读到的
-0.69 / 0.75 / 0.83 / 0.91 <b>只反映几何被拆成了几块，不反映轴线在哪</b>。
-<br><br>更麻烦的是<b>它把好坏排反了</b>：摄像机的门读 0.50（全场最差），实际只往里 3.9%，是最干净的铰链；
-钻床工作台读 0.80（看着还行），实际往里 27%，是真问题。
-<br><br>新量法经注入验证，<b>跟位移线性对应，误差小于 0.005</b>，且与几何拆成几块无关。
-阈值 0.15 <b>是从硬件推的</b>：合页轴 15–25 mm、门宽 400–800 mm，往里 2–6%，所以 15% 已经很宽松，
-25% 肉眼就看得出不是边缘铰链。<b>没有从样本里挑</b>——那是拿尺子迁就被量的东西。</div>
-<h4>through_center_of（轮子、齿轮、旋钮）</h4>
-<div class="f-block">offset = |perp(部件质心 − p₀)|
-通过 ⟺ offset / diag(AABB(部件)) ≤ anchor_center_offset_max = 0.05</div>
-<p class="why">归一化用<b>部件自己</b>的对角线，不用整机对角线——上一轮 607 条里只有 19 条能算出整机对角线。</p>
+jnt_limited[k] = 0（continuous）→ N/A</div>
+<div class="note"><code>states.closed</code>、参考构型、<code>range.min</code> <b>常是同一个数</b>，
+原方案列成三件事分别核对。同一个数算三次，<b>正是 P0 自己禁止的重复计分</b>。</div>
+</div></div>
 
-<h3><span class="id">KF1.range_and_reference</span> 行程与参考 <span class="pill p-rep">合并</span></h3>
-<div class="f-block">span_model = jnt_range[k][1] − jnt_range[k][0]
-通过 ⟺ |span_model − span_declared| / span_declared ≤ state_match_relative
-
-jnt_limited[k] = 0（URDF 的 continuous）→ 记 N/A</div>
-<p class="why"><b>算一条，不是四条。</b><code>states.closed</code>、参考构型、<code>range.min</code>
-<b>常常是同一个数</b>，而原方案把它们列成三件要分别核对的事。同一个数算三次，
-<b>正是 P0 自己那条「同一信息不重复计算」所禁止的</b>。</p>
-
-<h3><span class="id">KF1.rigid_follower</span> 刚性随动 <span class="pill p-new">新增</span></h3>
-<div class="f-block">R(b) = {b} ∪ { c : parent(c) ∈ R(b) 且 body_jntnum[c] = 0 }   不跨过任何关节能走到
+<div class="c"><header><span class="n">rigid_follower</span><span class="tag t-new">补</span></header><div class="b">
+<div class="f">R(b) = {b} ∪ { c : parent(c) ∈ R(b)
+                   且 body_jntnum[c] = 0 }
 通过 ⟺ b*(follower) ∈ R(b*(leader))</div>
-<p class="why"><b>纯图上走一趟，不花钱，抓的是一个「看一眼看不出来」的缺陷</b>：
-把手螺在柜体上而不是抽屉上，<b>在参考姿态下渲染出来一模一样</b>，只有抽屉拉开时才露馅。
-只在一个姿态上评估的检查看不见它，图上走一趟就能。</p>
+<div class="note ok">纯图上走一趟，抓「看一眼看不出来」的缺陷：把手螺在柜体上而不是抽屉上，
+<b>参考姿态渲染一模一样</b>，只有拉开时才露馅。</div>
+</div></div>
 
-<h3><span class="id">KF1.travel_scale</span> 假关节 <span class="pill p-rep">替换「可见部件不动」</span></h3>
-<div class="f-block">D = diag(AABB(<b>这个部件自己绑定的 geom</b>))
-通过 ⟺ D / 行程 ≥ travel_scale_min = 0.50        只对 slide</div>
-<div class="why bad"><b>原方案写的是：</b>「不出现 qpos 变了而<b>可见</b>部件不动」——
-<b>「可见」需要渲染，而 P3 自己的适用范围禁止渲染。</b>它点名了人最容易说出口的那种失败
-（「我拉开了，什么都没动」），<b>却没有能用的算子</b>。
-<br><br>要抓的是：body 挂着声明的关节、行程也对，<b>但几乎没有几何</b>，看得见的抽屉其实是不动部件的 geom。
-<b>位移测不出来</b>——那个假部件把 0.18 m 走完了。<b>能测的是尺寸</b>：滑 0.18 m 而只有 8 mm 宽的东西，不是抽屉。
-归一化用<b>关节自己声明的行程</b>，不用整机对角线。</div>
-<p class="why ok"><b>量的是「部件自己」而不是「它带动的一切」</b>——那个假部件上挂着一个真的
-0.16 m 把手，整个刚性子树 0.39 m 宽，而契约点名的那个部件只有 <b>0.0139 m</b>。</p>
-</section>
+<div class="c"><header><span class="n">travel_scale</span><span class="tag t-rep">改</span></header><div class="b">
+<div class="f">D = diag(AABB(<b>部件自己绑定的 geom</b>))
+通过 ⟺ D / 行程 ≥ 0.50            仅 slide</div>
+<div class="note bad">原文是「qpos 变了而<b>可见</b>部件不动」，<b>而 P3 自己禁止渲染</b>。
+要抓的是：挂着关节、行程也对，<b>但几乎没有几何</b>。<b>位移测不出来</b>——假部件把 0.18 m 走完了；
+<b>能测的是尺寸</b>：滑 0.18 m 而只有 8 mm 宽的不是抽屉。<br>
+量部件<b>自己</b>而非整个刚性子树——那个假部件挂了个真把手，子树 0.39 m，部件本身 <b>0.0139 m</b>。</div>
+</div></div>
 
-<!-- 05 -->
-<section class="panel" id="s5">
-<p class="kicker">05 · KF2</p>
-<h2>机械耦合保真度：4 条检查</h2>
-<div class="why bad"><b>先说公式为什么必须改。</b>
-原公式 <span class="f">KF2 = mean_g 1[max_q |r| ≤ ε]</span> 读的是残差，
-<b>而残差只有在模型真的建了约束对象时才存在</b>。生成器什么都没写 → 没有残差 →
+</div>
+
+<!-- KF2 -->
+<div class="band"><h2>KF2 · 机械耦合保真度</h2>
+<p>Coupling Fidelity — 4 条</p></div>
+<div class="grid">
+
+<div class="c"><header><span class="n">公式本身</span><span class="tag t-rep">改</span></header><div class="b">
+<div class="f">原式  KF2 = mean_g 1[max_q |r| ≤ ε]
+现式  KF2 = mean_g <b>1[bound(g)]</b> · 1[max_q |r| ≤ ε]</div>
+<div class="note bad">残差只在模型真建了约束时才存在。生成器什么都没写 → 没有残差 →
 <b>空集取 max 让判断为真</b> → <b>最差的模型得 1.0</b>。
-<br><br>正文里那句「检查 coupling 是否 active」本来是护栏，但<b>真正落地的是公式</b>。</div>
-<div class="f-block"><b>KF2 = mean_g  1[bound(g)] × 1[ max_q |r_g,norm(q)| ≤ ε_g ]</b></div>
+正文那句「检查 coupling 是否 active」是护栏，但<b>落地的是公式</b>。</div>
+</div></div>
 
-<h3>前提：URDF 的 <code>&lt;mimic&gt;</code> 会被 MuJoCo 悄悄丢掉</h3>
-<div class="why"><b>实测：7 条真实资产声明了 <code>&lt;mimic&gt;</code>，加载后 <code>neq</code> 全是 0</b>
-（含传动比 −1 和 0.777778 的齿轮组、14 片联动的百叶窗、两个反向对转刀盘的碎纸机）。
-<b>不处理的话 KF2 会把这 7 条全判 0</b>，理由是「没有实现耦合的约束」，可它们在 URDF 里<b>写得完全正确</b>——
-<b>那等于让资产替读取方的缺陷背锅。</b>
-<br><br>两条走 XML 的路都不通（URDF 里的 <code>&lt;mujoco&gt;&lt;equality&gt;</code> 被忽略；
-<code>mj_saveLastXML</code> 存读一轮会丢几何），所以改成<b>在编译前编辑 MjSpec</b>。
-URDF 的 <span class="f">q_dep = k·q_ind + c</span> 和 polycoef 逐字段对应，翻译没有解释余地，
-每次翻译都记进出处字段。</div>
+<div class="c"><header><span class="n">前提：mimic 被丢掉</span><span class="tag t-new">补</span></header><div class="b">
+<div class="f">实测 7 条真实资产声明 &lt;mimic&gt;，
+加载后 neq 全是 0
 
-<h3><span class="id">KF2.bound</span></h3>
-<div class="f-block">E(g) = { e : eq_type[e] = mjEQ_JOINT 且 {eq_obj1id[e], eq_obj2id[e]} = {dep, ind} }
-通过 ⟺ 存在 e ∈ E(g) 使 eq_active0[e] 为真</div>
-<p class="why"><b>它绝不从「两个关节碰巧一起动」推出耦合存在。</b>没有东西强制的关系不是关系，
-不管某个姿态下数字多好看。</p>
+修法：编译前编辑 MjSpec
+      q_dep = k·q_ind + c  ↔  polycoef 逐字段对应
+      每次翻译记进 provenance</div>
+<div class="note">不处理的话 KF2 把这 7 条全判 0，理由是「没有约束」，可它们在 URDF 里<b>写得完全正确</b>——
+<b>等于让资产替读取方的缺陷背锅</b>。（含传动比 −1 的齿轮组、14 片联动百叶窗、反向对转碎纸机。）</div>
+</div></div>
 
-<h3><span class="id">KF2.coefficient</span></h3>
-<div class="f-block">MuJoCo:  q_{obj1} = a₀ + a₁·q_{obj2} + a₂q² + a₃q³ + a₄q⁴
+<div class="c"><header><span class="n">bound</span></header><div class="b">
+<div class="f">在关节等式图上找 ind → dep 的<b>最短链</b>
+  边: q_o1 = a₀ + a₁q_o2   (a₁≠0 时含反向边)
+通过 ⟺ 存在通路，且链上每条等式 active</div>
+<div class="note">绝不从「两个关节碰巧一起动」推出耦合。<br>
+<b>走链而非只看直接约束</b>：契约写 <code>mechanism: any</code>，声明的是关系不是实现。
+手套箱把两根连杆都以 0.55 挂在门上——<b>它们确实精确 1:1</b>，只看直接约束会把正确机构判成缺失。</div>
+</div></div>
 
-obj1 = dep:   ĉ = a₁,      ô = a₀
-obj1 = ind:   ĉ = 1/a₁,    ô = −a₀/a₁      角色互换 —— 同一个机构，不判负
+<div class="c"><header><span class="n">coefficient</span></header><div class="b">
+<div class="f">沿链复合：斜率相乘，偏移累加
+  q_v = m_e(m_u·q_ind + b_u) + b_e
 
-通过 ⟺ |ĉ−c|/|c| ≤ ε  且  |ô−o| ≤ ε  且  max|a₂..a₄| ≤ 1e−9</div>
-<p class="why"><b>符号是比值的一部分，不是约定。</b>外啮合齿轮反着转，所以声明 −3 却建成 +3
-<b>描述的是一个造不出来的机构</b>，这条会点名它「符号反了」，而不是报一个百分比。</p>
+通过 ⟺ |ĉ−c|/|c| ≤ ε
+     且 |ô−o| ≤ ε
+     且 max|a₂..a₄| ≤ 1e−9</div>
+<div class="note"><b>符号是比值的一部分，不是约定。</b>外啮合齿轮反转，声明 −3 建成 +3
+<b>描述的是造不出来的机构</b>，这条点名「符号反了」而不是报百分比。</div>
+</div></div>
 
-<h3><span class="id">KF2.expected_dof</span></h3>
-<div class="f-block">n = Σ_{j∈成员} dof(jnt_type[j])       free=6, ball=3, slide=1, hinge=1
-m = #{ e : eq_type=JOINT 且 active 且 {obj1,obj2} ⊆ 成员 }
-通过 ⟺ n − m = expected_dof</div>
-<p class="why ok"><b>它和 bound 从两个独立方向抓同一个缺陷</b>：bound 读模型的约束表，
-expected_dof 数还剩几个自由度。<b>骗过一个的模型，得换一种方式才能骗过第二个。</b>
-<br><br>（数行数而不是取 efc_J 的秩，前提是这些行互相独立——单条等式必然成立；两条冗余等式会被高估，
-这一点记为局限而不是掩盖，而语料里不会出现，因为耦合来自 <code>&lt;mimic&gt;</code>，
-MuJoCo 每个关节只允许一条。）</p>
+<div class="c"><header><span class="n">expected_dof</span></header><div class="b">
+<div class="f">n = Σ_{j∈成员} dof(jnt_type[j])
+    free=6 ball=3 slide=1 hinge=1
 
-<h3><span class="id">KF2.residual</span></h3>
-<div class="f-block">对 q 取 linspace(range.min, range.max, 33)   含端点、奇数个所以含中点
+在 <b>active 等式图</b>上求成员的连通分量数 k
+通过 ⟺ n − (成员数 − k) = expected_dof</div>
+<div class="note ok">和 bound <b>从两个独立方向抓同一缺陷</b>：bound 读约束表，这条数剩几个自由度。
+<b>骗过一个还得换方式骗第二个。</b><br>
+数分量而非数等式行，也修掉了旧版「两条冗余等式扣两个自由度」的高估。</div>
+</div></div>
+
+<div class="c"><header><span class="n">residual</span></header><div class="b">
+<div class="f">for q in linspace(min, max, 33):
     qpos[ind] ← q
-    qpos[dep] ← c·q + o             ← 把模型摆到「它应该在的位置」
-    mj_forward(m, d)                ← 只算位置，不步进，不涉及质量/摩擦/阻尼
-    rows = { i : efc_type[i]=EQUALITY 且 efc_id[i]=e }
-    r(q)  = max |efc_pos[rows]|
+    qpos[中间关节] ← <b>模型</b>说的位置
+    qpos[dep] ← <b>契约</b>说的 c·q + o
+    mj_forward                 位置层，不步进
+    r(q) = max |efc_pos[链上各行]|
 
-R = max_q r(q) / N        N ∈ {依赖端行程, 独立端行程, 绝对值}
-通过 ⟺ R ≤ ε_g</div>
-<div class="tw"><table><thead><tr><th>齿轮箱构型</th><th class="num">max |efc_pos|</th><th>含义</th></tr></thead><tbody>
-<tr><td>正确的 −3</td><td class="num hi"><b>0.000000</b></td><td>两种描述完全一致</td></tr>
-<tr><td>建成 −2</td><td class="num">6.283</td><td>输入转一圈，输出差一整圈</td></tr>
-<tr><td>建成 +3</td><td class="num lo"><b>37.698</b></td><td>差六圈——符号错比齿比错更离谱，读数也确实更大</td></tr>
-<tr><td>没有约束</td><td class="num">N/A</td><td>由 bound 判负，<b>不由这条报「齿比错了」</b></td></tr>
+R = max_q r(q) / N ;  通过 ⟺ R ≤ ε</div>
+<div class="tw"><table><tbody>
+<tr><td>正确 −3</td><td class="num hi"><b>0.000000</b></td></tr>
+<tr><td>建成 −2</td><td class="num">6.283</td></tr>
+<tr><td>建成 +3</td><td class="num lo"><b>37.698</b></td></tr>
+<tr><td>无约束</td><td class="num">N/A → bound 判负</td></tr>
 </tbody></table></div>
-<p class="why">没有约束时，coefficient 和 residual <b>不判，记 N/A</b>。对一个根本不存在的关系报「齿比错了」
-<b>是把缺陷说错了名字</b>——缺失是 bound 的账。</p>
-</section>
+<div class="note">对根本不存在的关系报「齿比错了」<b>是把缺陷说错名字</b>——缺失是 bound 的账。</div>
+</div></div>
 
-<!-- 06 -->
-<section class="panel" id="s6">
-<p class="kicker">06 · KF3</p>
-<h2>四层采样：结果固定、成本可控、可查</h2>
-<p><b>原方案只写了「确定性的可行 q 采样」，没有任何采样规则。</b>示例资产 3 个自由度，
-满网格是 33³ = <b>35,937</b> 个姿态，且随自由度<b>指数</b>增长（6 个自由度 = 13 亿）。
-每个自由度单独扫很便宜，但对「两个抽屉同时拉开才会撞」<b>完全看不见</b>。</p>
-<div class="tw"><table>
-<thead><tr><th>层</th><th>内容</th><th>换来什么</th><th class="num">柜子成本</th></tr></thead><tbody>
-<tr><td>参考</td><td>q_ref</td><td>基准</td><td class="num">1</td></tr>
-<tr><td>① 逐自由度</td><td>每个关节 33 个点，其余留在参考姿态</td><td>单个动作会撞到的东西——绝大多数</td><td class="num">99</td></tr>
-<tr><td>② 成对网格</td><td>9×9，<b>只对包围盒可能相交的那些对</b></td><td>互相配合才出现的失败</td><td class="num">243</td></tr>
-<tr><td>③ 状态组合</td><td>声明的语义状态全组合 2^d（d&gt;12 时封顶）</td><td>人真正命名的那些姿态，精确访问</td><td class="num">8</td></tr>
-<tr><td>④ Halton 填充</td><td>256×d 个点</td><td>规整的采样会跨过去的东西</td><td class="num">768</td></tr>
-<tr><td colspan="3"><b>合计</b></td><td class="num"><b>1,119</b></td></tr>
+</div>
+
+<!-- KF3 -->
+<div class="band"><h2>KF3 · 可行运动一致性</h2>
+<p>Feasible Motion Consistency — 四层采样 + 3 条</p></div>
+<div class="grid">
+
+<div class="c"><header><span class="n">四层采样</span><span class="tag t-new">补</span></header><div class="b">
+<p>原方案只写「确定性可行 q 采样」，<b>没有采样规则</b>。3 自由度满网格 33³ = 35,937，6 自由度 13 亿。</p>
+<div class="tw"><table><thead><tr><th>层</th><th>内容</th><th class="num">柜子</th></tr></thead><tbody>
+<tr><td>①</td><td>逐自由度 33 点</td><td class="num">99</td></tr>
+<tr><td>②</td><td>成对 9×9，仅包围盒可能相交的对</td><td class="num">243</td></tr>
+<tr><td>③</td><td>声明状态全组合 2^d</td><td class="num">8</td></tr>
+<tr><td>④</td><td>Halton 填充 256×d</td><td class="num">768</td></tr>
+<tr><td colspan="2"><b>合计</b>（满网格 35,937）</td><td class="num"><b>1,119</b></td></tr>
 </tbody></table></div>
-<h4>② 的筛选判据——「成本可控」就来自这里</h4>
-<div class="f-block">B(j) = ⋃_{v ∈ {lo, 中点, hi}} AABB_保守( subtree(child(j)) 在 q_j=v 时 )
-pad  = 0.05 × max( diag B(a), diag B(b) )
-若 B(a) 与 B(b) 各自胀 pad 之后仍不相交 → 跳过这一对，并<b>写进报告</b></div>
-<p class="why">用往大了取的包围盒（外接球半径）是有意选的方向：高估的代价是白扫一对，
-低估的代价是<b>漏掉这一层存在的理由</b>。跳过了哪些对写进 <code>pairs_skipped</code>——
-<b>悄悄少扫了，读起来和全扫过一模一样。</b></p>
-<h4>④ 用 Halton，不用 Sobol，更不用随机</h4>
-<div class="f-block">φ_b(k) = Σ_{i≥0} d_i(k) × b^(−i−1)        d_i(k) = k 写成 b 进制后第 i 位
-第 k 个点的第 j 维 = φ_{p_j}(k)          p = (2,3,5,7,11,13,…)</div>
-<p class="why"><b>没有种子可设，因为压根没有抽签</b>——第 k 个点是 k 的固定函数。
-分数在两次运行之间会变的话，任何回归都和噪声分不开。
-（Halton 到十维以上相关性变差，所以它是<b>补充</b>前面三层，不单独承担覆盖。这点记在代码里。）</p>
-<h4>两个容易搞反的地方</h4>
-<p class="why"><b>采样区间取契约声明的 range，不取模型的</b>——用模型的区间等于把搜索悄悄缩到
-资产恰好允许的范围，一个把行程写小的资产反而被扫得更松（写错是 KF1 的账）。
-<br><br><b>依赖关节的值由契约的耦合关系算出，不由模型的约束算出</b>——把模型摆到 P0 说它该在的位置，
-<b>它自己的机构在那儿同不同意，是 KF2 的残差要回答的。</b></p>
-</section>
+<div class="f">② 剪枝: B(j) = ⋃_{v∈{lo,mid,hi}} AABB_保守(subtree)
+   pad = 0.05 × max(diag B(a), diag B(b))
+   不相交 → 跳过，<b>并写进 pairs_skipped</b>
 
-<!-- 07 -->
-<section class="panel" id="s7">
-<p class="kicker">07 · KF3</p>
-<h2>可行运动一致性：3 条检查</h2>
-<div class="why bad"><b>先说原方案的「运动有效性」为什么大部分被换掉。</b>
-「closed/open/中间姿态可达」「轨迹连续」「相对位姿符合关节语义」——
-在编译好的 mjModel 上<b>全是正向运动学自带的性质</b>，而正向运动学按构造就是精确且连续的。
-<b>把姿态写进 qpos 永远成功。没有资产能让它们失败。</b>
-<br><br>能失败的是<b>到那儿的路上会不会撞自己</b>，所以「可达」被改写成
-<b>「在不产生禁止穿模的前提下可达」</b>——那才是关于资产的问题。</div>
+④ Halton: φ_b(k) = Σ d_i(k)·b^(−i−1)
+   第 k 点是 k 的固定函数，<b>没有种子</b></div>
+<div class="note">采样区间取<b>契约</b>的 range 不取模型的——否则把搜索悄悄缩到资产恰好允许的范围。
+依赖关节由<b>契约</b>的耦合算出——<b>模型自己同不同意是 KF2 的残差要答的</b>。</div>
+</div></div>
 
-<h3><span class="id">KF3.forbidden_pair</span> 禁止对</h3>
-<div class="f-block">Q = 采样点集合
-exempt(q, 对) = 存在一条 required/permitted 声明，针对同一对，且 q 属于它声明的状态
-pen(q) = max(0, −该对在 q 处的最小带符号距离)
+<div class="c"><header><span class="n">motion validity</span><span class="tag t-rep">改</span></header><div class="b">
+<div class="note bad">原方案的「closed/open 可达」「轨迹连续」「相对位姿符合关节语义」
+<b>全是正向运动学自带的性质</b>，而 FK 按构造精确且连续。<b>把姿态写进 qpos 永远成功。</b></div>
+<div class="f"><b>state_reachability</b>（重写后）
+通过 ⟺ max_{q∈Q_s} max_{禁止对} pen(q) ≤ ε_pen
 
-这一对通过 ⟺ max_{q ∈ Q, 非 exempt} pen(q) ≤ forbidden_penetration_m
+不是「可不可达」——那是采样器的性质；
+是「<b>能不能干净地停在那个状态</b>」</div>
+</div></div>
 
-S_forbidden = 通过的禁止对数 / <b>能算的禁止对数</b>
-能算的对数 = 0 → <b>记 N/A，不是 1.0</b></div>
-<div class="why"><b>按对计分，不按样本。</b>一千个姿态里有一个深度穿模，<b>那是一对坏了</b>。
-除以样本数会读成 <b>0.99997</b>——<b>同一个缺陷会随着采样密度在四个数量级之间移动</b>。
-姿态是<b>证据</b>（报出第一个出问题的 q），不是分母。</div>
-<p><b>反例 <code>swept_interference</code>：</b>在门的扫过区域里放一个支架。</p>
-<div class="f-block">门开角     与柜体最小间距
-   0°       +0.00000
-  20°       +0.00000
-  25°       −0.00509  ✗
-  30°       −0.02791  ✗
-  35°       −0.01119  ✗
-  40°       +0.00000
-  90°       +0.00000
+<div class="c"><header><span class="n">collision validity</span><span class="tag t-lit">照做</span></header><div class="b">
+<div class="f"><b>forbidden_pair</b>
+pen(q) = max(0, −最小带符号距离)
+该对通过 ⟺ max_{q∈Q, 非exempt} pen(q) ≤ ε_pen
 
-<b>两个端点都干净，只在中间撞。</b>任何只在声明状态上检查的做法都会判它完美。</div>
+S = 通过对数 / <b>能算的对数</b>
+能算 = 0 → <b>N/A，不是 1.0</b>
 
-<h3><span class="id">KF3.required_contact</span> 必须接触</h3>
-<div class="f-block">Q_s = { q ∈ Q : q 属于状态 s }
-通过 ⟺ min_{q ∈ Q_s} d(a, b) ≤ required_contact_m
-Q_s 为空 → 记 N/A（<b>从没被评估过的声明不等于被满足的声明</b>）</div>
-<p class="why">这就是旧 <code>allowed</code> 桶里那半「永远不会失败」的东西被改成的样子。
-作为「必须」，它抓的是<b>只靠 <code>range</code> 属性限位、全身没有几何挡住的机构</b>——
-<b>那正是「真机构」和「只是声明了」的区别</b>。标准柜子最初就有这个毛病，加了前挡边才修好。</p>
+<b>required_contact</b>
+通过 ⟺ min_{q∈Q_s} d(a,b) ≤ ε_contact
+Q_s = ∅ → N/A</div>
+<div class="note"><b>按对计分不按样本</b>：1000 个姿态里 1 个深穿模是<b>一对坏了</b>，
+除以样本数读成 0.99997——<b>同一缺陷随采样密度移动四个数量级</b>。姿态是证据，不是分母。</div>
+<div class="f">反例 swept_interference（门与柜体间距）
+  0° +0.00000    25° <b>−0.00509</b>    40° +0.00000
+ 20° +0.00000    30° <b>−0.02791</b>    90° +0.00000
+<b>两端干净，只在中间撞</b> —— 只查声明状态会判它完美</div>
+</div></div>
 
-<h3><span class="id">KF3.state_reachability</span> 状态可达</h3>
-<div class="f-block">通过 ⟺ max_{q ∈ Q_s} max_{禁止对, 非 exempt} pen(q) ≤ forbidden_penetration_m</div>
-<p class="why">不是问「状态可不可达」——那是采样器的性质，不可能失败。
-是问<b>「能不能干净地停在那个状态」</b>。</p>
-</section>
+</div>
 
-<!-- 08 -->
-<section class="panel" id="s8">
-<p class="kicker">08 · 打分与报告</p>
-<h2>让判定能被追问</h2>
-<div class="f-block">score(R) = |{ r ∈ R : 通过 }| / |{ r ∈ R : 不是 N/A }|
-分母 = 0  →  <b>None</b>，不是 1.0，也不是 0.0</div>
-<p class="why">两个极端都是在为一个没人测过的维度<b>编一个结果出来</b>。
-分母为空的指标不是「测到了一个完美的资产」，是「什么都没测到」。</p>
-<h4>三种结论，不是两种</h4>
-<p>通过 / 失败 / <b>N/A</b>。N/A 必须存在，因为另一种做法更糟：
-<b>工具没法评估的声明记成通过，和它评估过并判定满足，完全分不开</b>。
-上一个项目把读不出来的字段当成缺失的字段，<b>等于把读取方的缺口算到了资产头上</b>。</p>
-<h4>报告拒绝写出三种会误导人的形状</h4>
-<div class="tw"><table><thead><tr><th>拒绝</th><th>为什么</th></tr></thead><tbody>
-<tr><td>判了失败但没写理由</td><td>没法被追问的判定是一句话，不是证据</td></tr>
-<tr><td>有结论但没有测量值</td><td>同上</td></tr>
-<tr><td><b>记了 N/A 但没说读不到什么</b></td><td><b>扫表格的人分不清「没写理由的 N/A」和「通过」</b></td></tr>
-</tbody></table></div>
-<h4>每份报告必带出处和覆盖</h4>
-<pre>provenance: {inertia_synthesized, mimics_translated, distance_backend, notes}
-coverage:   {samples, by_layer, pairs_swept, <b>pairs_skipped</b>, scan_points, …}
-tolerance_digest: sha256[:16]</pre>
-<p class="why"><b>出处：</b>没人应该靠信任来相信「合成的惯量」和「补回来的耦合」没有混进分数。
-<b>覆盖：</b>一个悄悄跳过一半姿态空间的采样计划，读起来和全扫过的一模一样。</p>
-<h4>KF1 按「怎么判出来的」分开报</h4>
-<div class="f-block">KF1.declared = score(读字段类: type, range_and_reference)
-KF1.measured = score(其余全部)</div>
-<p class="why">上一轮语料里读字段类几乎全通过，混在一起会把<b>真正会变的那些淹掉</b>。
-实测：<code>range_too_small</code> 上 declared=0.83 / measured=1.00，
-<code>hinge_through_middle</code> 上正好反过来。</p>
-</section>
+<!-- 报告 -->
+<div class="band"><h2>报告 · Gate 通过率与三维 Kinematic Profile</h2></div>
+<div class="grid">
 
-<!-- 09 -->
-<section class="panel" id="s9">
-<p class="kicker">09 · 验证</p>
-<h2>13 份标准资产：缺陷是人为造的，答案已知</h2>
-<div class="why ok"><b>为什么必须有它们。</b>拿真实资产跑出来 0.87——<b>这个数对不对没人知道</b>。
-而最糟的情况是<b>一条永远不会失败的检查</b>：它在所有资产上都输出「通过」，
-<b>看起来像「资产都挺好」，不像「代码坏了」</b>。真实资产本来大部分就是通过的，两者长得一模一样。
-<b>没有已知的坏输入，这种检查根本看不出来。</b></div>
-<div class="f-block">资产                        KF1    KF3   查出来的
-cabinet_correct            1.00   1.00   —
-wrong_parent               0.96   1.00   KF1.parent
-wrong_joint_type           0.91   0.89   KF1.type + range（单位随类型变）
-hinge_through_middle       0.96   1.00   KF1.anchor
-axis_rotated_90            0.96   1.00   KF1.axis_admits_motion
-range_too_small            0.96   1.00   KF1.range_and_reference
-detached_follower          0.96   1.00   KF1.rigid_follower
-fake_joint_decoy_geom      0.95   1.00   KF1.travel_scale
-door_axis_horizontal       0.91   0.89   KF1.axis_semantic + anchor
-swept_interference         1.00   0.89   KF3.forbidden_pair
+<div class="c"><header><span class="n">score</span><span class="tag t-rep">改</span></header><div class="b">
+<div class="f">score(R) = |{通过}| / |{不是 N/A}|
+分母 = 0 → <b>None</b>，不是 1.0 也不是 0.0
 
-gearbox_correct            KF2=1.00   —
-gearbox_wrong_ratio        KF2=0.50   KF2.coefficient + residual
-gearbox_wrong_sign         KF2=0.50   同上（符号反了）
-gearbox_missing_coupling   KF2=<b>0.00</b>   KF2.bound + expected_dof   ← 原公式会给 1.00</div>
-<p><b>每条检查要过三关</b>，不是两关：正确件上不响 · 自己的反例上响 · <b>别人的反例上不响</b>。
-第三关是「一条检查」和「烟雾报警器」的分界——什么坏了都响的检查没有查出父件错了，只查出「有东西不一样」。</p>
-<p>反例存成「对正确件的最小修改」（120 条逐检查的预期写在清单里），所以缺陷是<b>能读的 diff</b>。
-<b>匹配不到任何东西的替换会直接报错</b>——否则「反例」就和对照件一模一样，
-拿它测出来的检查看着可靠、实际什么都没查。</p>
-<div class="why"><b>光是把正确件建出来，就当场抓到 5 个 bug</b>（真实资产一个都发现不了）：
-loader 用子串搜 <code>&lt;inertial</code> 而注释里正好写了这几个字、包围盒用外接球高估了一整个半对角线、
-门轴绕 +z 转导致<b>往柜子里面开、穿进去 0.040 m</b>、门把手埋在自己门板里，以及——
-<b>对照件本身有「只靠 range 限位、没有几何挡住门」的问题，正是 required_contact 要抓的那类。</b></div>
-</section>
+KF1.declared = score(读字段类)
+KF1.measured = score(其余)</div>
+<div class="note">两个极端都是<b>为没人测过的维度编个结果</b>。空分母不是「完美资产」，是「什么都没测到」。<br>
+拆开报是因为读字段类几乎全通过，混在一起会<b>把真正会变的淹掉</b>。</div>
+</div></div>
 
-<!-- 10 -->
-<section class="panel" id="s10">
-<p class="kicker">10 · 实测</p>
-<h2>十条真实记录：ID 与结果</h2>
-<p>代码和契约<b>都在打开这些资产之前冻结</b>（哈希存在 <code>contracts/pilot/FROZEN.json</code>，
-提交时间早于任何一次评测）。下面是原样的输出。</p>
+<div class="c"><header><span class="n">三态与必带字段</span><span class="tag t-new">补</span></header><div class="b">
+<div class="f">通过 / 失败 / <b>N/A</b>
+
+报告拒绝写出：
+  判负但没写理由
+  有结论但没有测量值
+  <b>记 N/A 但没说读不到什么</b>
+
+必带 provenance {合成惯量, 翻译的 mimic, 距离后端}
+必带 coverage   {samples, by_layer, <b>pairs_skipped</b>}
+必带 tolerance_digest</div>
+<div class="note">N/A 必须存在：<b>没法评估的声明记成通过，和评估过并判定满足，完全分不开</b>。
+上一个项目把读不出的字段当成缺失的字段，<b>把读取方的缺口算到了资产头上</b>。</div>
+</div></div>
+
+</div>
+
+<!-- 验证 -->
+<div class="band"><h2>验证 · 13 份标准资产，缺陷是人造的</h2>
+<p>每条检查过三关：正确件不响 · 自己的反例响 · <b>别人的反例不响</b>（第三关分开「诊断」和「烟雾报警器」）</p></div>
+<div class="grid wide"><div class="c"><div class="b">
+<div class="f">cabinet_correct          KF1 1.00  KF3 1.00   —
+wrong_parent             KF1 0.96             KF1.parent
+wrong_joint_type         KF1 0.91  KF3 0.89   KF1.type + range
+hinge_through_middle     KF1 0.96             KF1.anchor
+axis_rotated_90          KF1 0.96             KF1.axis_admits_motion
+range_too_small          KF1 0.96             KF1.range_and_reference
+detached_follower        KF1 0.96             KF1.rigid_follower
+fake_joint_decoy_geom    KF1 0.95             KF1.travel_scale
+door_axis_horizontal     KF1 0.91  KF3 0.89   KF1.axis_semantic + anchor
+swept_interference       KF1 1.00  KF3 0.89   KF3.forbidden_pair
+
+gearbox_correct          KF2 1.00   —
+gearbox_wrong_ratio      KF2 0.50   coefficient + residual
+gearbox_wrong_sign       KF2 0.50   同上（符号反）
+gearbox_missing_coupling KF2 <b>0.00</b>   bound + expected_dof  ← 原公式给 1.00</div>
+<div class="note">拿真实资产跑出 0.87，<b>对不对没人知道</b>。最糟的是永远不会失败的检查——
+它在所有资产上输出通过，<b>看着像「资产都挺好」不像「代码坏了」</b>。<b>没有已知的坏输入就看不出来。</b><br>
+光是把正确件建出来就当场抓到 5 个 bug（真实资产一个都发现不了），
+其中一个是<b>对照件自己只靠 range 限位、没有几何挡住门</b>——正是 required_contact 要抓的那类。</div>
+</div></div></div>
+
+<!-- 实测 -->
+<div class="band"><h2>实测 · 十条记录</h2>
+<p>代码和契约<b>都在打开这些资产之前冻结</b>。严格绑定下十条全被 Gate 拒（部件粒度对不上），
+下表是<b>诊断结果不是最终得分</b>：对能绑上的部件评估，其余记 N/A。</p></div>
+<div class="grid wide"><div class="c"><div class="b">
 <div class="tw"><table>
 <thead><tr><th>物体</th><th>record_id</th><th class="num">KF1</th><th class="num">KF2</th>
-<th class="num">KF3</th><th class="num">声明数</th><th class="num">N/A</th><th>失败的检查</th></tr></thead>
-<tbody>
-<tr><td>摄像机（翻转屏）</td><td class="id">rec_camcorder_with_flipout_screen_b5753ec789b546b0a058ca52bbcd590d</td>
-<td class="num">0.78</td><td class="num">—</td><td class="num lo">0.56</td><td class="num">33</td><td class="num">6</td>
-<td>axis_semantic · forbidden_pair · range_and_reference · state_reachability</td></tr>
-<tr><td>空气炸锅（抽拉篮）</td><td class="id">rec_air_fryer_with_pullout_basket_14ac4c8c9e35416b864382571fa27e62</td>
-<td class="num">0.84</td><td class="num">—</td><td class="num hi">1.00</td><td class="num">52</td><td class="num">11</td>
-<td>axis_semantic · parent · range_and_reference</td></tr>
+<th class="num">KF3</th><th class="num">N/A</th><th>失败</th></tr></thead><tbody>
+<tr><td>摄像机</td><td class="id">rec_camcorder_with_flipout_screen_b5753ec789b546b0a058ca52bbcd590d</td>
+<td class="num">0.78</td><td class="num">—</td><td class="num lo">0.56</td><td class="num">6</td>
+<td>axis_semantic · forbidden_pair · range · state_reach</td></tr>
+<tr><td>空气炸锅</td><td class="id">rec_air_fryer_with_pullout_basket_14ac4c8c9e35416b864382571fa27e62</td>
+<td class="num">0.84</td><td class="num">—</td><td class="num hi">1.00</td><td class="num">11</td>
+<td>axis_semantic · parent · range</td></tr>
 <tr><td>钻床斜台</td><td class="id">rec_drillpress_tilt_table_0001</td>
-<td class="num">0.82</td><td class="num">—</td><td class="num lo">0.20</td><td class="num">21</td><td class="num">5</td>
-<td>anchor · forbidden_pair · required_contact · state_reachability</td></tr>
-<tr><td>笔记本电脑</td><td class="id">rec_laptop_clamshell_d201e66211d4426096f1625b7b4fc1cf</td>
-<td class="num">0.83</td><td class="num">—</td><td class="num lo">0.57</td><td class="num">23</td><td class="num">4</td>
-<td>forbidden_pair · range_and_reference · state_reachability</td></tr>
-<tr><td>离心榨汁机</td><td class="id">rec_centrifugal_juicer_with_articulated_components_8cf981d5e9bd4079bfcaa4a2e5ace079</td>
-<td class="num">0.89</td><td class="num">—</td><td class="num lo">0.64</td><td class="num">62</td><td class="num">12</td>
-<td>forbidden_pair · parent · range_and_reference · state_reachability</td></tr>
+<td class="num">0.82</td><td class="num">—</td><td class="num lo">0.20</td><td class="num">5</td>
+<td>anchor · forbidden_pair · required_contact · state_reach</td></tr>
+<tr><td>笔记本</td><td class="id">rec_laptop_clamshell_d201e66211d4426096f1625b7b4fc1cf</td>
+<td class="num">0.83</td><td class="num">—</td><td class="num lo">0.57</td><td class="num">4</td>
+<td>forbidden_pair · range · state_reach</td></tr>
+<tr><td>榨汁机</td><td class="id">rec_centrifugal_juicer_with_articulated_components_8cf981d5e9bd4079bfcaa4a2e5ace079</td>
+<td class="num">0.89</td><td class="num">—</td><td class="num lo">0.64</td><td class="num">12</td>
+<td>forbidden_pair · parent · range · state_reach</td></tr>
 <tr><td>手套箱门</td><td class="id">rec_glove_compartment_door_927c892914044efcb1cb608ac19db1b7</td>
-<td class="num">0.83</td><td class="num lo">0.00</td><td class="num hi">1.00</td><td class="num">32</td><td class="num">8</td>
-<td>bound · expected_dof · range_and_reference</td></tr>
+<td class="num">0.83</td><td class="num hi">1.00</td><td class="num hi">1.00</td><td class="num">6</td>
+<td>range</td></tr>
 <tr><td>吊扇</td><td class="id">rec_ceiling_fan_a743cb8b7b834f689d8e18995b53306a</td>
-<td class="num">0.82</td><td class="num">—</td><td class="num hi">1.00</td><td class="num">43</td><td class="num">27</td>
-<td>anchor · range_and_reference</td></tr>
+<td class="num">0.82</td><td class="num">—</td><td class="num hi">1.00</td><td class="num">27</td>
+<td>anchor · range</td></tr>
 <tr><td>健身车</td><td class="id">rec_stationary_exercise_bike_541413c0121143a2bed6faede26e1fdc</td>
-<td class="num">0.88</td><td class="num">—</td><td class="num hi">1.00</td><td class="num">33</td><td class="num">7</td>
-<td>range_and_reference</td></tr>
-<tr><td>自行车曲柄脚踏</td><td class="id">rec_bicycle_crankset_and_pedal_assembly_815cd8c51ee342719a051869fe2b7325</td>
-<td class="num">0.87</td><td class="num">—</td><td class="num hi">1.00</td><td class="num">34</td><td class="num">14</td>
-<td>parent</td></tr>
+<td class="num">0.88</td><td class="num">—</td><td class="num hi">1.00</td><td class="num">7</td><td>range</td></tr>
+<tr><td>曲柄脚踏</td><td class="id">rec_bicycle_crankset_and_pedal_assembly_815cd8c51ee342719a051869fe2b7325</td>
+<td class="num">0.87</td><td class="num">—</td><td class="num hi">1.00</td><td class="num">14</td><td>parent</td></tr>
 <tr><td>灶台</td><td class="id">rec_stove_top_0002</td>
-<td class="num hi">1.00</td><td class="num">—</td><td class="num hi">1.00</td><td class="num">59</td><td class="num">28</td>
-<td>无</td></tr>
+<td class="num hi">1.00</td><td class="num">—</td><td class="num hi">1.00</td><td class="num">28</td><td>无</td></tr>
 </tbody></table></div>
-<p style="font-size:.85rem;color:var(--muted)">KF2 一栏的「—」表示该资产没有耦合声明，按规则记 None 而不是 1.0。
-手套箱门的 0.00 是因为四连杆的联动在模型里没有任何约束强制。</p>
+<p style="font-size:.84rem;color:var(--muted)">KF2 的「—」表示该资产<b>没有耦合声明也没有 mimic</b>，按规则记 None 而不是 1.0——
+九条都是这种情况，不是漏跑。触发次数：range 7 · forbidden_pair 4 · state_reach 4 · parent 3 · axis_semantic 2 · anchor 2 · required_contact 1。</p>
+<div class="note"><b>与人工总评的对照</b>（这份数据只有 1–5 总评分，没有逐项标注）：<br>
+摄像机 <b>5</b> 分 / KF3 0.56（采样中段查出穿模，两端干净） · 钻床 <b>5</b> 分 / KF3 0.20 ·
+灶台 <b>3</b> 分 / P3 全 1.00（运动学没问题，扣分另有原因）。<br>
+<b>这三行就是要做分维度验证器的理由</b>——一个总评分说不出哪儿不对。</div>
+</div></div></div>
 
-<h4>各条检查的触发次数</h4>
-<div class="f-block">range_and_reference   7/10      parent            3/10
-forbidden_pair        4/10      axis_semantic     2/10
-state_reachability    4/10      anchor            2/10
-required_contact      1/10      bound             1/10
-expected_dof          1/10      其余 7 条          0/10</div>
+<!-- 边界 -->
+<div class="band"><h2>还没解决的</h2></div>
+<div class="grid">
 
-<h4>和人工评分的对照</h4>
-<p>这份数据里<b>只有一个 1–5 的总评分，没有逐项标注</b>（分项标注在另一份语料里）。
-总评分覆盖的是外观、几何、提示词遵循等全部方面，不只是运动学，所以两者本来就不该一致。
-但<b>不一致的方向值得看</b>：</p>
-<div class="tw"><table>
-<thead><tr><th>物体</th><th class="num">人工总评</th><th class="num">KF3</th><th>差在哪</th></tr></thead><tbody>
-<tr><td>摄像机</td><td class="num">5</td><td class="num lo">0.56</td><td>采样中段查出穿模，端点姿态是干净的</td></tr>
-<tr><td>钻床斜台</td><td class="num">5</td><td class="num lo">0.20</td><td>轴线往工作台里 27%，且多对禁止接触被突破</td></tr>
-<tr><td>灶台</td><td class="num">3</td><td class="num hi">1.00</td><td>运动学全对；扣分来自 P3 看不到的东西</td></tr>
+<div class="c"><header><span class="n">① C5</span></header><div class="b">
+<p>去掉关节约束后几何撑不撑得住。</p>
+<div class="note bad">P3 三项<b>加起来问不到</b>：一扇声明完美 revolute、<b>一根合页几何都没有</b>的门全绿——
+求解器无条件替资产执行关节约束。<br>
+<b>而这是人工失败最多的一项：425 条里 103 条，比第二名多十倍。</b>
+灶台 P3 全 1.00、人工只给 3 分。已按决定推迟。</div>
+</div></div>
+
+<div class="c"><header><span class="n">② 粒度不匹配</span></header><div class="b">
+<p>生成器划分普遍比提示词粗：曲柄脚踏焊成一个件、灶台没有 burner link、吊扇四叶合进 rotor。</p>
+<div class="note">已裁定<b>数目不一致即失败</b>，Gate 拒掉是对的。<br>
+但吊扇值得看：<b>23 条接触声明只评了 5 条</b>（N/A 27 条，全场最多），
+因为点名叶片的声明都绑不上——<b>卡住的恰好是本该起作用的那类检查</b>。</div>
+</div></div>
+
+<div class="c"><header><span class="n">③ P0 表达缺口</span></header><div class="b">
+<div class="tw"><table><tbody>
+<tr><td><b>数量不定的复数</b></td><td>笔记本 48 个按键 link，契约一个没声明</td></tr>
+<tr><td><b>几何决定的比值</b></td><td>手套箱门与限位连杆的比值提示词没给</td></tr>
 </tbody></table></div>
-<p class="why"><b>这三行正好说明为什么要做分维度的验证器。</b>
-一个总评分说不出「哪儿不对」；前两行是人打了满分但运动学有实实在在的问题，
-第三行是运动学没问题、扣分另有原因——<b>而灶台恰好落在下一节第 ① 条那个盲区里。</b></p>
-<p style="font-size:.85rem;color:var(--muted)">十条中 8 条主评 5 分、2 条 3 分；生成模型为 gpt-5.4（4 条）与 gpt-5.5-2026-04-23（6 条）。
-所有评测在严格绑定下会被 Gate 拦下（见下一节第 ② 条），表中数字是打开诊断模式、
-对能绑上的部件评估、其余记 N/A 得到的，<b>是诊断结果，不是最终得分</b>。</p>
-</section>
+<div class="note">第二条已引发过一次 KF2 误判——<b>根因是 P0 说不出那个比值</b>。</div>
+</div></div>
 
-<!-- 11 -->
-<section class="panel" id="s11">
-<p class="kicker">11 · 边界</p>
-<h2>还没解决的四件事</h2>
+<div class="c"><header><span class="n">④ range 触发 7/10</span></header><div class="b">
+<div class="note">多半同一类原因：契约里那些行程数字<b>不少是提示词没给、由契约作者填的</b>。
+需要的是<b>逐条复核契约</b>，不是改检查。</div>
+</div></div>
 
-<h3>① C5：把关节约束拿掉，几何撑不撑得住</h3>
-<div class="why bad">P3 这三项<b>加起来都问不到这个问题</b>。一扇声明了完美 revolute 关节、
-<b>一根合页几何都没有</b>的门，KF1/KF2/KF3 全绿——求解器会无条件替资产执行关节约束。
-<br><br><b>而这在人工标注里是失败最多的一项：425 条里 103 条，比第二名多十倍。</b>
-上面的实测已经证实了这一点：<code>rec_stove_top_0002</code> <b>P3 每一项 1.00、零失败</b>，
-人工总评却只有 3 分。
-<br><br>现有的东西里有它的两块碎片（<code>travel_scale</code>、<code>required_contact</code>），
-<b>但都没问到它的核心问题</b>。已按决定推迟；做的时候作为单独命名的扩展项，不进 Kinematic Profile，
-两张表并排报。</div>
-
-<h3>② 部件粒度对不上</h3>
-<p>十条真实资产里，<b>生成器的部件划分普遍比提示词粗</b>：曲柄脚踏把主轴、两个曲柄臂、链轮焊成一个
-<code>crank_assembly</code>；灶台没有任何 burner link；吊扇把四个叶片合并进 <code>rotor</code>。</p>
-<p class="why"><b>已裁定：数目和提示词不一致就算失败</b>，Gate 拒掉它们是正确行为。
-这条裁定还<b>消掉了一个误报</b>——曲柄脚踏那条「父件错」是绑定有损造成的，人工判它全部满足，
-而在这条裁定下它<b>根本到不了 P3</b>。
-<br><br>但吊扇那条值得单独看：它的 N/A 有 27 条（十条里最多），因为每一条点名叶片的接触声明都绑不上，
-<b>23 条接触声明里只评了 5 条</b>。<b>粒度问题卡住的，恰好是本来最该起作用的那类检查。</b></p>
-
-<h3>③ P0 的两个表达缺口</h3>
-<div class="tw"><table><thead><tr><th>缺口</th><th>在哪暴露的</th></tr></thead><tbody>
-<tr><td><b>数量不定的复数</b>：去掉 <code>count</code> 之后没法表达「若干个按键」</td>
-<td>笔记本资产有 <b>48 个独立按键 link</b>，契约一个都没声明 → 48 个真实自由度无人评估</td></tr>
-<tr><td><b>由几何决定的比值</b>：没法表达「这些联动，比值由几何定而不是由声明定」</td>
-<td>手套箱门的四连杆——门与限位连杆的比值提示词没给，只能声明「两根连杆彼此 1:1」</td></tr>
-</tbody></table></div>
-
-<h3>④ <code>range_and_reference</code> 触发 7/10，可疑</h3>
-<p class="why">多半是同一类原因：契约里那些行程数字，<b>不少是提示词没给、由契约作者填的</b>
-（笔记本的 2.1 rad 就在契约注释里注明了是作者判断）。
-这需要的是<b>逐条复核契约</b>，不是改检查。</p>
-
-<div class="why"><b>还有一条一直存在、只能靠人解决的：契约由谁写。</b>
-判分过程是纯计算没错，但<b>契约本身是写出来的文字</b>。哈希冻结防的是「看了资产再改契约」，
-<b>防不了「一开始就把提示词读错」</b>——钻床那条，契约作者把「standard locking features」
-（复数、没给数）写成了 1 个锁柄，资产实际有 2 个。<b>那是契约作者的错，不是资产的错，也不是检查的错。</b>
-所以流程必须是：<b>起草 → 逐条签字 → 再冻结。</b></div>
-</section>
+</div>
 
 </main>
-<footer><p><b>Evo-Articraft P0 + P3</b> · 16 条检查 · 16 条准入规则 · 266 个测试 ·
-判分不用大模型 · <span class="f">github.com/Wanglin-He/Kinematic-wanglin</span></p></footer>
+<footer><p><b>P0 + P3</b> · 16 条检查 · 16 条准入规则 · 268 个测试 · 判分不用大模型 ·
+github.com/Wanglin-He/Kinematic-wanglin</p></footer>
 </body>
 </html>
