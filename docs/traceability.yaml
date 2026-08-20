@@ -539,3 +539,61 @@ items:
     spec: "N/A 维度从适用项聚合中排除"
     disposition: literal
     where: evo_p0p3/p3/verdict.py::score
+
+  # ====================================================================================
+  # Rulings and open items, dated and attributed so they are not re-litigated
+  # ====================================================================================
+
+  - id: RULING.part_granularity
+    spec: "（试点中出现，规格未涵盖）"
+    disposition: added
+    where: evo_p0p3/p3/gate.py
+    replaced_by: "a required part the asset does not expose as a body is a G1 failure"
+    reason: >
+      Every one of the first three pilot assets models fewer parts than its prompt names.
+      The crankset prompt names a spindle, two crank arms and a chainring; the asset has
+      one link, crank_assembly, covering all four. The cooktop prompt says "four-burner"
+      and the asset has no burner links. The exercise bike prompt lists a flywheel housing
+      the asset does not expose.
+
+      Ruled 2026-08-19 by the project owner: this is a FAILURE, not an unevaluable case,
+      because the part count does not match what the prompt declared. G1 rejecting these
+      assets is therefore correct behaviour and stays the default.
+
+      The ruling also removes a false alarm rather than merely classifying one. Forced
+      through with an explicit binding table, the crankset produced KF1.parent failures on
+      both pedals -- the contract says each pedal hangs off its crank arm, the model hangs
+      them off the merged assembly -- while human annotators passed the asset, because
+      physically the pedal IS on the arm. Under the ruling that asset never reaches P3, so
+      P3 never emits the misleading verdict. The defect is attributed to the layer that
+      owns it.
+
+      --diagnostic exists to run P3 on what did bind when a Gate-level blocker would
+      otherwise make P3 unobservable. Its output is labelled NOT A SCORE and must not be
+      reported as one.
+
+  - id: OPEN.c5_physical_connection
+    spec: "（规格未涵盖，来自 ver3 讨论中 xuge 提出的 C5）"
+    disposition: decided
+    replaced_by: "deferred by the project owner on 2026-08-19; to be revisited as a clearly labelled extension"
+    reason: >
+      C5 asks the one question P3 cannot: with the abstract joint constraint removed, does
+      the geometry itself hold the part? A door declared with a perfect revolute joint and
+      no hinge geometry at all passes every KF1, KF2 and KF3 predicate, because the solver
+      enforces the declared joint unconditionally whether or not a bearing exists.
+
+      This is not hypothetical. Of the 425 records with both compiled geometry and human
+      annotation, 103 fail on "活动零件是否具有可信的实体连接或支撑结构" -- more than any
+      other item, and ten times the next most common. The pilot confirmed it on a real
+      asset: rec_stove_top_0002 scores 1.00 on every P3 metric with zero failures while
+      human annotators fail it on exactly that item.
+
+      Two fragments of it already exist here. KF1.travel_scale catches a body that carries
+      the declared joint while owning almost no geometry. KF3.required_contact catches a
+      declared stop that no geometry realises. Neither asks C5's question.
+
+      The owner has deferred this deliberately and it is recorded so it is not lost. When
+      it is built it goes in as a named extension outside the Kinematic Profile, with two
+      tables reported side by side -- the specification as written, and the specification
+      plus the extension -- so the size of the gap is visible rather than argued.
+
