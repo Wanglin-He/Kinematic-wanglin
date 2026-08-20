@@ -137,8 +137,8 @@ footer p{margin:0}
 
 <h3><span class="id">required_parts</span> 逐个列实例 <span class="pill p-rep">替换</span></h3>
 <p><b>原方案：</b><code>{id: drawer, count: 3}</code>，而下游用的是 <code>drawer_1</code>。</p>
-<p><b>问题：</b>四页方案里<b>没有一处</b>规定 count 怎么展开成实例，也没规定 Gate 按什么顺序分配下标。
-示例里三个抽屉一模一样所以看不出来，但对左右门这种<b>不一样</b>的集合，实例配错就直接改变判定。</p>
+<p><b>问题：</b>方案里<b>没有一处</b>规定 count 怎么展开成实例。示例里三个抽屉一模一样所以看不出来，
+但对左右门这种<b>不一样</b>的集合，实例配错就直接改变判定。</p>
 <pre>required_parts:
   - {id: drawer_1, role: movable, group: drawer}
   - {id: drawer_2, role: movable, group: drawer}
@@ -147,8 +147,8 @@ footer p{margin:0}
 
 <h3><span class="id">role</span> 三个取值 + rigid_attachments <span class="pill p-rep">替换</span></h3>
 <p><b>原方案：</b>「fixed 或 movable」——但它自己的示例里出现了第三个值 <code>role: follows_drawer</code>。</p>
-<div class="why"><b>两个毛病。</b>那个字符串<b>说不清哪个把手跟着哪个抽屉</b>——handle_3 跟着 drawer_2 也能全绿。
-更麻烦的是：把手要是记成 <code>movable</code>，Gate 会要求它有自己的关节，而正确的把手<b>不该有</b>。</div>
+<div class="why"><b>两个毛病：</b>那个字符串<b>说不清哪个把手跟着哪个抽屉</b>（handle_3 跟着 drawer_2 也能全绿）；
+而且把手要是记成 <code>movable</code>，Gate 会要求它有自己的关节，可正确的把手<b>不该有</b>。</div>
 <div class="tw"><table>
 <thead><tr><th>role</th><th>含义</th><th>Gate 的期望</th></tr></thead><tbody>
 <tr><td><code>fixed</code></td><td>不动</td><td>不要求关节</td></tr>
@@ -162,9 +162,8 @@ footer p{margin:0}
 <p><b>原方案：</b><code>axis: depth</code>——一个词，而<b>全篇没有任何地方定义物体坐标系</b>。</p>
 <div class="why"><b>为什么不能简单地要求「生成器按规定朝向输出」。</b>
 URDF 里没有语义方向，只有数字；两个建模时差 90° 的相同柜子是同一个物体。规定朝向会把
-<b>「没按约定摆」变成「运动学做错了」</b>——一个完全正确但转了 90° 的柜子，每条轴向判定全错。
-而这是要用来比较多个生成器的，那测到的就成了<b>谁读了坐标系说明</b>，不是谁的关节做得对。
-这是个会把结论带偏的干扰因素。</div>
+<b>「没按约定摆」变成「运动学做错了」</b>——一个完全正确但转了 90° 的柜子每条轴向判定全错。
+用来比较多个生成器时，测到的就成了<b>谁读了坐标系说明</b>，不是谁的关节做得对。</div>
 <div class="tw"><table>
 <thead><tr><th>写法</th><th>怎么判</th><th>整机绕竖直轴转一下还成立吗</th></tr></thead><tbody>
 <tr><td><code>semantic</code>：vertical / horizontal</td><td>对重力算夹角（不花钱）</td><td><b>成立</b></td></tr>
@@ -319,27 +318,26 @@ world = origin + local @ rot.T</pre>
 <pre>observed, steps = binding.nearest_declared_ancestor(child)
 verdict = PASS if observed == joint.parent else FAIL</pre>
 <div class="why"><b>为什么要「最近的已声明祖先」而不是「是不是祖先」。</b>
-一个挂在上层抽屉下面的下层抽屉，柜体<b>仍然</b>在它的祖先链上——问「声明的父件在不在上面」会放它过去，
+挂在上层抽屉下面的下层抽屉，柜体<b>仍然</b>在它的祖先链上——问「声明的父件在不在上面」会放它过去，
 而那正好是「拉开上抽屉会把下抽屉一起拖出来」这个缺陷。
-<br><br>没声明的中间 body <b>直接跳过</b>：生成器会自由插入没名字的连杆，把它当父件会因为一种契约根本没提的
-建模习惯而判负正确的资产。</div>
+<br><br>没声明的中间 body <b>直接跳过</b>：生成器会自由插入没名字的连杆，把它当父件会因为一种
+契约根本没提的建模习惯，判负正确的资产。</div>
 <p><b>反例：</b><code>wrong_parent</code>——drawer_2 挂到 drawer_1 上，只改 <code>body_parentid</code> 一个字段。</p>
 
 <h3><span class="id">KF1.type</span> 关节类型 <span class="pill p-lit">照做</span></h3>
 <div class="f-block">μ: slide↦mjJNT_SLIDE, hinge↦mjJNT_HINGE, ball↦mjJNT_BALL, free↦mjJNT_FREE
 通过 ⟺ jnt_type[k] = μ(声明的类型)</div>
-<p class="why"><b>这组里最弱的一条，明说。</b>上一轮语料里关节类型解析完整率 100%、几乎总是对得上，
-而且<b>有 6 条记录声明的类型和提示词一字不差、人还是判了失败</b>。留着是因为它便宜、失败时没有歧义，
-但它被归进<b>「读字段」子分数</b>单独报，不和测量类混在一起把后者冲淡。</p>
+<p class="why"><b>这组里最弱的一条，明说。</b>上一轮语料里关节类型几乎总是对得上，而且
+<b>有 6 条记录声明的类型和提示词一字不差、人还是判了失败</b>。留着是因为它便宜、失败时没有歧义，
+但它归进<b>「读字段」子分数</b>单独报，不和测量类混在一起把后者冲淡。</p>
 
 <h3><span class="id">KF1.dof_composition</span> 自由度构成 <span class="pill p-rep">替换原第 4 条</span></h3>
 <div class="f-block">通过 ⟺ body_jntnum[b*(part)] = 1</div>
 <div class="why bad"><b>原方案的第 4 条两半都是永远不会失败的检查。</b>
-「slide 不得产生额外旋转」——MuJoCo 的 slide 按定义就是纯平移。
-「hinge 的 anchor 在小扰动下保持固定」——<code>mj_kinematics</code> 就是<b>按声明的 jnt_pos 算出</b>锚点的。
-<b>没有任何模型能让这两句失败。</b>
-<br><br>但它们想抓的失败是真的：一个部件被挂了 free 关节、或者用 slide+hinge 组合假装单自由度，
-它的运动方式就不是那一个声明的自由度所描述的。<b>数关节个数是模型真的能做错的检查；问 slide 转不转不是。</b></div>
+「slide 不得产生额外旋转」——MuJoCo 的 slide 按定义就是纯平移；「hinge 的 anchor 在小扰动下保持固定」——
+<code>mj_kinematics</code> 就是<b>按声明的 jnt_pos 算出</b>锚点的。<b>没有任何模型能让这两句失败。</b>
+<br><br>但它们想抓的失败是真的：一个部件挂了 free 关节、或用 slide+hinge 组合假装单自由度，
+运动方式就不是那一个声明的自由度所描述的。<b>数关节个数是模型真的能做错的检查；问 slide 转不转不是。</b></div>
 
 <h3><span class="id">KF1.axis_semantic</span> 轴向（语义） <span class="pill p-lit">照做</span></h3>
 <div class="f-block">û = −g / |g|                g = model.opt.gravity（默认 (0,0,−9.81)）
@@ -413,12 +411,11 @@ jnt_limited[k] = 0（URDF 的 continuous）→ 记 N/A</div>
 <div class="f-block">D = diag(AABB(<b>这个部件自己绑定的 geom</b>))
 通过 ⟺ D / 行程 ≥ travel_scale_min = 0.50        只对 slide</div>
 <div class="why bad"><b>原方案写的是：</b>「不出现 qpos 变了而<b>可见</b>部件不动」——
-<b>「可见」需要渲染，而 P3 自己的适用范围禁止渲染。</b>
-它点名了人最容易说出口的那种运动学失败（「我拉开了，什么都没动」），<b>却没有能用的算子</b>。
-<br><br>要抓的是：body 挂着声明的关节、行程也对，<b>但几乎没有几何</b>，看得见的那个抽屉其实是不动部件的 geom。
-<b>位移测不出来</b>——那个假部件把 0.18 m 走完了。<b>能测出来的是尺寸。</b>
-一个滑 0.18 m 而只有 8 mm 宽的东西，不是抽屉。
-<br><br>归一化用<b>关节自己声明的行程</b>，不用整机对角线。</div>
+<b>「可见」需要渲染，而 P3 自己的适用范围禁止渲染。</b>它点名了人最容易说出口的那种失败
+（「我拉开了，什么都没动」），<b>却没有能用的算子</b>。
+<br><br>要抓的是：body 挂着声明的关节、行程也对，<b>但几乎没有几何</b>，看得见的抽屉其实是不动部件的 geom。
+<b>位移测不出来</b>——那个假部件把 0.18 m 走完了。<b>能测的是尺寸</b>：滑 0.18 m 而只有 8 mm 宽的东西，不是抽屉。
+归一化用<b>关节自己声明的行程</b>，不用整机对角线。</div>
 <p class="why ok"><b>量的是「部件自己」而不是「它带动的一切」</b>——那个假部件上挂着一个真的
 0.16 m 把手，整个刚性子树 0.39 m 宽，而契约点名的那个部件只有 <b>0.0139 m</b>。</p>
 </section>
@@ -435,14 +432,14 @@ jnt_limited[k] = 0（URDF 的 continuous）→ 记 N/A</div>
 <div class="f-block"><b>KF2 = mean_g  1[bound(g)] × 1[ max_q |r_g,norm(q)| ≤ ε_g ]</b></div>
 
 <h3>前提：URDF 的 <code>&lt;mimic&gt;</code> 会被 MuJoCo 悄悄丢掉</h3>
-<div class="why"><b>实测：7 条真实资产声明了 <code>&lt;mimic&gt;</code>，加载后 <code>neq</code> 全是 0。</b>
-里面有传动比 −1 和 0.777778 的齿轮组、14 片联动的百叶窗、两个反向对转刀盘的碎纸机。
-<b>不处理的话 KF2 会把这 7 条全判 0</b>，理由是「没有实现耦合的约束」，可它们在 URDF 里<b>写得完全正确</b>。
+<div class="why"><b>实测：7 条真实资产声明了 <code>&lt;mimic&gt;</code>，加载后 <code>neq</code> 全是 0</b>
+（含传动比 −1 和 0.777778 的齿轮组、14 片联动的百叶窗、两个反向对转刀盘的碎纸机）。
+<b>不处理的话 KF2 会把这 7 条全判 0</b>，理由是「没有实现耦合的约束」，可它们在 URDF 里<b>写得完全正确</b>——
 <b>那等于让资产替读取方的缺陷背锅。</b>
 <br><br>两条走 XML 的路都不通（URDF 里的 <code>&lt;mujoco&gt;&lt;equality&gt;</code> 被忽略；
 <code>mj_saveLastXML</code> 存读一轮会丢几何），所以改成<b>在编译前编辑 MjSpec</b>。
-URDF 的 <span class="f">q_dep = k·q_ind + c</span> 和 polycoef 逐字段对应，翻译没有解释余地。
-每一次翻译都记进出处字段。</div>
+URDF 的 <span class="f">q_dep = k·q_ind + c</span> 和 polycoef 逐字段对应，翻译没有解释余地，
+每次翻译都记进出处字段。</div>
 
 <h3><span class="id">KF2.bound</span></h3>
 <div class="f-block">E(g) = { e : eq_type[e] = mjEQ_JOINT 且 {eq_obj1id[e], eq_obj2id[e]} = {dep, ind} }
@@ -495,7 +492,7 @@ R = max_q r(q) / N        N ∈ {依赖端行程, 独立端行程, 绝对值}
 <p class="kicker">06 · KF3</p>
 <h2>四层采样：结果固定、成本可控、可查</h2>
 <p><b>原方案只写了「确定性的可行 q 采样」，没有任何采样规则。</b>示例资产 3 个自由度，
-满网格是 33³ = <b>35,937</b> 个姿态，而且随自由度<b>指数</b>增长（6 个自由度 = 13 亿）。
+满网格是 33³ = <b>35,937</b> 个姿态，且随自由度<b>指数</b>增长（6 个自由度 = 13 亿）。
 每个自由度单独扫很便宜，但对「两个抽屉同时拉开才会撞」<b>完全看不见</b>。</p>
 <div class="tw"><table>
 <thead><tr><th>层</th><th>内容</th><th>换来什么</th><th class="num">柜子成本</th></tr></thead><tbody>
@@ -633,9 +630,9 @@ gearbox_wrong_sign         KF2=0.50   同上（符号反了）
 gearbox_missing_coupling   KF2=<b>0.00</b>   KF2.bound + expected_dof   ← 原公式会给 1.00</div>
 <p><b>每条检查要过三关</b>，不是两关：正确件上不响 · 自己的反例上响 · <b>别人的反例上不响</b>。
 第三关是「一条检查」和「烟雾报警器」的分界——什么坏了都响的检查没有查出父件错了，只查出「有东西不一样」。</p>
-<p>反例存成「对正确件的最小修改」（120 条逐检查的预期写在清单里），所以缺陷是<b>能读的 diff</b>，
-而且改不动正确件而不被发现。<b>匹配不到任何东西的替换会直接报错</b>——
-否则「反例」就和对照件一模一样，拿它测出来的检查看着可靠、实际什么都没查。</p>
+<p>反例存成「对正确件的最小修改」（120 条逐检查的预期写在清单里），所以缺陷是<b>能读的 diff</b>。
+<b>匹配不到任何东西的替换会直接报错</b>——否则「反例」就和对照件一模一样，
+拿它测出来的检查看着可靠、实际什么都没查。</p>
 <div class="why"><b>光是把正确件建出来，就当场抓到 5 个 bug</b>（真实资产一个都发现不了）：
 loader 用子串搜 <code>&lt;inertial</code> 而注释里正好写了这几个字、包围盒用外接球高估了一整个半对角线、
 门轴绕 +z 转导致<b>往柜子里面开、穿进去 0.040 m</b>、门把手埋在自己门板里，以及——
