@@ -1,0 +1,23 @@
+# Gate binding: contract part id -> asset link name(s).
+#
+# Written after the contracts were hashed and committed, from LINK NAMES ONLY. No geometry
+# was inspected. Every decision is recorded, including the ones not made.
+#
+# BOUND (exact or unambiguous):
+frame:       base_frame
+crank:       crank
+saddle_post: saddle_post
+handlebar:   bar_post      # the prompt's "bars"; the asset splits post from knob
+
+# NOT BOUND, and why:
+#
+#   flywheel_housing -- the asset has no link for it. Links are: base_frame, crank,
+#   pedal_pos, pedal_neg, saddle_post, bar_post, saddle_knob, bar_knob. The prompt lists
+#   a flywheel housing among the components, so either the asset omitted it or expressed
+#   it as geometry on base_frame without making it addressable. Either way the Gate cannot
+#   bind it, and guessing base_frame would be the fuzzy matching this architecture removes.
+#
+# NOT DECLARED BY THE CONTRACT, present in the asset:
+#   pedal_pos, pedal_neg, saddle_knob, bar_knob -- the prompt never mentions pedals or
+#   adjuster knobs. Extra parts are not a contract violation; they are recorded so the
+#   asymmetry is visible.

@@ -1,0 +1,24 @@
+# Gate binding: contract part id -> asset link name(s). Link names only; no geometry read.
+#
+# BOUND:
+bb_shell:    bottom_bracket_shell
+spindle:     crank_assembly    # see the note below -- this binding is lossy
+pedal_left:  pedal_spindle_0
+pedal_right: pedal_spindle_1
+
+# RECORDED ASSUMPTION:
+#   pedal_left/right -> pedal_spindle_0/1 by declaration order. The asset's names carry no
+#   side, so nothing in either file distinguishes them. If the two pedals differ in any way
+#   the contract cares about, this binding is a coin flip and any verdict that depends on
+#   which is which is unsafe. Recorded rather than hidden.
+#
+# NOT BOUND, and why:
+#
+#   crank_arm_left, crank_arm_right, chainring -- the asset has no links for them. It has
+#   one link, crank_assembly, covering the spindle, both arms and the chainring together.
+#   The prompt names three separate components; the asset made them one rigid body.
+#   Kinematically that is equivalent -- they do all turn together -- but it means none of
+#   them is separately addressable, so "the chainring is attached to the spindle" is not a
+#   claim anything can check on this asset. The rigid_attachments in the contract are
+#   therefore unevaluable, which is a finding about part granularity rather than about
+#   kinematics.

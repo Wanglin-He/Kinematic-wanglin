@@ -1,0 +1,18 @@
+# Gate binding: contract part id -> asset link name(s). Link names only; no geometry read.
+#
+# BOUND (exact):
+cooktop_slab: cooktop
+knob_1:       knob_1
+knob_2:       knob_2
+knob_3:       knob_3
+knob_4:       knob_4
+
+# NOT BOUND, and why:
+#
+#   burner_1..4 -- the asset has no burner links. Its links are: countertop, cooktop,
+#   knob_1..4. The prompt says "four-burner gas cooktop", so the burners exist as an idea
+#   and probably as geometry on the cooktop slab, but not as addressable parts.
+#
+# NOT DECLARED BY THE CONTRACT, present in the asset:
+#   countertop -- the prompt describes the cooktop as "set into a thin countertop cutout",
+#   which reads as context rather than as a part of the object. The asset models it.

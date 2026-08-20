@@ -100,8 +100,24 @@ class Admission:
         )
 
 
-def admit(urdf_path: str | Path, contract: Contract) -> Admission:
-    """Run the four checks and, if possible, produce the binding."""
+def admit(
+    urdf_path: str | Path,
+    contract: Contract,
+    *,
+    binding_table: str | Path | None = None,
+    diagnostic: bool = False,
+) -> Admission:
+    """Run the four checks and, if possible, produce the binding.
+
+    ``binding_table`` supplies the Gate's part-to-link mapping explicitly, which is what
+    the real Gate will emit. Without one, part ids are taken as link names -- true of the
+    hand-authored gold assets by construction, and never safe to assume of a generated one.
+
+    ``diagnostic`` downgrades an unbound required part from a G1 failure to an unbound
+    entry, so P3 runs on what did bind and reports the rest as N/A. It is not a score. The
+    faithful reading of P1 is that a missing required part fails the Gate, and that stays
+    the default; this exists so a Gate-level blocker does not make P3 unobservable.
+    """
     urdf_path = Path(urdf_path)
     record_id = urdf_path.parent.name if urdf_path.name == "model.urdf" else urdf_path.stem
     checks: list[GateCheck] = []
@@ -123,20 +139,35 @@ def admit(urdf_path: str | Path, contract: Contract) -> Admission:
     ))
 
     # -- G1 geometry existence ---------------------------------------------------------
+    table = None
+    if binding_table is not None:
+        import yaml
+        raw = yaml.safe_load(Path(binding_table).read_text(encoding="utf-8")) or {}
+        table = {str(k): v for k, v in raw.items()}
+
     missing_body, empty = [], []
     for part in contract.required_parts:
-        body = asset.body_id(part.id)
+        link = table.get(part.id) if table is not None else part.id
+        body = asset.body_id(str(link)) if link else None
         if body is None:
             missing_body.append(part.id)
         elif not asset.geoms_of(body):
             empty.append(part.id)
-    if missing_body or empty:
+    if (missing_body or empty) and not (diagnostic and not empty):
         detail = []
         if missing_body:
             detail.append(f"no body for {missing_body}")
         if empty:
             detail.append(f"no geometry on {empty}")
         checks.append(GateCheck("G1", Status.FAIL, "; ".join(detail)))
+    elif missing_body:
+        checks.append(GateCheck(
+            "G1", Status.PASS,
+            f"diagnostic run: {len(contract.required_parts) - len(missing_body)} of "
+            f"{len(contract.required_parts)} required parts bound; {missing_body} are "
+            f"unbound and every claim about them is reported N/A. NOT A SCORE -- the "
+            f"faithful reading is that these fail the Gate",
+        ))
     else:
         checks.append(GateCheck(
             "G1", Status.PASS,
@@ -145,10 +176,18 @@ def admit(urdf_path: str | Path, contract: Contract) -> Admission:
 
     binding = None
     if checks[-1].passed:
-        try:
-            binding = binding_mod.identity(asset, tuple(contract.part_ids))
-        except binding_mod.BindingError as exc:  # pragma: no cover - G1 already covers it
-            checks[-1] = GateCheck("G1", Status.FAIL, str(exc))
+        bound = {}
+        for part in contract.required_parts:
+            link = table.get(part.id) if table is not None else part.id
+            body = asset.body_id(str(link)) if link else None
+            if body is not None:
+                bound[part.id] = (body,)
+        binding = binding_mod.Binding(
+            parts=bound,
+            source=(binding_mod.BindingSource.TABLE if table is not None
+                    else binding_mod.BindingSource.IDENTITY),
+            asset=asset,
+        )
 
     # -- G2 kinematic validity ---------------------------------------------------------
     if binding is None:
@@ -163,6 +202,8 @@ def admit(urdf_path: str | Path, contract: Contract) -> Admission:
 
     problems = []
     for part in contract.required_parts:
+        if part.id not in binding.parts:
+            continue  # unbound in a diagnostic run; G1 already reported it
         body = binding.root_body(part.id)
         count = int(asset.model.body_jntnum[body])
         if part.role is Role.MOVABLE and count != 1:

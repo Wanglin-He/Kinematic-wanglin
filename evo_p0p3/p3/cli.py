@@ -30,6 +30,11 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("assets", nargs="+", type=Path)
     run.add_argument("--json", type=Path, help="write one report per asset here")
     run.add_argument("-v", "--verbose", action="store_true", help="also list abstentions")
+    run.add_argument("--binding", type=Path, help="Gate binding table (part id -> link name)")
+    run.add_argument(
+        "--diagnostic", action="store_true",
+        help="run on the parts that bind and report the rest N/A. Not a score.",
+    )
 
     g = sub.add_parser("gold", help="evaluate the gold-standard set")
     g.add_argument("--json", type=Path)
@@ -41,7 +46,8 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     if args.command == "run":
-        return _run(args.contract, args.assets, args.json, args.verbose)
+        return _run(args.contract, args.assets, args.json, args.verbose,
+                    args.binding, args.diagnostic)
     if args.command == "gold":
         return _gold(args.json, args.verbose)
     if args.command == "sweep":
@@ -69,9 +75,13 @@ def _load_contract(path: Path):
     return contract
 
 
-def evaluate(contract, asset_path: Path) -> report.AssetReport:
+def evaluate(
+    contract, asset_path: Path, *, binding_table=None, diagnostic: bool = False
+) -> report.AssetReport:
     """One asset, end to end."""
-    admitted = gate.admit(asset_path, contract)
+    admitted = gate.admit(
+        asset_path, contract, binding_table=binding_table, diagnostic=diagnostic
+    )
     if not admitted.admitted or admitted.binding is None:
         return report.build(contract, admitted)
 
@@ -101,11 +111,16 @@ def _emit(reports, out_dir: Path | None, verbose: bool) -> int:
     return 0 if all(not r.failures for r in reports) else 1
 
 
-def _run(contract_path: Path, assets: list[Path], out_dir: Path | None, verbose: bool) -> int:
+def _run(contract_path: Path, assets: list[Path], out_dir: Path | None, verbose: bool,
+         binding_table=None, diagnostic: bool = False) -> int:
     contract = _load_contract(contract_path)
     if contract is None:
         return 2
-    return _emit([evaluate(contract, a) for a in assets], out_dir, verbose)
+    return _emit(
+        [evaluate(contract, a, binding_table=binding_table, diagnostic=diagnostic)
+         for a in assets],
+        out_dir, verbose,
+    )
 
 
 def _gold(out_dir: Path | None, verbose: bool) -> int:

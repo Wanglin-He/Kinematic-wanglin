@@ -1,0 +1,961 @@
+{
+  "record_id": "rec_stove_top_0002",
+  "contract_id": "rec_stove_top_0002",
+  "admitted": true,
+  "gate": [
+    {
+      "check": "G0",
+      "status": "pass",
+      "detail": "compiled: 7 bodies, 4 joints, 60 geoms"
+    },
+    {
+      "check": "G1",
+      "status": "pass",
+      "detail": "diagnostic run: 5 of 9 required parts bound; ['burner_1', 'burner_2', 'burner_3', 'burner_4'] are unbound and every claim about them is reported N/A. NOT A SCORE -- the faithful reading is that these fail the Gate"
+    },
+    {
+      "check": "G2",
+      "status": "pass",
+      "detail": "every required part has a motion chain matching its declared role"
+    },
+    {
+      "check": "G3",
+      "status": "pass",
+      "detail": "declared masses and inertias compile"
+    }
+  ],
+  "profile": {
+    "KF1": 1.0,
+    "KF2": null,
+    "KF3": 1.0
+  },
+  "sub_scores": {
+    "KF1.declared": 1.0,
+    "KF1.measured": 1.0
+  },
+  "applicability": {
+    "KF1": "20/32",
+    "KF2": "0/0",
+    "KF3": "11/27"
+  },
+  "tolerance_digest": "f9f12e6afa23c9a0",
+  "provenance": {
+    "record_id": "rec_stove_top_0002",
+    "source": "/Users/wanglin/Desktop/articraft-data/cache/record_materialization/rec_stove_top_0002/model.urdf",
+    "inertia_synthesized": false,
+    "collidable_geoms": 0,
+    "distance_backend": "mj_geomDistance",
+    "mimics_translated": [],
+    "notes": [
+      "no <collision> in source; all geoms are visual-only, so mjData.contact is always empty and every distance goes through mj_geomDistance."
+    ]
+  },
+  "coverage": {
+    "samples": 1158,
+    "by_layer": {
+      "reference": 1,
+      "scan": 132,
+      "states": 1,
+      "fill": 1024
+    },
+    "driven_dofs": [
+      "knob_1_turn",
+      "knob_2_turn",
+      "knob_3_turn",
+      "knob_4_turn"
+    ],
+    "dependent_dofs": [],
+    "pairs_swept": [],
+    "pairs_skipped": [
+      [
+        "knob_1_turn",
+        "knob_2_turn"
+      ],
+      [
+        "knob_1_turn",
+        "knob_3_turn"
+      ],
+      [
+        "knob_1_turn",
+        "knob_4_turn"
+      ],
+      [
+        "knob_2_turn",
+        "knob_3_turn"
+      ],
+      [
+        "knob_2_turn",
+        "knob_4_turn"
+      ],
+      [
+        "knob_3_turn",
+        "knob_4_turn"
+      ]
+    ],
+    "scan_points": 33,
+    "pair_points": 9,
+    "fill_per_dof": 256,
+    "notes": [
+      "6 joint pair(s) were not swept together because their swept bounds cannot reach each other: knob_1_turn+knob_2_turn, knob_1_turn+knob_3_turn, knob_1_turn+knob_4_turn, knob_2_turn+knob_3_turn, knob_2_turn+knob_4_turn, knob_3_turn+knob_4_turn"
+    ]
+  },
+  "claims": [
+    {
+      "predicate": "KF1.parent",
+      "subject": "knob_1_turn",
+      "verdict": "pass",
+      "reason": "'knob_1' moves relative to 'cooktop_slab' as declared",
+      "measured": {
+        "nearest_declared_ancestor": "cooktop_slab",
+        "links_up": 1
+      },
+      "threshold": {},
+      "evidence": {
+        "part": "knob_1",
+        "child_body": "knob_1",
+        "body_chain_upward": [
+          "cooktop"
+        ],
+        "binding_source": "table"
+      }
+    },
+    {
+      "predicate": "KF1.parent",
+      "subject": "knob_2_turn",
+      "verdict": "pass",
+      "reason": "'knob_2' moves relative to 'cooktop_slab' as declared",
+      "measured": {
+        "nearest_declared_ancestor": "cooktop_slab",
+        "links_up": 1
+      },
+      "threshold": {},
+      "evidence": {
+        "part": "knob_2",
+        "child_body": "knob_2",
+        "body_chain_upward": [
+          "cooktop"
+        ],
+        "binding_source": "table"
+      }
+    },
+    {
+      "predicate": "KF1.parent",
+      "subject": "knob_3_turn",
+      "verdict": "pass",
+      "reason": "'knob_3' moves relative to 'cooktop_slab' as declared",
+      "measured": {
+        "nearest_declared_ancestor": "cooktop_slab",
+        "links_up": 1
+      },
+      "threshold": {},
+      "evidence": {
+        "part": "knob_3",
+        "child_body": "knob_3",
+        "body_chain_upward": [
+          "cooktop"
+        ],
+        "binding_source": "table"
+      }
+    },
+    {
+      "predicate": "KF1.parent",
+      "subject": "knob_4_turn",
+      "verdict": "pass",
+      "reason": "'knob_4' moves relative to 'cooktop_slab' as declared",
+      "measured": {
+        "nearest_declared_ancestor": "cooktop_slab",
+        "links_up": 1
+      },
+      "threshold": {},
+      "evidence": {
+        "part": "knob_4",
+        "child_body": "knob_4",
+        "body_chain_upward": [
+          "cooktop"
+        ],
+        "binding_source": "table"
+      }
+    },
+    {
+      "predicate": "KF1.type",
+      "subject": "knob_1_turn",
+      "verdict": "pass",
+      "reason": "declared and built as hinge",
+      "measured": {
+        "joint_type": "hinge"
+      },
+      "threshold": {
+        "declared": "hinge"
+      },
+      "evidence": {
+        "mj_joint": "cooktop_to_knob_1"
+      }
+    },
+    {
+      "predicate": "KF1.type",
+      "subject": "knob_2_turn",
+      "verdict": "pass",
+      "reason": "declared and built as hinge",
+      "measured": {
+        "joint_type": "hinge"
+      },
+      "threshold": {
+        "declared": "hinge"
+      },
+      "evidence": {
+        "mj_joint": "cooktop_to_knob_2"
+      }
+    },
+    {
+      "predicate": "KF1.type",
+      "subject": "knob_3_turn",
+      "verdict": "pass",
+      "reason": "declared and built as hinge",
+      "measured": {
+        "joint_type": "hinge"
+      },
+      "threshold": {
+        "declared": "hinge"
+      },
+      "evidence": {
+        "mj_joint": "cooktop_to_knob_3"
+      }
+    },
+    {
+      "predicate": "KF1.type",
+      "subject": "knob_4_turn",
+      "verdict": "pass",
+      "reason": "declared and built as hinge",
+      "measured": {
+        "joint_type": "hinge"
+      },
+      "threshold": {
+        "declared": "hinge"
+      },
+      "evidence": {
+        "mj_joint": "cooktop_to_knob_4"
+      }
+    },
+    {
+      "predicate": "KF1.dof_composition",
+      "subject": "knob_1_turn",
+      "verdict": "pass",
+      "reason": "one declared degree of freedom, one joint",
+      "measured": {
+        "joints_on_body": 1
+      },
+      "threshold": {
+        "expected": 1
+      },
+      "evidence": {
+        "joint_names": [
+          "cooktop_to_knob_1"
+        ],
+        "body": "knob_1"
+      }
+    },
+    {
+      "predicate": "KF1.dof_composition",
+      "subject": "knob_2_turn",
+      "verdict": "pass",
+      "reason": "one declared degree of freedom, one joint",
+      "measured": {
+        "joints_on_body": 1
+      },
+      "threshold": {
+        "expected": 1
+      },
+      "evidence": {
+        "joint_names": [
+          "cooktop_to_knob_2"
+        ],
+        "body": "knob_2"
+      }
+    },
+    {
+      "predicate": "KF1.dof_composition",
+      "subject": "knob_3_turn",
+      "verdict": "pass",
+      "reason": "one declared degree of freedom, one joint",
+      "measured": {
+        "joints_on_body": 1
+      },
+      "threshold": {
+        "expected": 1
+      },
+      "evidence": {
+        "joint_names": [
+          "cooktop_to_knob_3"
+        ],
+        "body": "knob_3"
+      }
+    },
+    {
+      "predicate": "KF1.dof_composition",
+      "subject": "knob_4_turn",
+      "verdict": "pass",
+      "reason": "one declared degree of freedom, one joint",
+      "measured": {
+        "joints_on_body": 1
+      },
+      "threshold": {
+        "expected": 1
+      },
+      "evidence": {
+        "joint_names": [
+          "cooktop_to_knob_4"
+        ],
+        "body": "knob_4"
+      }
+    },
+    {
+      "predicate": "KF1.axis_semantic",
+      "subject": "knob_1_turn",
+      "verdict": "pass",
+      "reason": "axis is horizontal (perpendicular to up), off by 0.0 deg",
+      "measured": {
+        "angle_to_up_deg": 90.0,
+        "deviation_deg": 0.0
+      },
+      "threshold": {
+        "axis_angle_deg": 15.0
+      },
+      "evidence": {
+        "axis_world": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "up": [
+          -0.0,
+          -0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.axis_semantic",
+      "subject": "knob_2_turn",
+      "verdict": "pass",
+      "reason": "axis is horizontal (perpendicular to up), off by 0.0 deg",
+      "measured": {
+        "angle_to_up_deg": 90.0,
+        "deviation_deg": 0.0
+      },
+      "threshold": {
+        "axis_angle_deg": 15.0
+      },
+      "evidence": {
+        "axis_world": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "up": [
+          -0.0,
+          -0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.axis_semantic",
+      "subject": "knob_3_turn",
+      "verdict": "pass",
+      "reason": "axis is horizontal (perpendicular to up), off by 0.0 deg",
+      "measured": {
+        "angle_to_up_deg": 90.0,
+        "deviation_deg": 0.0
+      },
+      "threshold": {
+        "axis_angle_deg": 15.0
+      },
+      "evidence": {
+        "axis_world": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "up": [
+          -0.0,
+          -0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.axis_semantic",
+      "subject": "knob_4_turn",
+      "verdict": "pass",
+      "reason": "axis is horizontal (perpendicular to up), off by 0.0 deg",
+      "measured": {
+        "angle_to_up_deg": 90.0,
+        "deviation_deg": 0.0
+      },
+      "threshold": {
+        "axis_angle_deg": 15.0
+      },
+      "evidence": {
+        "axis_world": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "up": [
+          -0.0,
+          -0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.axis_admits_motion",
+      "subject": "knob_1_turn",
+      "verdict": "na",
+      "reason": "only meaningful for a slide; hinge travel is an arc and is KF3's to sweep",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.axis_admits_motion",
+      "subject": "knob_2_turn",
+      "verdict": "na",
+      "reason": "only meaningful for a slide; hinge travel is an arc and is KF3's to sweep",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.axis_admits_motion",
+      "subject": "knob_3_turn",
+      "verdict": "na",
+      "reason": "only meaningful for a slide; hinge travel is an arc and is KF3's to sweep",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.axis_admits_motion",
+      "subject": "knob_4_turn",
+      "verdict": "na",
+      "reason": "only meaningful for a slide; hinge travel is an arc and is KF3's to sweep",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.anchor",
+      "subject": "knob_1_turn",
+      "verdict": "pass",
+      "reason": "the axis passes within 0.4% of 'knob_1''s own size of its centroid",
+      "measured": {
+        "offset_over_diagonal": 0.004,
+        "offset_m": 0.00025,
+        "part_diagonal_m": 0.062914
+      },
+      "threshold": {
+        "anchor_center_offset_max": 0.05
+      },
+      "evidence": {
+        "part": "knob_1",
+        "anchor_world": [
+          -0.15,
+          -0.155,
+          0.049
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.anchor",
+      "subject": "knob_2_turn",
+      "verdict": "pass",
+      "reason": "the axis passes within 0.4% of 'knob_2''s own size of its centroid",
+      "measured": {
+        "offset_over_diagonal": 0.004,
+        "offset_m": 0.00025,
+        "part_diagonal_m": 0.062914
+      },
+      "threshold": {
+        "anchor_center_offset_max": 0.05
+      },
+      "evidence": {
+        "part": "knob_2",
+        "anchor_world": [
+          -0.05,
+          -0.155,
+          0.049
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.anchor",
+      "subject": "knob_3_turn",
+      "verdict": "pass",
+      "reason": "the axis passes within 0.4% of 'knob_3''s own size of its centroid",
+      "measured": {
+        "offset_over_diagonal": 0.004,
+        "offset_m": 0.00025,
+        "part_diagonal_m": 0.062914
+      },
+      "threshold": {
+        "anchor_center_offset_max": 0.05
+      },
+      "evidence": {
+        "part": "knob_3",
+        "anchor_world": [
+          0.05,
+          -0.155,
+          0.049
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.anchor",
+      "subject": "knob_4_turn",
+      "verdict": "pass",
+      "reason": "the axis passes within 0.4% of 'knob_4''s own size of its centroid",
+      "measured": {
+        "offset_over_diagonal": 0.004,
+        "offset_m": 0.00025,
+        "part_diagonal_m": 0.062914
+      },
+      "threshold": {
+        "anchor_center_offset_max": 0.05
+      },
+      "evidence": {
+        "part": "knob_4",
+        "anchor_world": [
+          0.15,
+          -0.155,
+          0.049
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.range_and_reference",
+      "subject": "knob_1_turn",
+      "verdict": "na",
+      "reason": "the joint is unlimited (URDF 'continuous'), so there is no declared travel to compare against",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.range_and_reference",
+      "subject": "knob_2_turn",
+      "verdict": "na",
+      "reason": "the joint is unlimited (URDF 'continuous'), so there is no declared travel to compare against",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.range_and_reference",
+      "subject": "knob_3_turn",
+      "verdict": "na",
+      "reason": "the joint is unlimited (URDF 'continuous'), so there is no declared travel to compare against",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.range_and_reference",
+      "subject": "knob_4_turn",
+      "verdict": "na",
+      "reason": "the joint is unlimited (URDF 'continuous'), so there is no declared travel to compare against",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.travel_scale",
+      "subject": "knob_1_turn",
+      "verdict": "na",
+      "reason": "a hinge range is an angle, with no length to compare a size against",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.travel_scale",
+      "subject": "knob_2_turn",
+      "verdict": "na",
+      "reason": "a hinge range is an angle, with no length to compare a size against",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.travel_scale",
+      "subject": "knob_3_turn",
+      "verdict": "na",
+      "reason": "a hinge range is an angle, with no length to compare a size against",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.travel_scale",
+      "subject": "knob_4_turn",
+      "verdict": "na",
+      "reason": "a hinge range is an angle, with no length to compare a size against",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.state_reachability",
+      "subject": "False",
+      "verdict": "pass",
+      "reason": "state 'False' is held with no forbidden interference",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "configurations_in_state": 1
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "worst_pair": null
+      }
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "knob_1+knob_2@all",
+      "verdict": "pass",
+      "reason": "'knob_1' and 'knob_2' stay clear across 1158 configurations, closest approach 0.0523 m",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "min_clearance_m": 0.052332,
+        "samples_evaluated": 1158
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "first_failing_configuration": null,
+        "closest_configuration": "halton[682]",
+        "distmax": 0.5
+      }
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "knob_1+knob_3@all",
+      "verdict": "pass",
+      "reason": "'knob_1' and 'knob_3' stay clear across 1158 configurations, closest approach 0.1523 m",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "min_clearance_m": 0.152312,
+        "samples_evaluated": 1158
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "first_failing_configuration": null,
+        "closest_configuration": "halton[170]",
+        "distmax": 0.5
+      }
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "knob_1+knob_4@all",
+      "verdict": "pass",
+      "reason": "'knob_1' and 'knob_4' stay clear across 1158 configurations, closest approach 0.2523 m",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "min_clearance_m": 0.252343,
+        "samples_evaluated": 1158
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "first_failing_configuration": null,
+        "closest_configuration": "halton[714]",
+        "distmax": 0.5
+      }
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "knob_2+knob_3@all",
+      "verdict": "pass",
+      "reason": "'knob_2' and 'knob_3' stay clear across 1158 configurations, closest approach 0.0524 m",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "min_clearance_m": 0.05241,
+        "samples_evaluated": 1158
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "first_failing_configuration": null,
+        "closest_configuration": "halton[483]",
+        "distmax": 0.5
+      }
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "knob_2+knob_4@all",
+      "verdict": "pass",
+      "reason": "'knob_2' and 'knob_4' stay clear across 1158 configurations, closest approach 0.1525 m",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "min_clearance_m": 0.15252,
+        "samples_evaluated": 1158
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "first_failing_configuration": null,
+        "closest_configuration": "halton[645]",
+        "distmax": 0.5
+      }
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "knob_3+knob_4@all",
+      "verdict": "pass",
+      "reason": "'knob_3' and 'knob_4' stay clear across 1158 configurations, closest approach 0.0523 m",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "min_clearance_m": 0.052348,
+        "samples_evaluated": 1158
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "first_failing_configuration": null,
+        "closest_configuration": "halton[204]",
+        "distmax": 0.5
+      }
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "knob_1+burner_1@all",
+      "verdict": "na",
+      "reason": "part 'burner_1' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "knob_1+burner_2@all",
+      "verdict": "na",
+      "reason": "part 'burner_2' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "knob_1+burner_3@all",
+      "verdict": "na",
+      "reason": "part 'burner_3' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "knob_1+burner_4@all",
+      "verdict": "na",
+      "reason": "part 'burner_4' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "knob_2+burner_1@all",
+      "verdict": "na",
+      "reason": "part 'burner_1' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "knob_2+burner_2@all",
+      "verdict": "na",
+      "reason": "part 'burner_2' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "knob_2+burner_3@all",
+      "verdict": "na",
+      "reason": "part 'burner_3' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "knob_2+burner_4@all",
+      "verdict": "na",
+      "reason": "part 'burner_4' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "knob_3+burner_1@all",
+      "verdict": "na",
+      "reason": "part 'burner_1' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "knob_3+burner_2@all",
+      "verdict": "na",
+      "reason": "part 'burner_2' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "knob_3+burner_3@all",
+      "verdict": "na",
+      "reason": "part 'burner_3' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "knob_3+burner_4@all",
+      "verdict": "na",
+      "reason": "part 'burner_4' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "knob_4+burner_1@all",
+      "verdict": "na",
+      "reason": "part 'burner_1' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "knob_4+burner_2@all",
+      "verdict": "na",
+      "reason": "part 'burner_2' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "knob_4+burner_3@all",
+      "verdict": "na",
+      "reason": "part 'burner_3' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "knob_4+burner_4@all",
+      "verdict": "na",
+      "reason": "part 'burner_4' has no binding. A part that reached P3 without one means the Gate admitted an asset it should have failed at G1.",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF3.required_contact",
+      "subject": "knob_1+cooktop_slab@all",
+      "verdict": "pass",
+      "reason": "'knob_1' and 'cooktop_slab' meet in state 'all', closest -0.0039 m",
+      "measured": {
+        "min_clearance_m": -0.003854,
+        "samples_evaluated": 1158
+      },
+      "threshold": {
+        "required_contact_m": 0.005
+      },
+      "evidence": {
+        "relation": "mesh_contact",
+        "closest_configuration": "halton[977]",
+        "state": "all"
+      }
+    },
+    {
+      "predicate": "KF3.required_contact",
+      "subject": "knob_2+cooktop_slab@all",
+      "verdict": "pass",
+      "reason": "'knob_2' and 'cooktop_slab' meet in state 'all', closest -0.0039 m",
+      "measured": {
+        "min_clearance_m": -0.003854,
+        "samples_evaluated": 1158
+      },
+      "threshold": {
+        "required_contact_m": 0.005
+      },
+      "evidence": {
+        "relation": "mesh_contact",
+        "closest_configuration": "halton[562]",
+        "state": "all"
+      }
+    },
+    {
+      "predicate": "KF3.required_contact",
+      "subject": "knob_3+cooktop_slab@all",
+      "verdict": "pass",
+      "reason": "'knob_3' and 'cooktop_slab' meet in state 'all', closest -0.0039 m",
+      "measured": {
+        "min_clearance_m": -0.003854,
+        "samples_evaluated": 1158
+      },
+      "threshold": {
+        "required_contact_m": 0.005
+      },
+      "evidence": {
+        "relation": "mesh_contact",
+        "closest_configuration": "halton[842]",
+        "state": "all"
+      }
+    },
+    {
+      "predicate": "KF3.required_contact",
+      "subject": "knob_4+cooktop_slab@all",
+      "verdict": "pass",
+      "reason": "'knob_4' and 'cooktop_slab' meet in state 'all', closest -0.0039 m",
+      "measured": {
+        "min_clearance_m": -0.003854,
+        "samples_evaluated": 1158
+      },
+      "threshold": {
+        "required_contact_m": 0.005
+      },
+      "evidence": {
+        "relation": "mesh_contact",
+        "closest_configuration": "halton[965]",
+        "state": "all"
+      }
+    }
+  ]
+}

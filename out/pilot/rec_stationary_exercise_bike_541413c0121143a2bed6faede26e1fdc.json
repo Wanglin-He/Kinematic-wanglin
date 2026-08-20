@@ -1,0 +1,665 @@
+{
+  "record_id": "rec_stationary_exercise_bike_541413c0121143a2bed6faede26e1fdc",
+  "contract_id": "rec_stationary_exercise_bike_541413c0121143a2bed6faede26e1fdc",
+  "admitted": true,
+  "gate": [
+    {
+      "check": "G0",
+      "status": "pass",
+      "detail": "compiled: 9 bodies, 7 joints, 91 geoms"
+    },
+    {
+      "check": "G1",
+      "status": "pass",
+      "detail": "diagnostic run: 4 of 5 required parts bound; ['flywheel_housing'] are unbound and every claim about them is reported N/A. NOT A SCORE -- the faithful reading is that these fail the Gate"
+    },
+    {
+      "check": "G2",
+      "status": "pass",
+      "detail": "every required part has a motion chain matching its declared role"
+    },
+    {
+      "check": "G3",
+      "status": "fail",
+      "detail": "the source declares no <inertial>; mass and inertia were synthesised to satisfy the compiler. Reported, but not a precondition for P3, whose scope excludes mass entirely"
+    }
+  ],
+  "profile": {
+    "KF1": 0.8823529411764706,
+    "KF2": null,
+    "KF3": 1.0
+  },
+  "sub_scores": {
+    "KF1.declared": 0.6,
+    "KF1.measured": 1.0
+  },
+  "applicability": {
+    "KF1": "17/24",
+    "KF2": "0/0",
+    "KF3": "9/9"
+  },
+  "tolerance_digest": "f9f12e6afa23c9a0",
+  "provenance": {
+    "record_id": "rec_stationary_exercise_bike_541413c0121143a2bed6faede26e1fdc",
+    "source": "/Users/wanglin/Desktop/articraft-data/cache/record_materialization/rec_stationary_exercise_bike_541413c0121143a2bed6faede26e1fdc/model.urdf",
+    "inertia_synthesized": true,
+    "collidable_geoms": 0,
+    "distance_backend": "mj_geomDistance",
+    "mimics_translated": [],
+    "notes": [
+      "no <inertial> in source; mass and inertia synthesised to satisfy the compiler. Never used in scoring.",
+      "no <collision> in source; all geoms are visual-only, so mjData.contact is always empty and every distance goes through mj_geomDistance."
+    ]
+  },
+  "coverage": {
+    "samples": 953,
+    "by_layer": {
+      "reference": 1,
+      "scan": 99,
+      "pair": 81,
+      "states": 4,
+      "fill": 768
+    },
+    "driven_dofs": [
+      "crank_spin",
+      "saddle_post_adjust",
+      "handlebar_adjust"
+    ],
+    "dependent_dofs": [],
+    "pairs_swept": [
+      [
+        "crank_spin",
+        "handlebar_adjust"
+      ]
+    ],
+    "pairs_skipped": [
+      [
+        "crank_spin",
+        "saddle_post_adjust"
+      ],
+      [
+        "saddle_post_adjust",
+        "handlebar_adjust"
+      ]
+    ],
+    "scan_points": 33,
+    "pair_points": 9,
+    "fill_per_dof": 256,
+    "notes": [
+      "2 joint pair(s) were not swept together because their swept bounds cannot reach each other: crank_spin+saddle_post_adjust, saddle_post_adjust+handlebar_adjust"
+    ]
+  },
+  "claims": [
+    {
+      "predicate": "KF1.parent",
+      "subject": "crank_spin",
+      "verdict": "pass",
+      "reason": "'crank' moves relative to 'frame' as declared",
+      "measured": {
+        "nearest_declared_ancestor": "frame",
+        "links_up": 1
+      },
+      "threshold": {},
+      "evidence": {
+        "part": "crank",
+        "child_body": "crank",
+        "body_chain_upward": [
+          "base_frame"
+        ],
+        "binding_source": "table"
+      }
+    },
+    {
+      "predicate": "KF1.parent",
+      "subject": "saddle_post_adjust",
+      "verdict": "pass",
+      "reason": "'saddle_post' moves relative to 'frame' as declared",
+      "measured": {
+        "nearest_declared_ancestor": "frame",
+        "links_up": 1
+      },
+      "threshold": {},
+      "evidence": {
+        "part": "saddle_post",
+        "child_body": "saddle_post",
+        "body_chain_upward": [
+          "base_frame"
+        ],
+        "binding_source": "table"
+      }
+    },
+    {
+      "predicate": "KF1.parent",
+      "subject": "handlebar_adjust",
+      "verdict": "pass",
+      "reason": "'handlebar' moves relative to 'frame' as declared",
+      "measured": {
+        "nearest_declared_ancestor": "frame",
+        "links_up": 1
+      },
+      "threshold": {},
+      "evidence": {
+        "part": "handlebar",
+        "child_body": "bar_post",
+        "body_chain_upward": [
+          "base_frame"
+        ],
+        "binding_source": "table"
+      }
+    },
+    {
+      "predicate": "KF1.type",
+      "subject": "crank_spin",
+      "verdict": "pass",
+      "reason": "declared and built as hinge",
+      "measured": {
+        "joint_type": "hinge"
+      },
+      "threshold": {
+        "declared": "hinge"
+      },
+      "evidence": {
+        "mj_joint": "crank_spin"
+      }
+    },
+    {
+      "predicate": "KF1.type",
+      "subject": "saddle_post_adjust",
+      "verdict": "pass",
+      "reason": "declared and built as slide",
+      "measured": {
+        "joint_type": "slide"
+      },
+      "threshold": {
+        "declared": "slide"
+      },
+      "evidence": {
+        "mj_joint": "saddle_height"
+      }
+    },
+    {
+      "predicate": "KF1.type",
+      "subject": "handlebar_adjust",
+      "verdict": "pass",
+      "reason": "declared and built as slide",
+      "measured": {
+        "joint_type": "slide"
+      },
+      "threshold": {
+        "declared": "slide"
+      },
+      "evidence": {
+        "mj_joint": "bar_height"
+      }
+    },
+    {
+      "predicate": "KF1.dof_composition",
+      "subject": "crank_spin",
+      "verdict": "pass",
+      "reason": "one declared degree of freedom, one joint",
+      "measured": {
+        "joints_on_body": 1
+      },
+      "threshold": {
+        "expected": 1
+      },
+      "evidence": {
+        "joint_names": [
+          "crank_spin"
+        ],
+        "body": "crank"
+      }
+    },
+    {
+      "predicate": "KF1.dof_composition",
+      "subject": "saddle_post_adjust",
+      "verdict": "pass",
+      "reason": "one declared degree of freedom, one joint",
+      "measured": {
+        "joints_on_body": 1
+      },
+      "threshold": {
+        "expected": 1
+      },
+      "evidence": {
+        "joint_names": [
+          "saddle_height"
+        ],
+        "body": "saddle_post"
+      }
+    },
+    {
+      "predicate": "KF1.dof_composition",
+      "subject": "handlebar_adjust",
+      "verdict": "pass",
+      "reason": "one declared degree of freedom, one joint",
+      "measured": {
+        "joints_on_body": 1
+      },
+      "threshold": {
+        "expected": 1
+      },
+      "evidence": {
+        "joint_names": [
+          "bar_height"
+        ],
+        "body": "bar_post"
+      }
+    },
+    {
+      "predicate": "KF1.axis_semantic",
+      "subject": "crank_spin",
+      "verdict": "pass",
+      "reason": "axis is horizontal (perpendicular to up), off by 0.0 deg",
+      "measured": {
+        "angle_to_up_deg": 90.0,
+        "deviation_deg": 0.0
+      },
+      "threshold": {
+        "axis_angle_deg": 15.0
+      },
+      "evidence": {
+        "axis_world": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "up": [
+          -0.0,
+          -0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.axis_semantic",
+      "subject": "saddle_post_adjust",
+      "verdict": "pass",
+      "reason": "axis is vertical (parallel to up), off by 0.0 deg",
+      "measured": {
+        "angle_to_up_deg": 0.0,
+        "deviation_deg": 0.0
+      },
+      "threshold": {
+        "axis_angle_deg": 15.0
+      },
+      "evidence": {
+        "axis_world": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "up": [
+          -0.0,
+          -0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.axis_semantic",
+      "subject": "handlebar_adjust",
+      "verdict": "pass",
+      "reason": "axis is vertical (parallel to up), off by 0.0 deg",
+      "measured": {
+        "angle_to_up_deg": 0.0,
+        "deviation_deg": 0.0
+      },
+      "threshold": {
+        "axis_angle_deg": 15.0
+      },
+      "evidence": {
+        "axis_world": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "up": [
+          -0.0,
+          -0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.axis_admits_motion",
+      "subject": "crank_spin",
+      "verdict": "na",
+      "reason": "only meaningful for a slide; hinge travel is an arc and is KF3's to sweep",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.axis_admits_motion",
+      "subject": "saddle_post_adjust",
+      "verdict": "na",
+      "reason": "'saddle_post' already overlaps 'frame' by 0.0747 m at the reference pose, so no direction can be judged clear; that overlap is a static-geometry finding",
+      "measured": {},
+      "threshold": {},
+      "evidence": {
+        "clearance_before": -0.074703
+      }
+    },
+    {
+      "predicate": "KF1.axis_admits_motion",
+      "subject": "handlebar_adjust",
+      "verdict": "na",
+      "reason": "'handlebar' already overlaps 'frame' by 0.0767 m at the reference pose, so no direction can be judged clear; that overlap is a static-geometry finding",
+      "measured": {},
+      "threshold": {},
+      "evidence": {
+        "clearance_before": -0.076724
+      }
+    },
+    {
+      "predicate": "KF1.anchor",
+      "subject": "crank_spin",
+      "verdict": "pass",
+      "reason": "the axis passes within 1.2% of 'crank''s own size of its centroid",
+      "measured": {
+        "offset_over_diagonal": 0.0123,
+        "offset_m": 0.010357,
+        "part_diagonal_m": 0.844225
+      },
+      "threshold": {
+        "anchor_center_offset_max": 0.05
+      },
+      "evidence": {
+        "part": "crank",
+        "anchor_world": [
+          0.12,
+          0.0,
+          0.47
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.anchor",
+      "subject": "saddle_post_adjust",
+      "verdict": "na",
+      "reason": "a slide joint has no pivot the kinematics depend on",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.anchor",
+      "subject": "handlebar_adjust",
+      "verdict": "na",
+      "reason": "a slide joint has no pivot the kinematics depend on",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.range_and_reference",
+      "subject": "crank_spin",
+      "verdict": "na",
+      "reason": "the joint is unlimited (URDF 'continuous'), so there is no declared travel to compare against",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.range_and_reference",
+      "subject": "saddle_post_adjust",
+      "verdict": "fail",
+      "reason": "P0 declares 0.15 m of travel and the model gives 0.16, off by 7%",
+      "measured": {
+        "model_span": 0.16,
+        "model_range": [
+          0.0,
+          0.16
+        ]
+      },
+      "threshold": {
+        "declared_span": 0.15,
+        "state_match_relative": 0.02
+      },
+      "evidence": {
+        "unit": "m",
+        "declared_states": {
+          "low": 0.0,
+          "high": 0.15
+        }
+      }
+    },
+    {
+      "predicate": "KF1.range_and_reference",
+      "subject": "handlebar_adjust",
+      "verdict": "fail",
+      "reason": "P0 declares 0.1 m of travel and the model gives 0.14, off by 40%",
+      "measured": {
+        "model_span": 0.14,
+        "model_range": [
+          0.0,
+          0.14
+        ]
+      },
+      "threshold": {
+        "declared_span": 0.1,
+        "state_match_relative": 0.02
+      },
+      "evidence": {
+        "unit": "m",
+        "declared_states": {
+          "low": 0.0,
+          "high": 0.1
+        }
+      }
+    },
+    {
+      "predicate": "KF1.travel_scale",
+      "subject": "crank_spin",
+      "verdict": "na",
+      "reason": "a hinge range is an angle, with no length to compare a size against",
+      "measured": {},
+      "threshold": {},
+      "evidence": {}
+    },
+    {
+      "predicate": "KF1.travel_scale",
+      "subject": "saddle_post_adjust",
+      "verdict": "pass",
+      "reason": "the geometry that moves is 0.709 m across against 0.150 m of declared travel",
+      "measured": {
+        "moving_geometry_diagonal_m": 0.708824,
+        "size_over_travel": 4.7255
+      },
+      "threshold": {
+        "travel_scale_min": 0.5,
+        "declared_travel_m": 0.15
+      },
+      "evidence": {
+        "measured_bodies": [
+          "saddle_post"
+        ]
+      }
+    },
+    {
+      "predicate": "KF1.travel_scale",
+      "subject": "handlebar_adjust",
+      "verdict": "pass",
+      "reason": "the geometry that moves is 1.018 m across against 0.100 m of declared travel",
+      "measured": {
+        "moving_geometry_diagonal_m": 1.017977,
+        "size_over_travel": 10.1798
+      },
+      "threshold": {
+        "travel_scale_min": 0.5,
+        "declared_travel_m": 0.1
+      },
+      "evidence": {
+        "measured_bodies": [
+          "bar_post"
+        ]
+      }
+    },
+    {
+      "predicate": "KF3.state_reachability",
+      "subject": "high",
+      "verdict": "pass",
+      "reason": "state 'high' is held with no forbidden interference",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "configurations_in_state": 1
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "worst_pair": null
+      }
+    },
+    {
+      "predicate": "KF3.state_reachability",
+      "subject": "home",
+      "verdict": "pass",
+      "reason": "state 'home' is held with no forbidden interference",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "configurations_in_state": 112
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "worst_pair": null
+      }
+    },
+    {
+      "predicate": "KF3.state_reachability",
+      "subject": "low",
+      "verdict": "pass",
+      "reason": "state 'low' is held with no forbidden interference",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "configurations_in_state": 46
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "worst_pair": null
+      }
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "crank+saddle_post@all",
+      "verdict": "pass",
+      "reason": "'crank' and 'saddle_post' stay clear across 953 configurations, closest approach 0.2279 m",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "min_clearance_m": 0.227875,
+        "samples_evaluated": 953
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "first_failing_configuration": null,
+        "closest_configuration": "halton[36]",
+        "distmax": 0.5
+      }
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "crank+handlebar@all",
+      "verdict": "pass",
+      "reason": "'crank' and 'handlebar' stay clear across 953 configurations, closest approach 0.2178 m",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "min_clearance_m": 0.217796,
+        "samples_evaluated": 953
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "first_failing_configuration": null,
+        "closest_configuration": "halton[75]",
+        "distmax": 0.5
+      }
+    },
+    {
+      "predicate": "KF3.forbidden_pair",
+      "subject": "saddle_post+handlebar@all",
+      "verdict": "pass",
+      "reason": "'saddle_post' and 'handlebar' stay clear across 953 configurations, closest approach 0.5000 m",
+      "measured": {
+        "max_penetration_m": 0.0,
+        "min_clearance_m": 0.5,
+        "samples_evaluated": 953
+      },
+      "threshold": {
+        "forbidden_penetration_m": 0.001
+      },
+      "evidence": {
+        "worst_configuration": null,
+        "first_failing_configuration": null,
+        "closest_configuration": "reference",
+        "distmax": 0.5
+      }
+    },
+    {
+      "predicate": "KF3.required_contact",
+      "subject": "crank+frame@all",
+      "verdict": "pass",
+      "reason": "'crank' and 'frame' meet in state 'all', closest -0.2700 m",
+      "measured": {
+        "min_clearance_m": -0.27,
+        "samples_evaluated": 953
+      },
+      "threshold": {
+        "required_contact_m": 0.005
+      },
+      "evidence": {
+        "relation": "mesh_contact",
+        "closest_configuration": "halton[362]",
+        "state": "all"
+      }
+    },
+    {
+      "predicate": "KF3.required_contact",
+      "subject": "saddle_post+frame@all",
+      "verdict": "pass",
+      "reason": "'saddle_post' and 'frame' meet in state 'all', closest -0.0748 m",
+      "measured": {
+        "min_clearance_m": -0.074762,
+        "samples_evaluated": 953
+      },
+      "threshold": {
+        "required_contact_m": 0.005
+      },
+      "evidence": {
+        "relation": "mesh_contact",
+        "closest_configuration": "halton[126]",
+        "state": "all"
+      }
+    },
+    {
+      "predicate": "KF3.required_contact",
+      "subject": "handlebar+frame@all",
+      "verdict": "pass",
+      "reason": "'handlebar' and 'frame' meet in state 'all', closest -0.0767 m",
+      "measured": {
+        "min_clearance_m": -0.076734,
+        "samples_evaluated": 953
+      },
+      "threshold": {
+        "required_contact_m": 0.005
+      },
+      "evidence": {
+        "relation": "mesh_contact",
+        "closest_configuration": "halton[250]",
+        "state": "all"
+      }
+    }
+  ]
+}
