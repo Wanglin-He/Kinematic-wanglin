@@ -1,5 +1,12 @@
-import json, re, pathlib, sys
-import numpy as np, mujoco
+"""Four orientation views per record, for the human review page.
+
+Not evidence for any verdict. The scoring pass has already run and frozen its results;
+this re-poses each asset at its reference configuration and takes four pictures from the
+same four angles, so a person can see which object they are being asked about. Every
+number on the page comes from the report, not from these.
+"""
+import json, pathlib, sys
+import numpy as np
 from evo_p0p3.p0.loader import load_contract
 from evo_p0p3.p3 import gate, review
 from evo_p0p3.p3.sweep import Sweeper
@@ -18,13 +25,6 @@ JOBS = [
  ("调节 · 灶台","stove_top","rec_stove_top_0002"),
 ]
 
-def parts_of(subject, ev):
-    if ev.get("worst_pair"): return tuple(ev["worst_pair"])
-    m = re.match(r"^(.+?)\+(.+?)@", subject)
-    if m: return (m.group(1), m.group(2))
-    if ev.get("part"): return (ev["part"],)
-    return ()
-
 out = []
 for zh, name, rid in JOBS:
     c = load_contract(f"contracts/pilot/{name}.yaml")
@@ -32,73 +32,23 @@ for zh, name, rid in JOBS:
                     binding_table=f"contracts/pilot/bindings/{name}.yaml", diagnostic=True)
     if ad.binding is None:
         print("skip", name, file=sys.stderr); continue
-    asset, b = ad.asset, ad.binding
-    m = asset.model
     rep = json.loads(pathlib.Path(f"out/pilot/{rid}.json").read_text())
-    sched = Sweeper(c, b).schedule()
-    by_label = {s.label: np.asarray(s.qpos, float) for s in sched.samples}
-    ref = by_label["reference"]
+    ref = np.asarray(Sweeper(c, ad.binding).schedule().samples[0].qpos, float)
+    views = review.surround(ad.asset, ad.binding, ref)
 
-    shots = []
-    for cl in rep["claims"]:
-        if cl["verdict"] != "fail": continue
-        pred, subj = cl["predicate"], cl["subject"]
-        ev, meas = cl.get("evidence") or {}, cl.get("measured") or {}
-        parts = parts_of(subj, ev)
-        if not parts:   # KF1 的证据里没有 part 字段，从契约的关节声明反查
-            for j in c.kinematic_claims.joints:
-                if j.id == subj:
-                    parts = (j.part,) + ((j.parent,) if j.parent in b.parts else ())
-                    break
-        parts = tuple(p for p in parts if p in b.parts)
-        if not parts: continue
-        joints = False; cap = ""; fail = None
-
-        if pred.startswith("KF3"):
-            lab = ev.get("worst_configuration") or ev.get("closest_configuration")
-            fail = by_label.get(lab)
-            cap = f"构型 {lab}"
-            if fail is None: fail = ref; cap = f"构型 {lab}（未在计划中，退回参考姿态）"
-        else:
-            # KF1：把该关节推到模型自己的极限，让「它实际能动到哪」看得见
-            jid = None
-            for j in c.kinematic_claims.joints:
-                if j.id == subj: jid = j; break
-            fail = ref.copy()
-            if jid is not None and jid.part in b.parts:
-                bd = b.root_body(jid.part)
-                if int(m.body_jntnum[bd]) >= 1:
-                    k = int(m.body_jntadr[bd]); adr = int(m.jnt_qposadr[k])
-                    lo, hi = (float(m.jnt_range[k][0]), float(m.jnt_range[k][1])) \
-                             if int(m.jnt_limited[k]) else (0.0, 1.0)
-                    fail[adr] = hi if abs(hi - ref[adr]) > abs(lo - ref[adr]) else lo
-                    unit = jid.range.unit if jid.range else ""
-                    if pred == "KF1.range_and_reference":
-                        cap = (f"模型自己只能到 {fail[adr]:+.4g} {unit}"
-                               f"（契约声明 {meas.get('model_span','?')} vs "
-                               f"{cl.get('threshold',{}).get('declared_span','?')}）")
-                    else:
-                        cap = f"该关节推到模型自己的极限 {fail[adr]:+.4g} {unit}"
-            joints = pred in ("KF1.anchor", "KF1.axis_semantic")
-            if joints: cap += "（细线为 MuJoCo 画出的关节轴）"
-            if pred == "KF1.parent" and ev.get("nearest_declared_ancestor") in b.parts:
-                parts = (parts[0], ev["nearest_declared_ancestor"])
-
-        sh = review.shoot(asset, b, ref, fail, parts, caption=cap, show_joints=joints)
-        shots.append({"predicate": pred, "subject": subj, "measured": meas,
-                      "threshold": cl.get("threshold") or {}, "evidence": ev,
-                      "why": cl.get("message") or cl.get("reason") or "",
-                      "parts": list(parts), "caption": cap,
-                      "ref": sh.reference_png, "fail": sh.failing_png})
+    fails = [{"predicate": x["predicate"], "subject": x["subject"], "reason": x.get("reason",""),
+              "measured": x.get("measured") or {}, "threshold": x.get("threshold") or {},
+              "evidence": x.get("evidence") or {}}
+             for x in rep["claims"] if x["verdict"] == "fail"]
     prompt = ""
     pj = pathlib.Path(f"{C}/{rid}/prompt.txt")
     if pj.exists(): prompt = pj.read_text(encoding="utf-8").strip()
     out.append({"zh": zh, "name": name, "rid": rid, "profile": rep["profile"],
                 "n_claims": len(rep["claims"]),
-                "n_na": sum(1 for x in rep["claims"] if x["verdict"]=="na"),
-                "prompt": prompt, "shots": shots})
-    print(f"{zh}: {len(shots)} 条判负已渲染", file=sys.stderr)
+                "n_na": sum(1 for x in rep["claims"] if x["verdict"] == "na"),
+                "prompt": prompt, "views": list(views), "fails": fails})
+    print(f"{zh}: 4 张视图 · {len(fails)} 条判负", file=sys.stderr)
 
 pathlib.Path("/tmp/shots.json").write_text(json.dumps(out, ensure_ascii=False))
-kb = pathlib.Path("/tmp/shots.json").stat().st_size//1024
-print(f"\n共 {sum(len(a['shots']) for a in out)} 条判负 · {sum(len(a['shots']) for a in out)*2} 张图 · {kb} KB", file=sys.stderr)
+kb = pathlib.Path("/tmp/shots.json").stat().st_size // 1024
+print(f"\n{len(out)} 个资产 · {len(out)*4} 张图 · {kb} KB", file=sys.stderr)

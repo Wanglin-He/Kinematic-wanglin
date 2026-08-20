@@ -20,7 +20,7 @@ from dataclasses import dataclass
 import mujoco
 import numpy as np
 
-GREY = (0.72, 0.72, 0.70, 0.16)
+GREY = (0.74, 0.74, 0.72, 1.0)
 """Assets carry their own materials, and a black laptop on a black background is not
 evidence of anything. Everything is repainted a neutral grey and only the parts a claim
 names get a colour.
@@ -89,6 +89,44 @@ def _png(renderer, model, data, camera, option) -> str:
     buffer = io.BytesIO()
     Image.fromarray(image).save(buffer, format="PNG", optimize=True)
     return base64.b64encode(buffer.getvalue()).decode("ascii")
+
+
+def surround(asset, binding, qpos, *, angles=(0, 90, 180, 270)) -> tuple[str, ...]:
+    """Four views of the whole asset at one pose, evenly around it.
+
+    The same four angles for every asset, so two records can be compared by eye without
+    wondering whether the camera moved. Nothing here is measured; the measurements are
+    already in the report and appear next to these as text.
+    """
+    from PIL import Image
+
+    model, data = asset.model, asset.data
+    model.geom_matid[:] = -1
+    model.geom_rgba[:] = GREY
+    model.vis.headlight.ambient[:] = [0.48, 0.48, 0.48]
+    model.vis.headlight.diffuse[:] = [0.78, 0.78, 0.78]
+    model.vis.headlight.specular[:] = [0.10, 0.10, 0.10]
+
+    data.qpos[:] = qpos
+    mujoco.mj_forward(model, data)
+
+    renderer = mujoco.Renderer(model, height=HEIGHT, width=WIDTH)
+    camera = mujoco.MjvCamera()
+    camera.type = mujoco.mjtCamera.mjCAMERA_FREE
+    camera.lookat[:] = np.asarray(model.stat.center, dtype=float)
+    camera.distance = 1.25 * float(model.stat.extent)
+    camera.elevation = -20.0
+    option = mujoco.MjvOption()
+
+    out = []
+    for angle in angles:
+        camera.azimuth = float(angle)
+        renderer.update_scene(data, camera, option)
+        buffer = io.BytesIO()
+        Image.fromarray(renderer.render()).save(buffer, format="PNG", optimize=True)
+        out.append(base64.b64encode(buffer.getvalue()).decode("ascii"))
+    renderer.close()
+    return tuple(out)
 
 
 def shoot(
