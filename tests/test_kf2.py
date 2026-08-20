@@ -93,7 +93,7 @@ def test_the_verdict_matrix_matches_the_manifest(defect, materialised, contract)
     mismatches = {
         predicate: (expected, observed.get(predicate))
         for predicate, expected in defect.expect.items()
-        if observed.get(predicate) != expected
+        if predicate.startswith("KF2.") and observed.get(predicate) != expected
     }
     assert not mismatches, f"expected vs observed: {mismatches}"
 

@@ -42,6 +42,10 @@
       <origin xyz="0 0.19 0.45"/>
       <geometry><box size="0.40 0.02 0.90"/></geometry>
     </visual>
+    <visual name="front_lip">
+      <origin xyz="0 -0.205 0.03"/>
+      <geometry><box size="0.40 0.01 0.02"/></geometry>
+    </visual>
     <visual name="mid_shelf">
       <origin xyz="0 0 0.39"/>
       <geometry><box size="0.36 0.38 0.01"/></geometry>
@@ -115,8 +119,10 @@
     <parent link="cabinet_body"/>
     <child link="door"/>
     <origin xyz="-0.17 -0.19 0.21"/>
-    <axis xyz="0 0 1"/>
-    <limit lower="0.0" upper="1.92" effort="20" velocity="1.0"/>
+    <!-- -z, not +z. About +z the panel would swing toward +y, straight into the carcass;
+         the sweep measured 0.040 m of interpenetration before this was corrected. -->
+    <axis xyz="0 0 -1"/>
+    <limit lower="0.0" upper="1.5708" effort="20" velocity="1.0"/>
   </joint>
 
   <link name="door_knob">
@@ -128,7 +134,7 @@
   <joint name="door_knob_fixed" type="fixed">
     <parent link="door"/>
     <child link="door_knob"/>
-    <origin xyz="0.30 -0.025 0"/>
+    <origin xyz="0.30 -0.028 0"/>
   </joint>
 
 </robot>

@@ -62,7 +62,7 @@ def control_for(defect, materialised) -> mjcf.LoadedAsset:
 def test_the_control_compiles_with_its_geometry_intact(control):
     assert control.model.nbody == 8
     assert control.model.njnt == 3
-    assert control.model.ngeom == 12
+    assert control.model.ngeom == 13  # six carcass panels + front lip + drawers, handles, door, knob
     assert control.inertia_synthesized  # visual-only, like the real assets
 
 

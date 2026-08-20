@@ -417,11 +417,29 @@ items:
 
   - id: P3.KF3.motion1
     spec: "closed、open 与中间关键状态可达，轨迹连续且覆盖声明范围"
-    disposition: deferred
+    disposition: replaced
+    where: evo_p0p3/p3/kf3.py::Session.state_reachability
+    replaced_by: "reachability scored as reachable WITHOUT forbidden interference"
+    reason: >
+      Reachability as written cannot fail. Writing a configuration into qpos always
+      succeeds, and forward kinematics is exact and continuous by construction, so
+      "closed and open are reachable" and "the path is continuous" are properties of
+      MuJoCo rather than of the asset -- the same tautology class that already cost this
+      project a fault-injection experiment with zero detections. What an asset genuinely
+      can fail is arriving at a declared state through its own geometry, so the state is
+      scored on whether any forbidden pair is violated while holding it.
 
   - id: P3.KF3.motion2
     spec: "相对位姿遵循 KF1 的 slide、hinge、ball 或 free 运动语义"
-    disposition: deferred
+    disposition: replaced
+    where: evo_p0p3/p3/kf1.py::dof_composition
+    replaced_by: "KF1.dof_composition -- one declared degree of freedom, one MuJoCo joint"
+    reason: >
+      A MuJoCo slide translates and a hinge rotates by construction, so checking that the
+      relative pose follows the declared semantics tests the solver rather than the asset.
+      The failure it aims at is real -- a part whose motion is not what the single declared
+      DOF describes -- and it is reachable by counting the joints on the body instead: a
+      free joint or a slide stacked with a hinge through a dummy link both fail that.
 
   - id: P3.KF3.motion3
     spec: "不出现跳变、假关节或 qpos 改变而可见部件不动"
@@ -437,11 +455,19 @@ items:
 
   - id: P3.KF3.collision1
     spec: "逐样本比较 allowed/forbidden contact pairs，并记录 signed distance"
-    disposition: deferred
+    disposition: clarified
+    where: evo_p0p3/p3/kf3.py::Session.forbidden_pairs
+    note: >
+      Measured at every sample as the specification says, but SCORED per pair. One deep
+      interpenetration among a thousand configurations is one broken pair; divided by the
+      sample count it reads 0.999, and the same defect would move by three orders of
+      magnitude with the sweep resolution. The configuration is evidence, not a
+      denominator.
 
   - id: P3.KF3.collision2
     spec: "报告最小间隙、最大穿透和首次失败 q；超过阈值的禁止穿透为硬失败"
-    disposition: deferred
+    disposition: literal
+    where: evo_p0p3/p3/kf3.py::Session.forbidden_pairs
 
   - id: P3.KF3.collision3
     spec: "显式处理 parent filtering、contype/conaffinity 与声明的齿面啮合接触"
@@ -470,14 +496,21 @@ items:
 
   - id: P3.KF3.sweep
     spec: "确定性 feasible q-sweep"
-    disposition: decided
-    replaced_by: "a four-layer deterministic schedule: per-DOF scan, adjacency-gated pair grid, declared state combinations, scrambled-Sobol fill"
+    disposition: clarified
+    where: evo_p0p3/p3/sweep.py
+    replaced_by: "a four-layer deterministic schedule: per-DOF scan, adjacency-gated pair grid, declared state combinations, Halton fill"
     reason: >
       No sampling rule is stated anywhere, and the example asset has three independent
       DOFs where a full grid at 32 points is 32,768 configurations. Four layers: a per-DOF
       1-D scan, a pair grid only for DOF pairs whose swept subtree AABBs intersect, all
       declared semantic state combinations, and a scrambled-Sobol fill with a frozen seed.
-      Cost grows linearly rather than exponentially in the DOF count.
+      Cost grows linearly rather than exponentially in the DOF count: the gold cabinet's
+      three joints come to 1,119 configurations against 35,937 for a full grid. The fill
+      layer uses a Halton sequence rather than a scrambled Sobol one -- Halton needs no
+      direction-number tables and no seed, since its k-th point is a fixed function of k,
+      and the fill supplements the structured layers rather than carrying the coverage
+      alone. Halton correlates badly above roughly ten dimensions, which is recorded here
+      rather than discovered later.
 
   - id: P3.report.gate_pass_rate
     spec: "报告 Gate Pass Rate 与三维 Kinematic Profile <KF1, KF2, KF3>"

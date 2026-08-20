@@ -82,8 +82,8 @@ kinematic_claims:
         semantic: vertical
         relational: {type: interface_line, between: [door, cabinet_body]}
       anchor: {on_edge_of: door}
-      range:  {unit: rad, min: 0.0, max: 1.920}
-      states: {closed: 0.0, open: 1.920}
+      range:  {unit: rad, min: 0.0, max: 1.5708}
+      states: {closed: 0.0, open: 1.5708}
 
   rigid_attachments:
     - {follower: handle_1,  leader: drawer_1}
@@ -107,6 +107,7 @@ kinematic_claims:
       - {parts: [{group: handle}, cabinet_body], state: all}
     forbidden:
       - {parts: [{group: drawer}, {group: drawer}], state: all}
+      - {parts: [door, cabinet_body], state: all}   # precedence exempts the closed-state stop
       - {parts: [door, drawer_1], state: all}
       - {parts: [door, drawer_2], state: all}
     precedence: required_and_permitted_over_forbidden

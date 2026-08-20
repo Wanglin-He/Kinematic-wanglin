@@ -39,6 +39,9 @@ families:
         KF1.range_and_reference:  pass
         KF1.rigid_follower:       pass
         KF1.travel_scale:         pass
+        KF3.forbidden_pair:       pass
+        KF3.required_contact:     pass
+        KF3.state_reachability:   pass
     - name: wrong_joint_type
       targets: KF1.type
       defect: >
@@ -48,12 +51,8 @@ families:
       substitute:
         - find: '<joint name="door_hinge" type="revolute">'
           replace: '<joint name="door_hinge" type="prismatic">'
-        - find: |
-            <axis xyz="0 0 1"/>
-                <limit lower="0.0" upper="1.92" effort="20" velocity="1.0"/>
-          replace: |
-            <axis xyz="0 0 1"/>
-                <limit lower="0.0" upper="0.30" effort="20" velocity="1.0"/>
+        - find: '<limit lower="0.0" upper="1.5708" effort="20" velocity="1.0"/>'
+          replace: '<limit lower="0.0" upper="0.30" effort="20" velocity="1.0"/>' 
       expect:
         # Two claims break, and the manifest says so rather than pretending otherwise: a
         # revolute turned prismatic changes the unit its range is measured in, so the
@@ -68,6 +67,11 @@ families:
         KF1.anchor:               pass
         KF1.rigid_follower:       pass
         KF1.travel_scale:         pass
+        # The door turned prismatic slides 0.30 m straight up through the shelf. A connected
+        # consequence of the type change, not a separate defect.
+        KF3.forbidden_pair:       fail
+        KF3.required_contact:     pass
+        KF3.state_reachability:   pass
     - name: hinge_through_middle
       targets: KF1.anchor
       defect: >
@@ -94,6 +98,9 @@ families:
         KF1.range_and_reference:  pass
         KF1.rigid_follower:       pass
         KF1.travel_scale:         pass
+        KF3.forbidden_pair:       pass
+        KF3.required_contact:     pass
+        KF3.state_reachability:   pass
     - name: axis_rotated_90
       targets: KF1.axis
       defect: >
@@ -120,6 +127,11 @@ families:
         KF1.range_and_reference:  pass
         KF1.rigid_follower:       pass
         KF1.travel_scale:         pass
+        # KF3 cannot see this: drawer-against-carcass is not a declared forbidden pair, since a
+        # drawer riding in its cavity touches it constantly. KF1.axis_admits_motion owns it.
+        KF3.forbidden_pair:       pass
+        KF3.required_contact:     pass
+        KF3.state_reachability:   pass
     - name: range_too_small
       targets: KF1.range_and_reference
       defect: >
@@ -148,6 +160,9 @@ families:
         KF1.anchor:               pass
         KF1.rigid_follower:       pass
         KF1.travel_scale:         pass
+        KF3.forbidden_pair:       pass
+        KF3.required_contact:     pass
+        KF3.state_reachability:   pass
     - name: detached_follower
       targets: KF1.rigid_follower
       defect: >
@@ -177,6 +192,9 @@ families:
         KF1.anchor:               pass
         KF1.range_and_reference:  pass
         KF1.travel_scale:         pass
+        KF3.forbidden_pair:       pass
+        KF3.required_contact:     pass
+        KF3.state_reachability:   pass
     - name: fake_joint_decoy_geom
       targets: KF1.travel_scale
       defect: >
@@ -230,6 +248,11 @@ families:
         KF1.anchor:               pass
         KF1.range_and_reference:  pass
         KF1.rigid_follower:       pass
+        # The stub sits inside the decoy, but drawer-against-carcass is not a forbidden pair.
+        # KF1.travel_scale owns this one.
+        KF3.forbidden_pair:       pass
+        KF3.required_contact:     pass
+        KF3.state_reachability:   pass
     - name: door_axis_horizontal
       targets: KF1.axis_semantic
       defect: >
@@ -238,12 +261,8 @@ families:
         range and parent are all untouched; only the direction of the line changed, and it
         changed by enough that gravity alone settles the question -- no object frame needed.
       substitute:
-        - find: |
-            <origin xyz="-0.17 -0.19 0.21"/>
-                <axis xyz="0 0 1"/>
-          replace: |
-            <origin xyz="-0.17 -0.19 0.21"/>
-                <axis xyz="1 0 0"/>
+        - find: '<axis xyz="0 0 -1"/>'
+          replace: '<axis xyz="1 0 0"/>' 
       expect:
         # anchor breaks as a consequence, and legitimately: a horizontal axis through the
         # panel's mid-height no longer runs along any edge of it. The defect really does
@@ -258,6 +277,43 @@ families:
         KF1.rigid_follower:       pass
         KF1.travel_scale:         pass
 
+        # A horizontal hinge axis flops the panel through the carcass. Connected consequence.
+        KF3.forbidden_pair:       fail
+        KF3.required_contact:     pass
+        KF3.state_reachability:   pass
+    - name: swept_interference
+      targets: KF3.forbidden_pair
+      defect: >
+        A bracket is added to the carcass, sitting in the arc the door sweeps through.
+        Both endpoints are clean: with the door closed the bracket stands well in front
+        of the panel, and with the door fully open the panel has swung clear of it in x.
+        The collision exists only between them, around thirty degrees -- exactly the
+        region a check evaluated at the declared states would never look at. This is what
+        the sweep is for.
+      substitute:
+        - find: '<visual name="front_lip">'
+          replace: |
+            <visual name="swing_bracket">
+                  <origin xyz="0.05 -0.32 0.21"/>
+                  <geometry><box size="0.03 0.03 0.06"/></geometry>
+                </visual>
+                <visual name="front_lip">
+      expect:
+        KF3.forbidden_pair:     fail
+        KF3.required_contact:   pass
+        KF3.state_reachability: pass
+
+        # The bracket is geometry on the carcass and touches no joint, so every
+        # articulation claim still holds. Only the swept path changed.
+        KF1.parent:               pass
+        KF1.type:                 pass
+        KF1.dof_composition:      pass
+        KF1.axis_semantic:        pass
+        KF1.axis_admits_motion:   pass
+        KF1.anchor:               pass
+        KF1.range_and_reference:  pass
+        KF1.rigid_follower:       pass
+        KF1.travel_scale:         pass
   - base: gearbox_correct.urdf
     defects:
 
