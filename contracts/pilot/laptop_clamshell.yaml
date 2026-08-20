@@ -1,0 +1,89 @@
+# Authored from prompt.txt ONLY. The asset was not opened.
+#
+# A GAP IN P0, recorded here because this prompt is where it shows.
+# "the keyboard keys move as short vertical prismatic sliders" is an unbounded plural. P0
+# no longer has `count`, deliberately -- nothing ever defined how a count expanded into
+# addressable instances -- and enumerating an unknown number of keys is not possible. So
+# no key parts are declared, and the keyboard is not evaluated. The alternative, inventing
+# a number, would fail an asset for having a different one.
+#
+# Chosen to test RANGE, which this prompt does not state either. A laptop lid opening
+# roughly 120 degrees is the ordinary reading, and 2.1 rad is written here as the contract
+# author's judgement rather than as something the prompt fixed. If the asset differs, the
+# right conclusion may be that the prompt was under-specified.
+
+record_id: rec_laptop_clamshell_d201e66211d4426096f1625b7b4fc1cf
+
+overall_description: >
+  A rugged laptop with a thick lower chassis and a reinforced display housing, the screen
+  panel joined to the rear spine by a pair of hinges, a keyboard and a large clickpad on
+  the base.
+
+required_parts:
+  - {id: chassis,  role: fixed}
+  - {id: display,  role: movable}
+  - {id: clickpad, role: movable}
+
+global_form:
+  category: laptop
+  geometry: thick rectangular base with a matching display housing hinged at the rear
+  coarse_structure: a clamshell with the screen swinging from the rear spine
+
+part_geometry:
+  - {id: chassis,  geometry: thick rectangular slab with a recessed keyboard well}
+  - {id: display,  geometry: reinforced rectangular panel}
+  - {id: clickpad, geometry: large flat rectangular pad set into the base}
+
+part_relations:
+  - {subject: display,  relation: attached_to, object: chassis}
+  - {subject: clickpad, relation: inside,      object: chassis}
+
+proportion_claims: []
+
+kinematic_claims:
+  canonical_frame: {up: gravity, front: null}
+  joints:
+    - id: display_hinge
+      part: display
+      parent: chassis
+      type: hinge
+      axis: {semantic: horizontal}      # "the rear revolute axis"
+      anchor: {on_edge_of: display}     # hinged at the rear spine, i.e. an edge
+      range:  {unit: rad, min: 0.0, max: 2.1}
+      states: {shut: 0.0, open: 2.1}
+
+    - id: clickpad_rock
+      part: clickpad
+      parent: chassis
+      type: hinge                       # "rocks on a shallow local pivot"
+      axis: {semantic: horizontal}
+      anchor: {on_edge_of: clickpad}    # the FRONT EDGE rocks, so the pivot is at the rear
+      range:  {unit: rad, min: 0.0, max: 0.05}
+      states: {rest: 0.0, clicked: 0.05}
+
+  rigid_attachments: []
+  couplings: []
+  independent_dofs: [display_hinge, clickpad_rock]
+  asset_states:
+    shut:    {scope: named_parts, tolerance: {relative: 0.02}}
+    open:    {scope: named_parts, tolerance: {relative: 0.02}}
+    rest:    {scope: named_parts, tolerance: {relative: 0.02}}
+    clicked: {scope: named_parts, tolerance: {relative: 0.02}}
+  contact_policy:
+    required:
+      - {parts: [display, chassis],  state: shut, relation: stop_contact}
+      - {parts: [clickpad, chassis], state: all,  relation: mesh_contact}
+    permitted: []
+    forbidden:
+      - {parts: [display, clickpad], state: all}
+    precedence: required_and_permitted_over_forbidden
+  tolerances:
+    axis_angle_deg:           15.0
+    anchor_side_fraction_min: 0.95
+    anchor_center_offset_max: 0.05
+    travel_scale_min:         0.50
+    follower_drift_m:         0.0005
+    state_match_relative:     0.02
+    required_contact_m:       0.005
+    forbidden_penetration_m:  0.001
+    coupling_residual:        0.02

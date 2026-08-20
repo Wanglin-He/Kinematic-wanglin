@@ -1,0 +1,112 @@
+# Authored from prompt.txt ONLY. The asset was not opened.
+#
+# A DELIBERATE OMISSION, recorded because it is a gap in P0 rather than in the asset.
+# The door and its limiter links form a four-bar linkage, so the ratio between the door's
+# rotation and a link's is fixed by the geometry -- and the prompt states no number for it.
+# Declaring one would be inventing a claim, so no door-to-link coupling is declared here.
+#
+# What IS declared is the one relation the prompt does state: the links are a matched pair
+# ("twin limiter links", "two short links near the lower corners"), so they must rotate
+# together, ratio 1. That is checkable and it is not a guess.
+#
+# The gap is real and worth carrying to the group: P0 cannot currently express "these are
+# linked, and the ratio follows from the geometry rather than from a declaration".
+
+record_id: rec_glove_compartment_door_927c892914044efcb1cb608ac19db1b7
+
+overall_description: >
+  A utility truck glove compartment: a boxy shallow fixed bin with a front door hinged at
+  its top edge, and two short limiter links near the lower corners running between the door
+  and the box walls.
+
+required_parts:
+  - {id: storage_bin,        role: fixed}
+  - {id: door,               role: movable}
+  - {id: limiter_link_left,  role: movable, group: limiter_link}
+  - {id: limiter_link_right, role: movable, group: limiter_link}
+
+global_form:
+  category: glove compartment
+  geometry: shallow boxy bin with a flat front door
+  coarse_structure: a top-hinged door restrained by two short links at the lower corners
+
+part_geometry:
+  - {id: storage_bin,        geometry: shallow rectangular open box}
+  - {id: door,               geometry: flat rectangular panel}
+  - {id: limiter_link_left,  geometry: short flat link}
+  - {id: limiter_link_right, geometry: short flat link}
+
+part_relations:
+  - {subject: door,               relation: attached_to, object: storage_bin}
+  - {subject: limiter_link_left,  relation: attached_to, object: storage_bin}
+  - {subject: limiter_link_right, relation: attached_to, object: storage_bin}
+
+proportion_claims: []
+
+kinematic_claims:
+  canonical_frame: {up: gravity, front: null}
+  joints:
+    - id: door_hinge
+      part: door
+      parent: storage_bin
+      type: hinge
+      axis: {semantic: horizontal}        # "a horizontal top hinge axis"
+      anchor: {on_edge_of: door}          # hinged at the TOP EDGE, not through the middle
+      range:  {unit: rad, min: 0.0, max: 1.5708}
+      states: {shut: 0.0, raised: 1.5708}
+
+    - id: limiter_left_pivot
+      part: limiter_link_left
+      parent: storage_bin
+      type: hinge
+      axis: {semantic: horizontal}
+      anchor: {on_edge_of: limiter_link_left}
+      range:  {unit: rad, min: 0.0, max: 1.0}
+      states: {shut: 0.0, raised: 1.0}
+
+    - id: limiter_right_pivot
+      part: limiter_link_right
+      parent: storage_bin
+      type: hinge
+      axis: {semantic: horizontal}
+      anchor: {on_edge_of: limiter_link_right}
+      range:  {unit: rad, min: 0.0, max: 1.0}
+      states: {shut: 0.0, raised: 1.0}
+
+  rigid_attachments: []
+
+  couplings:
+    - id: twin_limiters
+      mechanism: any
+      relation:
+        dependent:   limiter_right_pivot
+        independent: limiter_left_pivot
+        coefficient: 1.0     # "twin" links at matched corners move together
+        offset:      0.0
+      expected_dof:  1
+      residual_norm: {by: absolute}
+      epsilon:       0.01
+
+  independent_dofs: [door_hinge, limiter_left_pivot]
+  asset_states:
+    shut:   {scope: named_parts, tolerance: {relative: 0.02}}
+    raised: {scope: named_parts, tolerance: {relative: 0.02}}
+  contact_policy:
+    required:
+      - {parts: [door, storage_bin], state: shut, relation: stop_contact}
+    permitted:
+      - {parts: [{group: limiter_link}, storage_bin], state: all}
+      - {parts: [{group: limiter_link}, door],        state: all}
+    forbidden:
+      - {parts: [{group: limiter_link}, {group: limiter_link}], state: all}
+    precedence: required_and_permitted_over_forbidden
+  tolerances:
+    axis_angle_deg:           15.0
+    anchor_side_fraction_min: 0.95
+    anchor_center_offset_max: 0.05
+    travel_scale_min:         0.50
+    follower_drift_m:         0.0005
+    state_match_relative:     0.02
+    required_contact_m:       0.005
+    forbidden_penetration_m:  0.001
+    coupling_residual:        0.01

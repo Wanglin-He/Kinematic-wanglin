@@ -1,0 +1,99 @@
+# Authored from prompt.txt ONLY. The asset was not opened.
+#
+# The claim this record is here to test is a NESTED parent: the screen panel swivels on
+# the screen door, which itself swings on the body. Declaring the panel's parent as the
+# body instead would be a different mechanism -- one where opening the door leaves the
+# panel behind.
+
+record_id: rec_camcorder_with_flipout_screen_b5753ec789b546b0a058ca52bbcd590d
+
+overall_description: >
+  A family camcorder with a soft-edged body shell, a cylindrical objective, and a left-side
+  screen door. The door swings open on a vertical side hinge, the screen panel inside it
+  swivels for viewing, and a power mode dial turns on the top rear corner.
+
+required_parts:
+  - {id: body_shell,   role: fixed}
+  - {id: objective,    role: fixed}
+  - {id: screen_door,  role: movable}
+  - {id: screen_panel, role: movable}
+  - {id: mode_dial,    role: movable}
+
+global_form:
+  category: camcorder
+  geometry: soft-edged handheld body with a cylindrical lens at the front
+  coarse_structure: a hinged side door carrying a swivelling screen
+
+part_geometry:
+  - {id: body_shell,   geometry: rounded rectangular shell}
+  - {id: objective,    geometry: short cylinder projecting forward}
+  - {id: screen_door,  geometry: flat rectangular door with a shallow finger notch}
+  - {id: screen_panel, geometry: flat rectangular panel}
+  - {id: mode_dial,    geometry: small round dial}
+
+part_relations:
+  - {subject: objective,    relation: attached_to, object: body_shell}
+  - {subject: screen_door,  relation: attached_to, object: body_shell}
+  - {subject: screen_panel, relation: inside,      object: screen_door}
+  - {subject: mode_dial,    relation: attached_to, object: body_shell}
+
+proportion_claims: []
+
+kinematic_claims:
+  canonical_frame: {up: gravity, front: null}
+  joints:
+    - id: screen_door_hinge
+      part: screen_door
+      parent: body_shell
+      type: hinge
+      axis: {semantic: vertical}          # "a vertical side hinge"
+      anchor: {on_edge_of: screen_door}
+      range:  {unit: rad, min: 0.0, max: 1.5708}
+      states: {closed: 0.0, open: 1.5708}
+
+    - id: screen_panel_swivel
+      part: screen_panel
+      parent: screen_door                 # the claim this record tests
+      type: hinge
+      axis: {semantic: horizontal}        # "a secondary swivel pivot for viewing"
+      anchor: {on_edge_of: screen_panel}
+      range:  {unit: rad, min: -1.5708, max: 1.5708}
+      states: {flat: 0.0}
+
+    - id: mode_dial_turn
+      part: mode_dial
+      parent: body_shell
+      type: hinge
+      axis: {semantic: vertical}
+      anchor: {through_center_of: mode_dial}
+      range:  {unit: rad, min: -3.1416, max: 3.1416}
+      states: {off: 0.0}
+
+  rigid_attachments: []
+  couplings: []
+  independent_dofs: [screen_door_hinge, screen_panel_swivel, mode_dial_turn]
+  asset_states:
+    closed: {scope: named_parts, tolerance: {relative: 0.02}}
+    open:   {scope: named_parts, tolerance: {relative: 0.02}}
+    flat:   {scope: named_parts, tolerance: {relative: 0.02}}
+    off:    {scope: named_parts, tolerance: {relative: 0.02}}
+  contact_policy:
+    required:
+      - {parts: [screen_door, body_shell],   state: closed, relation: stop_contact}
+      - {parts: [screen_panel, screen_door], state: all,    relation: mesh_contact}
+      - {parts: [mode_dial, body_shell],     state: all,    relation: mesh_contact}
+    permitted: []
+    forbidden:
+      - {parts: [screen_door, objective], state: all}
+      - {parts: [screen_panel, body_shell], state: all}
+    precedence: required_and_permitted_over_forbidden
+  tolerances:
+    axis_angle_deg:           15.0
+    anchor_side_fraction_min: 0.95
+    anchor_center_offset_max: 0.05
+    travel_scale_min:         0.50
+    follower_drift_m:         0.0005
+    state_match_relative:     0.02
+    required_contact_m:       0.005
+    forbidden_penetration_m:  0.001
+    coupling_residual:        0.02

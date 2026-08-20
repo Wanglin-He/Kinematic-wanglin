@@ -1,0 +1,144 @@
+# Authored from prompt.txt ONLY. The asset was not opened.
+#
+# The most explicit prompt in the set: it names five separate motions in one sentence, so
+# five joints are declared and nothing is inferred. This is the record chosen to test
+# whether a declared joint actually exists.
+
+record_id: rec_centrifugal_juicer_with_articulated_components_8cf981d5e9bd4079bfcaa4a2e5ace079
+
+overall_description: >
+  A stainless steel juicer with a deep base, a clear upper chamber, a tall feed pusher over
+  the basket housing, two short side clamps securing the chamber lid, and a small drip tray
+  under the front spout.
+
+required_parts:
+  - {id: base,        role: fixed}
+  - {id: chamber,     role: fixed}
+  - {id: spout,       role: fixed}
+  - {id: lid,         role: movable}
+  - {id: feed_pusher, role: movable}
+  - {id: clamp_left,  role: movable, group: clamp}
+  - {id: clamp_right, role: movable, group: clamp}
+  - {id: drip_tray,   role: movable}
+  - {id: basket,      role: movable}
+
+global_form:
+  category: centrifugal juicer
+  geometry: deep metal base under a clear cylindrical chamber with a tall central chute
+  coarse_structure: a lidded chamber held by two side clamps over a spinning basket
+
+part_geometry:
+  - {id: base,        geometry: deep rounded metal housing}
+  - {id: chamber,     geometry: clear cylindrical upper chamber}
+  - {id: spout,       geometry: short forward-facing pour spout}
+  - {id: lid,         geometry: domed chamber lid with a central chute}
+  - {id: feed_pusher, geometry: tall cylindrical plunger}
+  - {id: clamp_left,  geometry: short flat clamp arm}
+  - {id: clamp_right, geometry: short flat clamp arm}
+  - {id: drip_tray,   geometry: shallow flat tray}
+  - {id: basket,      geometry: conical mesh basket}
+
+part_relations:
+  - {subject: chamber,     relation: above,       object: base}
+  - {subject: lid,         relation: above,       object: chamber}
+  - {subject: feed_pusher, relation: inside,      object: lid}
+  - {subject: basket,      relation: inside,      object: chamber}
+  - {subject: clamp_left,  relation: attached_to, object: chamber}
+  - {subject: clamp_right, relation: attached_to, object: chamber}
+  - {subject: drip_tray,   relation: below,       object: spout}
+  - {subject: spout,       relation: attached_to, object: base}
+
+proportion_claims: []
+
+kinematic_claims:
+  canonical_frame: {up: gravity, front: null}
+  joints:
+    - id: feed_pusher_slide           # "slides prismatically through the chute"
+      part: feed_pusher
+      parent: lid
+      type: slide
+      axis: {semantic: vertical}
+      anchor: null
+      range:  {unit: m, min: 0.0, max: 0.08}
+      states: {up: 0.0, down: 0.08}
+
+    - id: lid_hinge                   # "the lid rotates on a rear hinge"
+      part: lid
+      parent: chamber
+      type: hinge
+      axis: {semantic: horizontal}
+      anchor: {on_edge_of: lid}
+      range:  {unit: rad, min: 0.0, max: 1.5708}
+      states: {shut: 0.0, open: 1.5708}
+
+    - id: clamp_left_pivot            # "the two side clamps rotate on matched pivots"
+      part: clamp_left
+      parent: chamber
+      type: hinge
+      axis: {semantic: horizontal}
+      anchor: {on_edge_of: clamp_left}
+      range:  {unit: rad, min: 0.0, max: 1.2}
+      states: {shut: 0.0, open: 1.2}
+
+    - id: clamp_right_pivot
+      part: clamp_right
+      parent: chamber
+      type: hinge
+      axis: {semantic: horizontal}
+      anchor: {on_edge_of: clamp_right}
+      range:  {unit: rad, min: 0.0, max: 1.2}
+      states: {shut: 0.0, open: 1.2}
+
+    - id: drip_tray_slide             # "the drip tray slides prismatically forward"
+      part: drip_tray
+      parent: base
+      type: slide
+      axis: {semantic: horizontal}
+      anchor: null
+      range:  {unit: m, min: 0.0, max: 0.06}
+      states: {shut: 0.0, open: 0.06}
+
+    - id: basket_spin                 # "rotates continuously on the vertical drive axis"
+      part: basket
+      parent: chamber
+      type: hinge
+      axis: {semantic: vertical}
+      anchor: {through_center_of: basket}
+      range:  {unit: rad, min: -6.2832, max: 6.2832}
+      states: {rest: 0.0}
+
+  rigid_attachments: []
+  couplings: []
+  independent_dofs:
+    [feed_pusher_slide, lid_hinge, clamp_left_pivot, clamp_right_pivot,
+     drip_tray_slide, basket_spin]
+  asset_states:
+    shut: {scope: named_parts, tolerance: {relative: 0.02}}
+    open: {scope: named_parts, tolerance: {relative: 0.02}}
+    up:   {scope: named_parts, tolerance: {relative: 0.02}}
+    down: {scope: named_parts, tolerance: {relative: 0.02}}
+    rest: {scope: named_parts, tolerance: {relative: 0.02}}
+  contact_policy:
+    required:
+      - {parts: [lid, chamber],         state: shut, relation: stop_contact}
+      - {parts: [basket, chamber],      state: all,  relation: mesh_contact}
+      - {parts: [{group: clamp}, chamber], state: all, relation: mesh_contact}
+    permitted:
+      - {parts: [{group: clamp}, lid], state: all}
+      - {parts: [feed_pusher, lid],    state: all}
+    forbidden:
+      - {parts: [feed_pusher, basket],   state: all}
+      - {parts: [drip_tray, base],       state: all}
+      - {parts: [{group: clamp}, base],  state: all}
+      - {parts: [lid, base],             state: all}
+    precedence: required_and_permitted_over_forbidden
+  tolerances:
+    axis_angle_deg:           15.0
+    anchor_side_fraction_min: 0.95
+    anchor_center_offset_max: 0.05
+    travel_scale_min:         0.50
+    follower_drift_m:         0.0005
+    state_match_relative:     0.02
+    required_contact_m:       0.005
+    forbidden_penetration_m:  0.001
+    coupling_residual:        0.02

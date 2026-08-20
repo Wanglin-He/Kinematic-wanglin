@@ -1,0 +1,82 @@
+# Authored from prompt.txt ONLY. The asset was not opened.
+#
+# The vaguest prompt of the ten: "The table tilt and standard locking features articulate
+# naturally" names one motion and gestures at another. Nothing here is inferred beyond
+# that sentence, so only two joints are declared and the phrase "standard locking features"
+# is read as one locking handle rather than as an unspecified number of them.
+#
+# Chosen to test AXIS. A tilt table tilts about a horizontal axis -- that much gravity
+# settles without any object frame, which is exactly what axis.semantic is for.
+
+record_id: rec_drillpress_tilt_table_0001
+
+overall_description: >
+  A drill-press tilt table: a robust mounting structure carrying a flat work surface that
+  tilts, with visible locking hardware.
+
+required_parts:
+  - {id: mounting_structure, role: fixed}
+  - {id: work_surface,       role: movable}
+  - {id: lock_handle,        role: movable}
+
+global_form:
+  category: drill-press tilt table
+  geometry: heavy bracket carrying a flat rectangular work surface
+  coarse_structure: a tilting table on a fixed mount with adjustment hardware
+
+part_geometry:
+  - {id: mounting_structure, geometry: heavy bracket with a clamping collar}
+  - {id: work_surface,       geometry: flat rectangular plate}
+  - {id: lock_handle,        geometry: short lever with a knob}
+
+part_relations:
+  - {subject: work_surface, relation: attached_to, object: mounting_structure}
+  - {subject: lock_handle,  relation: attached_to, object: mounting_structure}
+
+proportion_claims: []
+
+kinematic_claims:
+  canonical_frame: {up: gravity, front: null}
+  joints:
+    - id: table_tilt
+      part: work_surface
+      parent: mounting_structure
+      type: hinge
+      axis: {semantic: horizontal}      # a tilt is about a horizontal axis
+      anchor: {on_edge_of: work_surface}
+      range:  {unit: rad, min: -0.79, max: 0.79}   # +/- 45 degrees, the usual travel
+      states: {flat: 0.0, tilted: 0.79}
+
+    - id: lock_turn
+      part: lock_handle
+      parent: mounting_structure
+      type: hinge
+      axis: {semantic: horizontal}
+      anchor: {through_center_of: lock_handle}
+      range:  {unit: rad, min: -3.1416, max: 3.1416}
+      states: {flat: 0.0}
+
+  rigid_attachments: []
+  couplings: []
+  independent_dofs: [table_tilt, lock_turn]
+  asset_states:
+    flat:   {scope: named_parts, tolerance: {relative: 0.02}}
+    tilted: {scope: named_parts, tolerance: {relative: 0.02}}
+  contact_policy:
+    required:
+      - {parts: [work_surface, mounting_structure], state: all, relation: mesh_contact}
+      - {parts: [lock_handle, mounting_structure],  state: all, relation: mesh_contact}
+    permitted: []
+    forbidden:
+      - {parts: [work_surface, lock_handle], state: all}
+    precedence: required_and_permitted_over_forbidden
+  tolerances:
+    axis_angle_deg:           15.0
+    anchor_side_fraction_min: 0.95
+    anchor_center_offset_max: 0.05
+    travel_scale_min:         0.50
+    follower_drift_m:         0.0005
+    state_match_relative:     0.02
+    required_contact_m:       0.005
+    forbidden_penetration_m:  0.001
+    coupling_residual:        0.02

@@ -1,0 +1,135 @@
+# Authored from prompt.txt ONLY. The asset was not opened.
+#
+# Chosen to test joint TYPE, and the prompt is unusually careful about it: the drawer
+# "slides prismatically", the dials "rotate continuously", the keep-warm button is "a small
+# prismatic push control", and the release button "slides prismatically". Four explicit
+# type words in one paragraph, so nothing here is inferred.
+
+record_id: rec_air_fryer_with_pullout_basket_14ac4c8c9e35416b864382571fa27e62
+
+overall_description: >
+  A cylindrical matte-finish air fryer with a rounded body, a short basket drawer pulling
+  from the lower front, and a top control tower carrying a temperature dial, a time dial
+  and a keep-warm button. The basket sits in the drawer and its handle carries a release
+  button.
+
+required_parts:
+  - {id: body,             role: fixed}
+  - {id: control_tower,    role: fixed}
+  - {id: drawer,           role: movable}
+  - {id: basket,           role: attached}
+  - {id: basket_handle,    role: attached}
+  - {id: temperature_dial, role: movable, group: dial}
+  - {id: time_dial,        role: movable, group: dial}
+  - {id: keep_warm_button, role: movable}
+  - {id: release_button,   role: movable}
+
+global_form:
+  category: air fryer
+  geometry: rounded matte cylinder with a squared control tower on top
+  coarse_structure: a hollow body with a drawer at the lower front and dials above
+
+part_geometry:
+  - {id: body,             geometry: rounded matte cylinder, hollow inside}
+  - {id: control_tower,    geometry: squared block on the upper rear}
+  - {id: drawer,           geometry: short open-topped drawer, hollow}
+  - {id: basket,           geometry: perforated open basket, hollow}
+  - {id: basket_handle,    geometry: curved handle across the drawer front}
+  - {id: temperature_dial, geometry: small round dial}
+  - {id: time_dial,        geometry: small round dial}
+  - {id: keep_warm_button, geometry: small flat button}
+  - {id: release_button,   geometry: small flat button on the handle top}
+
+part_relations:
+  - {subject: drawer,           relation: inside,      object: body}
+  - {subject: basket,           relation: inside,      object: drawer}
+  - {subject: basket_handle,    relation: attached_to, object: drawer}
+  - {subject: release_button,   relation: attached_to, object: basket_handle}
+  - {subject: temperature_dial, relation: attached_to, object: control_tower}
+  - {subject: time_dial,        relation: attached_to, object: control_tower}
+  - {subject: keep_warm_button, relation: attached_to, object: control_tower}
+
+proportion_claims: []
+
+kinematic_claims:
+  canonical_frame: {up: gravity, front: null}
+  joints:
+    - id: drawer_slide
+      part: drawer
+      parent: body
+      type: slide                       # "slides prismatically from the lower front"
+      axis: {semantic: horizontal}
+      anchor: null
+      range:  {unit: m, min: 0.0, max: 0.14}
+      states: {shut: 0.0, open: 0.14}
+
+    - id: temperature_dial_turn
+      part: temperature_dial
+      parent: control_tower
+      type: hinge                       # "both dials rotate continuously"
+      axis: {semantic: horizontal}
+      anchor: {through_center_of: temperature_dial}
+      range:  {unit: rad, min: -6.2832, max: 6.2832}
+      states: {home: 0.0}
+
+    - id: time_dial_turn
+      part: time_dial
+      parent: control_tower
+      type: hinge
+      axis: {semantic: horizontal}
+      anchor: {through_center_of: time_dial}
+      range:  {unit: rad, min: -6.2832, max: 6.2832}
+      states: {home: 0.0}
+
+    - id: keep_warm_press
+      part: keep_warm_button
+      parent: control_tower
+      type: slide                       # "a small prismatic push control"
+      axis: {semantic: horizontal}
+      anchor: null
+      range:  {unit: m, min: 0.0, max: 0.004}
+      states: {out: 0.0, pressed: 0.004}
+
+    - id: release_press
+      part: release_button
+      parent: basket_handle
+      type: slide                       # "slides prismatically into the handle top"
+      axis: {semantic: vertical}
+      anchor: null
+      range:  {unit: m, min: 0.0, max: 0.005}
+      states: {out: 0.0, pressed: 0.005}
+
+  rigid_attachments:
+    - {follower: basket,        leader: drawer}
+    - {follower: basket_handle, leader: drawer}
+
+  couplings: []
+  independent_dofs:
+    [drawer_slide, temperature_dial_turn, time_dial_turn, keep_warm_press, release_press]
+  asset_states:
+    shut:    {scope: named_parts, tolerance: {relative: 0.02}}
+    open:    {scope: named_parts, tolerance: {relative: 0.02}}
+    home:    {scope: named_parts, tolerance: {relative: 0.02}}
+    out:     {scope: named_parts, tolerance: {relative: 0.02}}
+    pressed: {scope: named_parts, tolerance: {relative: 0.02}}
+  contact_policy:
+    required:
+      - {parts: [drawer, body],                  state: shut, relation: stop_contact}
+      - {parts: [{group: dial}, control_tower],  state: all,  relation: mesh_contact}
+    permitted:
+      - {parts: [keep_warm_button, control_tower], state: all}
+      - {parts: [release_button, basket_handle],   state: all}
+    forbidden:
+      - {parts: [{group: dial}, {group: dial}], state: all}
+      - {parts: [drawer, control_tower],        state: all}
+    precedence: required_and_permitted_over_forbidden
+  tolerances:
+    axis_angle_deg:           15.0
+    anchor_side_fraction_min: 0.95
+    anchor_center_offset_max: 0.05
+    travel_scale_min:         0.50
+    follower_drift_m:         0.0005
+    state_match_relative:     0.02
+    required_contact_m:       0.005
+    forbidden_penetration_m:  0.001
+    coupling_residual:        0.02

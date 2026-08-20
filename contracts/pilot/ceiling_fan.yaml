@@ -1,0 +1,104 @@
+# Authored from prompt.txt ONLY. The asset was not opened.
+#
+# The blades are declared as riding the axle rather than each carrying a joint: "four
+# angular aluminium blades on a central revolute axle" is one rotation with four things
+# fixed to it. Four independent blade joints would be a different, and wrong, mechanism.
+
+record_id: rec_ceiling_fan_a743cb8b7b834f689d8e18995b53306a
+
+overall_description: >
+  A four-blade contemporary ceiling fan: a low-profile disc motor housing flush to the
+  ceiling canopy, four angular aluminium blades on a central revolute axle, and an
+  integrated light tray on a revolute hinge at the housing underside.
+
+required_parts:
+  - {id: canopy,        role: fixed}
+  - {id: motor_housing, role: fixed}
+  - {id: axle,          role: movable}
+  - {id: blade_1, role: attached, group: blade}
+  - {id: blade_2, role: attached, group: blade}
+  - {id: blade_3, role: attached, group: blade}
+  - {id: blade_4, role: attached, group: blade}
+  - {id: light_tray,    role: movable}
+
+global_form:
+  category: ceiling fan
+  geometry: shallow disc housing under a flush ceiling canopy with four radial blades
+  coarse_structure: a rotating blade assembly below a fixed housing, with a hinged tray
+
+part_geometry:
+  - {id: canopy,        geometry: shallow disc flush to the ceiling}
+  - {id: motor_housing, geometry: low-profile disc}
+  - {id: axle,          geometry: short central shaft}
+  - {id: blade_1, geometry: flat angular tapered blade}
+  - {id: blade_2, geometry: flat angular tapered blade}
+  - {id: blade_3, geometry: flat angular tapered blade}
+  - {id: blade_4, geometry: flat angular tapered blade}
+  - {id: light_tray,    geometry: shallow round tray}
+
+part_relations:
+  - {subject: motor_housing, relation: attached_to, object: canopy}
+  - {subject: axle,          relation: attached_to, object: motor_housing}
+  - {subject: blade_1, relation: attached_to, object: axle}
+  - {subject: blade_2, relation: attached_to, object: axle}
+  - {subject: blade_3, relation: attached_to, object: axle}
+  - {subject: blade_4, relation: attached_to, object: axle}
+  - {subject: light_tray,    relation: attached_to, object: motor_housing}
+
+proportion_claims: []
+
+kinematic_claims:
+  canonical_frame: {up: gravity, front: null}
+  joints:
+    - id: axle_spin
+      part: axle
+      parent: motor_housing
+      type: hinge
+      axis: {semantic: vertical}          # a ceiling fan turns about the vertical
+      anchor: {through_center_of: axle}
+      range:  {unit: rad, min: -6.2832, max: 6.2832}
+      states: {rest: 0.0}
+
+    - id: light_tray_hinge
+      part: light_tray
+      parent: motor_housing
+      type: hinge
+      axis: {semantic: horizontal}        # "a revolute hinge at the housing underside"
+      anchor: {on_edge_of: light_tray}
+      range:  {unit: rad, min: 0.0, max: 1.5708}
+      states: {shut: 0.0, swung: 1.5708}
+
+  rigid_attachments:
+    - {follower: blade_1, leader: axle}
+    - {follower: blade_2, leader: axle}
+    - {follower: blade_3, leader: axle}
+    - {follower: blade_4, leader: axle}
+
+  couplings: []
+  independent_dofs: [axle_spin, light_tray_hinge]
+  asset_states:
+    rest:  {scope: named_parts, tolerance: {relative: 0.02}}
+    shut:  {scope: named_parts, tolerance: {relative: 0.02}}
+    swung: {scope: named_parts, tolerance: {relative: 0.02}}
+  contact_policy:
+    required:
+      - {parts: [axle, motor_housing],       state: all,  relation: mesh_contact}
+      - {parts: [light_tray, motor_housing], state: shut, relation: stop_contact}
+    permitted: []
+    forbidden:
+      # The blades turn a full revolution; nothing they pass should be in the way.
+      - {parts: [{group: blade}, light_tray],    state: all}
+      - {parts: [{group: blade}, canopy],        state: all}
+      - {parts: [{group: blade}, motor_housing], state: all}
+      - {parts: [{group: blade}, {group: blade}], state: all}
+    precedence: required_and_permitted_over_forbidden
+  tolerances:
+    axis_angle_deg:           15.0
+    anchor_side_fraction_min: 0.95
+    anchor_center_offset_max: 0.05
+    travel_scale_min:         0.50
+    follower_drift_m:         0.0005
+    state_match_relative:     0.02
+    required_contact_m:       0.005
+    forbidden_penetration_m:  0.001
+    coupling_residual:        0.02
