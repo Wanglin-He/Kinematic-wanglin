@@ -265,8 +265,18 @@ items:
 
   - id: P3.input.gate_bindings
     spec: "从 Gate 读取已绑定的 body、joint、tendon 与 geom"
-    disposition: deferred
-    note: "A minimal Gate producing the binding table is planned; P3 will never infer a name."
+    disposition: clarified
+    where: evo_p0p3/p3/gate.py
+    note: >
+      A stand-in Gate, faithful to P1's four checks with one stated exception: G3 reports
+      but does not gate. MuJoCo refuses to compile a moving body with no mass, so the
+      loader synthesises inertia for the 341 of 546 real assets declaring none -- and P3's
+      scope excludes mass entirely, so nothing it measures could depend on that value.
+      Failing those out would discard two thirds of the corpus over a property P3 never
+      reads. Checks that an earlier failure prevented from running report `not_run` rather
+      than `fail`, which is P1's own instruction to classify each failure under the
+      earliest matching gate: without it one missing part produces three failures and a
+      reader cannot tell the cause from its shadow.
 
   - id: P3.input.compiled_mjmodel
     spec: "编译后的 mjModel"
@@ -514,15 +524,18 @@ items:
 
   - id: P3.report.gate_pass_rate
     spec: "报告 Gate Pass Rate 与三维 Kinematic Profile <KF1, KF2, KF3>"
-    disposition: deferred
+    disposition: literal
+    where: evo_p0p3/p3/report.py::RunReport
 
   - id: P3.report.no_single_scalar
     spec: "不输出隐藏失败的单一总分；优先报 per-joint claims、coupling residual、motion success、minimum clearance、maximum penetration 与 first failing q"
-    disposition: deferred
+    disposition: clarified
+    where: evo_p0p3/p3/report.py::validate
     note: >
       Extended: every report also carries the loader's provenance -- synthesised inertia,
       translated mimics, distance backend -- so no reader mistakes a patch for the asset.
 
   - id: P3.report.na_excluded
     spec: "N/A 维度从适用项聚合中排除"
-    disposition: deferred
+    disposition: literal
+    where: evo_p0p3/p3/verdict.py::score

@@ -6,20 +6,58 @@
 按已知答案去调评测器——跑得再好也证明不了什么。
 
 ```bash
-uv run --no-project --with pyyaml --with pytest python -m pytest -q
+# 全部测试
+uv run --no-project --with pyyaml --with mujoco --with numpy --with pillow --with pytest \
+  python -m pytest -q
+
+# 契约准入检查
 uv run --no-project --with pyyaml python -m evo_p0p3.p0.cli validate contracts/
+
+# 跑金标准资产（1 份正确 + 11 份带已知缺陷）
+uv run --no-project --with pyyaml --with mujoco --with numpy \
+  python -m evo_p0p3.p3.cli gold
+
+# 跑真实资产
+uv run --no-project --with pyyaml --with mujoco --with numpy \
+  python -m evo_p0p3.p3.cli run contracts/<contract>.yaml <path>/model.urdf --json out/
 ```
 
 ## 状态
 
 | | 状态 |
 |---|---|
-| P0 schema / loader / 准入检查 A1–A16 | ✅ 33 个测试 |
-| P3 KF1 关节配置保真度 | 🚧 谓词推导中 |
-| P3 KF2 机械耦合保真度 | 🚧 |
-| P3 KF3 可行运动一致性 | 🚧 |
-| 金标准资产（1 正确 + 11 缺陷） | 🚧 |
-| 10 个真实模型的验证 | ⏳ 等 P3 冻结 |
+| P0 schema / loader / 准入检查 A1–A16 | ✅ |
+| P3 KF1 关节配置保真度（9 条谓词） | ✅ |
+| P3 KF2 机械耦合保真度（4 条谓词） | ✅ |
+| P3 KF3 可行运动一致性（3 条谓词 + 四层扫掠） | ✅ |
+| 金标准资产（2 正确 + 11 缺陷，120 条逐谓词预期） | ✅ |
+| Gate 替身 · 报告层 · CLI | ✅ |
+| **合计 263 个测试** | ✅ |
+| 10 个真实模型的验证 | ⏳ 等契约写好 |
+
+## 金标准结果
+
+```
+资产                        KF1    KF3   诊断
+cabinet_correct            1.00   1.00   —
+wrong_parent               0.96   1.00   KF1.parent
+wrong_joint_type           0.91   0.89   KF1.type + range（单位随类型变）
+hinge_through_middle       0.96   1.00   KF1.anchor
+axis_rotated_90            0.96   1.00   KF1.axis_admits_motion
+range_too_small            0.96   1.00   KF1.range_and_reference
+detached_follower          0.96   1.00   KF1.rigid_follower
+fake_joint_decoy_geom      0.95   1.00   KF1.travel_scale
+door_axis_horizontal       0.91   0.89   KF1.axis_semantic + anchor
+swept_interference         1.00   0.89   KF3.forbidden_pair
+
+资产                        KF2   诊断
+gearbox_correct            1.00   —
+gearbox_wrong_ratio        0.50   KF2.coefficient + residual
+gearbox_wrong_sign         0.50   同上（符号反）
+gearbox_missing_coupling   0.00   KF2.bound + expected_dof
+```
+
+**正确件满分，每个反例被自己那条谓词点名。**
 
 ## 模块
 
