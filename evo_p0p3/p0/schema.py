@@ -428,7 +428,22 @@ class Tolerances:
     """
 
     axis_angle_deg: float = 15.0
-    anchor_side_fraction_min: float = 0.95
+    anchor_edge_inset_max: float = 0.15
+    """How far inside a part an edge hinge's axis may sit, as a fraction of the part's
+    extent perpendicular to that axis. 0 is exactly on the edge; 0.5 is dead centre.
+
+    Replaces a vertex-count ratio that could not work. Calibration by injection showed it
+    was a step function: displacing a known-good hinge inward by 1% of the panel width
+    dropped it from 1.000 to 0.500, and every displacement from 1% to 50% read 0.500. For
+    a box, four corners sit each side the moment the axis is inside. The intermediate
+    values real assets produced came from how their geometry was split into geoms, not
+    from where the axis was -- so the measure ranked a hinge inset 4% as worse than one
+    inset 27%.
+
+    This measure tracks the displacement linearly, and 0.15 is set from the hardware
+    rather than from the sample: a hinge barrel is 15-25 mm on a door 400-800 mm wide,
+    which is 2-6% inset, so 15% is already generous and 25% is visibly not an edge hinge.
+    """
     anchor_center_offset_max: float = 0.05
     travel_scale_min: float = 0.50
     follower_drift_m: float = 0.0005

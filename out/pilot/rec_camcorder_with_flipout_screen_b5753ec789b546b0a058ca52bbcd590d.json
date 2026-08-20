@@ -25,20 +25,20 @@
     }
   ],
   "profile": {
-    "KF1": 0.6666666666666666,
+    "KF1": 0.7777777777777778,
     "KF2": null,
     "KF3": 0.5555555555555556
   },
   "sub_scores": {
     "KF1.declared": 0.5,
-    "KF1.measured": 0.75
+    "KF1.measured": 0.9166666666666666
   },
   "applicability": {
     "KF1": "18/24",
     "KF2": "0/0",
     "KF3": "9/9"
   },
-  "tolerance_digest": "f9f12e6afa23c9a0",
+  "tolerance_digest": "a44f481ffaaf1fef",
   "provenance": {
     "record_id": "rec_camcorder_with_flipout_screen_b5753ec789b546b0a058ca52bbcd590d",
     "source": "/Users/wanglin/Desktop/articraft-data/cache/record_materialization/rec_camcorder_with_flipout_screen_b5753ec789b546b0a058ca52bbcd590d/model.urdf",
@@ -348,16 +348,14 @@
     {
       "predicate": "KF1.anchor",
       "subject": "screen_door_hinge",
-      "verdict": "fail",
-      "reason": "the axis splits 'screen_door' 4/4; only 50% lies on one side, so it turns about its middle rather than its edge",
+      "verdict": "pass",
+      "reason": "the axis sits 3.9% into 'screen_door' from its edge, within the 15% a real hinge occupies",
       "measured": {
-        "side_fraction": 0.5,
-        "positive": 4,
-        "negative": 4,
-        "on_axis": 0
+        "edge_inset": 0.0394,
+        "extent_m": 0.0812
       },
       "threshold": {
-        "anchor_side_fraction_min": 0.95
+        "anchor_edge_inset_max": 0.15
       },
       "evidence": {
         "part": "screen_door",
@@ -371,16 +369,14 @@
     {
       "predicate": "KF1.anchor",
       "subject": "screen_panel_swivel",
-      "verdict": "fail",
-      "reason": "the axis splits 'screen_panel' 4/4; only 50% lies on one side, so it turns about its middle rather than its edge",
+      "verdict": "pass",
+      "reason": "the axis sits 4.0% into 'screen_panel' from its edge, within the 15% a real hinge occupies",
       "measured": {
-        "side_fraction": 0.5,
-        "positive": 4,
-        "negative": 4,
-        "on_axis": 0
+        "edge_inset": 0.0399,
+        "extent_m": 0.060095
       },
       "threshold": {
-        "anchor_side_fraction_min": 0.95
+        "anchor_edge_inset_max": 0.15
       },
       "evidence": {
         "part": "screen_panel",

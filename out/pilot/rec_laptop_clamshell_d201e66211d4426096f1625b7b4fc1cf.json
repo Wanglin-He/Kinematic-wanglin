@@ -38,7 +38,7 @@
     "KF2": "0/0",
     "KF3": "7/7"
   },
-  "tolerance_digest": "f9f12e6afa23c9a0",
+  "tolerance_digest": "a44f481ffaaf1fef",
   "provenance": {
     "record_id": "rec_laptop_clamshell_d201e66211d4426096f1625b7b4fc1cf",
     "source": "/Users/wanglin/Desktop/articraft-data/cache/record_materialization/rec_laptop_clamshell_d201e66211d4426096f1625b7b4fc1cf/model.urdf",
@@ -254,15 +254,13 @@
       "predicate": "KF1.anchor",
       "subject": "display_hinge",
       "verdict": "pass",
-      "reason": "100% of 'display' lies on one side of the axis, so the line runs along its edge",
+      "reason": "the axis sits 4.2% into 'display' from its edge, within the 15% a real hinge occupies",
       "measured": {
-        "side_fraction": 1.0,
-        "positive": 72,
-        "negative": 0,
-        "on_axis": 0
+        "edge_inset": 0.0424,
+        "extent_m": 0.241798
       },
       "threshold": {
-        "anchor_side_fraction_min": 0.95
+        "anchor_edge_inset_max": 0.15
       },
       "evidence": {
         "part": "display",
@@ -277,15 +275,13 @@
       "predicate": "KF1.anchor",
       "subject": "clickpad_rock",
       "verdict": "pass",
-      "reason": "100% of 'clickpad' lies on one side of the axis, so the line runs along its edge",
+      "reason": "the axis sits 0.0% into 'clickpad' from its edge, within the 15% a real hinge occupies",
       "measured": {
-        "side_fraction": 1.0,
-        "positive": 14,
-        "negative": 0,
-        "on_axis": 2
+        "edge_inset": 0.0,
+        "extent_m": 0.07242
       },
       "threshold": {
-        "anchor_side_fraction_min": 0.95
+        "anchor_edge_inset_max": 0.15
       },
       "evidence": {
         "part": "clickpad",

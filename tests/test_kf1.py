@@ -159,23 +159,34 @@ def test_parent_uses_the_nearest_declared_ancestor_not_mere_ancestry(materialise
     assert "cabinet_body" in chain
 
 
-def test_anchor_does_not_abstain_when_the_axis_runs_through_the_centroid(
-    materialised, contract
-):
-    # The degenerate case is the defect, not a reason to abstain: an axis through the
-    # door's centroid is precisely a hinge through its middle.
+def test_anchor_reads_a_centre_hinge_as_halfway_in(materialised, contract):
+    # A hinge through the door's middle is the defect this predicate exists for, and the
+    # measure says exactly how far in it sits rather than merely that it is inside.
     asset = mjcf.load(materialised["hinge_through_middle"], record_id="middle")
     bound = binding_mod.identity(asset, tuple(contract.part_ids))
     result = next(r for r in kf1.anchor(contract, bound) if r.subject == "door_hinge")
     assert result.verdict is Verdict.FAIL
-    assert result.measured["side_fraction"] == pytest.approx(0.5, abs=0.01)
+    assert result.measured["edge_inset"] == pytest.approx(0.5, abs=0.01)
 
 
-def test_anchor_measures_the_control_as_entirely_on_one_side(materialised, contract):
+def test_anchor_reads_the_control_as_exactly_on_the_edge(materialised, contract):
     asset = mjcf.load(materialised["cabinet_correct"], record_id="control")
     bound = binding_mod.identity(asset, tuple(contract.part_ids))
     result = next(r for r in kf1.anchor(contract, bound) if r.subject == "door_hinge")
-    assert result.measured["side_fraction"] == pytest.approx(1.0)
+    assert result.measured["edge_inset"] == pytest.approx(0.0, abs=1e-9)
+
+
+def test_the_anchor_measure_tracks_displacement_instead_of_stepping(materialised):
+    # The measure this replaced was a step function: displacing a known-good hinge inward
+    # by 1% of the panel width dropped it from 1.000 to 0.500, and every displacement from
+    # 1% to 50% read 0.500, because a box has four corners each side the moment the axis
+    # is inside. A measure that cannot tell 4% from 27% cannot carry a threshold.
+    from evo_p0p3.p3 import calibrate
+
+    readings = calibrate.sweep_hinge((0.0, 0.05, 0.15, 0.30, 0.50))
+    for r in readings:
+        assert r.inset_fraction == pytest.approx(r.offset_fraction, abs=0.005)
+    assert {round(r.side_fraction, 3) for r in readings} == {1.0, 0.5}
 
 
 def test_travel_scale_measures_the_part_not_everything_riding_it(materialised, contract):

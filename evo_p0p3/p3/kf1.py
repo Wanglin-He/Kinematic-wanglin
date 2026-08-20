@@ -427,8 +427,9 @@ def anchor(contract: Contract, binding: Binding) -> tuple[ClaimResult, ...]:
     Two forms, and they are opposites:
 
     ``on_edge_of``
-        The part's vertices must lie on one side of a plane through the axis. A door
-        hinged on its edge scores 1.0; hinged through its middle, 0.5.
+        The axis must sit near the part's boundary rather than inside it, measured as a
+        fraction of the part's own extent. A door hinged on its edge reads 0; hinged
+        through its middle, 0.5.
     ``through_center_of``
         The axis must pass near the part's centroid, normalised by the part's own size. A
         gear on its shaft scores near 0; mounted off-centre it does not.
@@ -491,30 +492,37 @@ def anchor(contract: Contract, binding: Binding) -> tuple[ClaimResult, ...]:
                 direction = vh[0] - np.dot(vh[0], a) * a
                 direction = direction / (np.linalg.norm(direction) or 1.0)
             s = radial @ direction
-            positive = int((s > 1e-6).sum())
-            negative = int((s < -1e-6).sum())
-            on_line = len(s) - positive - negative
-            fraction = max(positive + on_line, negative + on_line) / len(s)
-            floor = tolerances.anchor_side_fraction_min
+            lo, hi = float(s.min()), float(s.max())
+            span = hi - lo
+            if span < 1e-9:
+                results.append(_na(
+                    "KF1.anchor", joint.id,
+                    f"{target!r} has no extent perpendicular to the axis, so 'how far in' "
+                    f"has no scale",
+                ))
+                continue
+            # How far inside the part the axis sits, as a fraction of the part's own
+            # extent. 0 is exactly on the edge, 0.5 is dead centre. Tessellation-
+            # independent, unlike counting which side each vertex fell on.
+            inset = min(abs(lo), abs(hi)) / span
+            ceiling = tolerances.anchor_edge_inset_max
             shared = {
-                "measured": {"side_fraction": round(fraction, 4),
-                             "positive": positive, "negative": negative,
-                             "on_axis": on_line},
-                "threshold": {"anchor_side_fraction_min": floor},
+                "measured": {"edge_inset": round(inset, 4),
+                             "extent_m": round(span, 6)},
+                "threshold": {"anchor_edge_inset_max": ceiling},
                 "evidence": {"part": target, "anchor_world": [round(float(v), 6) for v in p0]},
             }
-            if fraction >= floor:
+            if inset <= ceiling:
                 results.append(ClaimResult(
                     "KF1.anchor", joint.id, Verdict.PASS,
-                    f"{fraction:.0%} of {target!r} lies on one side of the axis, so the line "
-                    f"runs along its edge", **shared,
+                    f"the axis sits {inset:.1%} into {target!r} from its edge, within the "
+                    f"{ceiling:.0%} a real hinge occupies", **shared,
                 ))
             else:
                 results.append(ClaimResult(
                     "KF1.anchor", joint.id, Verdict.FAIL,
-                    f"the axis splits {target!r} {positive}/{negative}; only {fraction:.0%} "
-                    f"lies on one side, so it turns about its middle rather than its edge",
-                    **shared,
+                    f"the axis sits {inset:.1%} into {target!r}, past the {ceiling:.0%} "
+                    f"allowed; it turns about its middle rather than its edge", **shared,
                 ))
         else:
             lo, hi = subtree_aabb(asset, bodies)

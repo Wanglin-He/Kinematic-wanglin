@@ -599,7 +599,8 @@ items:
 
   - id: OPEN.anchor_threshold_uncalibrated
     spec: "（试点中暴露；阈值 anchor_side_fraction_min 从未校准）"
-    disposition: decided
+    disposition: replaced
+    where: evo_p0p3/p3/calibrate.py
     where: evo_p0p3/p0/schema.py::Tolerances
     replaced_by: "calibration by fault injection, before any of these numbers are reported as results"
     reason: >
@@ -623,5 +624,29 @@ items:
       written for. A calibrated threshold should keep those and drop the 0.83-0.91 band,
       and the way to find where it sits is deterministic fault injection on the gold
       assets: displace a known-good hinge from its edge by a known fraction and read where
-      detection begins. That work is owed before any anchor verdict is reported as a result.
+      detection begins.
+
+      RESOLVED, and the answer was not a threshold. The injection ran and showed the
+      measure itself is a step function: displacing the gold door's hinge inward by 1% of
+      the panel width dropped it from 1.000 to 0.500, and every displacement from 1% to
+      50% also read 0.500. A box has four corners each side the moment the axis is inside,
+      so a vertex-count ratio carries no information about how far inside. The intermediate
+      values real assets produced -- 0.69, 0.75, 0.83, 0.91 -- came from how their geometry
+      was split into geoms, not from where their axes sat. No threshold could have worked.
+
+      Replaced by the axis's inset as a fraction of the part's own extent perpendicular to
+      it, which the injection confirms tracks displacement linearly to within 0.005 across
+      the whole range. The threshold of 0.15 comes from hardware rather than from the
+      sample: a hinge barrel is 15-25 mm on a door 400-800 mm wide, so 2-6% inset, and 25%
+      is visibly not an edge hinge.
+
+      The old measure had the ranking inverted, which is the specific failure an earlier
+      adversarial review predicted for a statistic of this shape. The camcorder read 0.50 --
+      worst in the set -- and is actually the cleanest hinge at 3.9% inset; the drill-press
+      read 0.80 and is genuinely near-centre at 27%. Human annotators failed the drill-press
+      on the axis item and passed the camcorder's parent item, so the corrected measure
+      agrees with them where the old one did not.
+
+      Effect on the pilot: KF1.anchor now fires on 2 of 10 assets instead of 5, and both
+      survivors are the ones measured near the middle.
 

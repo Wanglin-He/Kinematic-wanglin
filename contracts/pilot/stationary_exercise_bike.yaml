@@ -101,7 +101,7 @@ kinematic_claims:
 
   tolerances:
     axis_angle_deg:           15.0
-    anchor_side_fraction_min: 0.95
+    anchor_edge_inset_max:      0.15
     anchor_center_offset_max: 0.05
     travel_scale_min:         0.50
     follower_drift_m:         0.0005

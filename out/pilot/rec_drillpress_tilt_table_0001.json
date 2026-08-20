@@ -38,7 +38,7 @@
     "KF2": "0/0",
     "KF3": "5/5"
   },
-  "tolerance_digest": "f9f12e6afa23c9a0",
+  "tolerance_digest": "a44f481ffaaf1fef",
   "provenance": {
     "record_id": "rec_drillpress_tilt_table_0001",
     "source": "/Users/wanglin/Desktop/articraft-data/cache/record_materialization/rec_drillpress_tilt_table_0001/model.urdf",
@@ -255,15 +255,13 @@
       "predicate": "KF1.anchor",
       "subject": "table_tilt",
       "verdict": "fail",
-      "reason": "the axis splits 'work_surface' 102/26; only 80% lies on one side, so it turns about its middle rather than its edge",
+      "reason": "the axis sits 27.1% into 'work_surface', past the 15% allowed; it turns about its middle rather than its edge",
       "measured": {
-        "side_fraction": 0.7969,
-        "positive": 102,
-        "negative": 26,
-        "on_axis": 0
+        "edge_inset": 0.2708,
+        "extent_m": 0.178662
       },
       "threshold": {
-        "anchor_side_fraction_min": 0.95
+        "anchor_edge_inset_max": 0.15
       },
       "evidence": {
         "part": "work_surface",

@@ -25,20 +25,20 @@
     }
   ],
   "profile": {
-    "KF1": 0.6666666666666666,
+    "KF1": 0.8333333333333334,
     "KF2": 0.0,
     "KF3": 1.0
   },
   "sub_scores": {
     "KF1.declared": 0.5,
-    "KF1.measured": 0.75
+    "KF1.measured": 1.0
   },
   "applicability": {
     "KF1": "18/24",
     "KF2": "2/4",
     "KF3": "4/4"
   },
-  "tolerance_digest": "c0894695795d2e86",
+  "tolerance_digest": "956063b9148f7749",
   "provenance": {
     "record_id": "rec_glove_compartment_door_927c892914044efcb1cb608ac19db1b7",
     "source": "/Users/wanglin/Desktop/articraft-data/cache/record_materialization/rec_glove_compartment_door_927c892914044efcb1cb608ac19db1b7/model.urdf",
@@ -355,16 +355,14 @@
     {
       "predicate": "KF1.anchor",
       "subject": "door_hinge",
-      "verdict": "fail",
-      "reason": "the axis splits 'door' 80/8; only 91% lies on one side, so it turns about its middle rather than its edge",
+      "verdict": "pass",
+      "reason": "the axis sits 5.0% into 'door' from its edge, within the 15% a real hinge occupies",
       "measured": {
-        "side_fraction": 0.9091,
-        "positive": 80,
-        "negative": 8,
-        "on_axis": 0
+        "edge_inset": 0.0502,
+        "extent_m": 0.248405
       },
       "threshold": {
-        "anchor_side_fraction_min": 0.95
+        "anchor_edge_inset_max": 0.15
       },
       "evidence": {
         "part": "door",
@@ -378,16 +376,14 @@
     {
       "predicate": "KF1.anchor",
       "subject": "limiter_left_pivot",
-      "verdict": "fail",
-      "reason": "the axis splits 'limiter_link_left' 16/4; only 83% lies on one side, so it turns about its middle rather than its edge",
+      "verdict": "pass",
+      "reason": "the axis sits 10.4% into 'limiter_link_left' from its edge, within the 15% a real hinge occupies",
       "measured": {
-        "side_fraction": 0.8333,
-        "positive": 16,
-        "negative": 4,
-        "on_axis": 4
+        "edge_inset": 0.1044,
+        "extent_m": 0.162808
       },
       "threshold": {
-        "anchor_side_fraction_min": 0.95
+        "anchor_edge_inset_max": 0.15
       },
       "evidence": {
         "part": "limiter_link_left",
@@ -401,16 +397,14 @@
     {
       "predicate": "KF1.anchor",
       "subject": "limiter_right_pivot",
-      "verdict": "fail",
-      "reason": "the axis splits 'limiter_link_right' 16/4; only 83% lies on one side, so it turns about its middle rather than its edge",
+      "verdict": "pass",
+      "reason": "the axis sits 10.4% into 'limiter_link_right' from its edge, within the 15% a real hinge occupies",
       "measured": {
-        "side_fraction": 0.8333,
-        "positive": 16,
-        "negative": 4,
-        "on_axis": 4
+        "edge_inset": 0.1044,
+        "extent_m": 0.162808
       },
       "threshold": {
-        "anchor_side_fraction_min": 0.95
+        "anchor_edge_inset_max": 0.15
       },
       "evidence": {
         "part": "limiter_link_right",

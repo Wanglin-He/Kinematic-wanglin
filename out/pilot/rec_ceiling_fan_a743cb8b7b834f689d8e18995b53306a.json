@@ -38,7 +38,7 @@
     "KF2": "0/0",
     "KF3": "5/23"
   },
-  "tolerance_digest": "f9f12e6afa23c9a0",
+  "tolerance_digest": "a44f481ffaaf1fef",
   "provenance": {
     "record_id": "rec_ceiling_fan_a743cb8b7b834f689d8e18995b53306a",
     "source": "/Users/wanglin/Desktop/articraft-data/cache/record_materialization/rec_ceiling_fan_a743cb8b7b834f689d8e18995b53306a/model.urdf",
@@ -275,15 +275,13 @@
       "predicate": "KF1.anchor",
       "subject": "light_tray_hinge",
       "verdict": "fail",
-      "reason": "the axis splits 'light_tray' 24/8; only 75% lies on one side, so it turns about its middle rather than its edge",
+      "reason": "the axis sits 33.2% into 'light_tray', past the 15% allowed; it turns about its middle rather than its edge",
       "measured": {
-        "side_fraction": 0.75,
-        "positive": 24,
-        "negative": 8,
-        "on_axis": 0
+        "edge_inset": 0.3322,
+        "extent_m": 0.300639
       },
       "threshold": {
-        "anchor_side_fraction_min": 0.95
+        "anchor_edge_inset_max": 0.15
       },
       "evidence": {
         "part": "light_tray",

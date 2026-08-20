@@ -25,20 +25,20 @@
     }
   ],
   "profile": {
-    "KF1": 0.8055555555555556,
+    "KF1": 0.8888888888888888,
     "KF2": null,
     "KF3": 0.6428571428571429
   },
   "sub_scores": {
     "KF1.declared": 0.7272727272727273,
-    "KF1.measured": 0.84
+    "KF1.measured": 0.96
   },
   "applicability": {
     "KF1": "36/48",
     "KF2": "0/0",
     "KF3": "14/14"
   },
-  "tolerance_digest": "f9f12e6afa23c9a0",
+  "tolerance_digest": "a44f481ffaaf1fef",
   "provenance": {
     "record_id": "rec_centrifugal_juicer_with_articulated_components_8cf981d5e9bd4079bfcaa4a2e5ace079",
     "source": "/Users/wanglin/Desktop/articraft-data/cache/record_materialization/rec_centrifugal_juicer_with_articulated_components_8cf981d5e9bd4079bfcaa4a2e5ace079/model.urdf",
@@ -681,16 +681,14 @@
     {
       "predicate": "KF1.anchor",
       "subject": "lid_hinge",
-      "verdict": "fail",
-      "reason": "the axis splits 'lid' 22/10; only 69% lies on one side, so it turns about its middle rather than its edge",
+      "verdict": "pass",
+      "reason": "the axis sits 4.5% into 'lid' from its edge, within the 15% a real hinge occupies",
       "measured": {
-        "side_fraction": 0.6875,
-        "positive": 22,
-        "negative": 10,
-        "on_axis": 0
+        "edge_inset": 0.0445,
+        "extent_m": 0.273863
       },
       "threshold": {
-        "anchor_side_fraction_min": 0.95
+        "anchor_edge_inset_max": 0.15
       },
       "evidence": {
         "part": "lid",
@@ -704,16 +702,14 @@
     {
       "predicate": "KF1.anchor",
       "subject": "clamp_left_pivot",
-      "verdict": "fail",
-      "reason": "the axis splits 'clamp_left' 20/4; only 83% lies on one side, so it turns about its middle rather than its edge",
+      "verdict": "pass",
+      "reason": "the axis sits 9.2% into 'clamp_left' from its edge, within the 15% a real hinge occupies",
       "measured": {
-        "side_fraction": 0.8333,
-        "positive": 20,
-        "negative": 4,
-        "on_axis": 0
+        "edge_inset": 0.0919,
+        "extent_m": 0.116198
       },
       "threshold": {
-        "anchor_side_fraction_min": 0.95
+        "anchor_edge_inset_max": 0.15
       },
       "evidence": {
         "part": "clamp_left",
@@ -727,16 +723,14 @@
     {
       "predicate": "KF1.anchor",
       "subject": "clamp_right_pivot",
-      "verdict": "fail",
-      "reason": "the axis splits 'clamp_right' 20/4; only 83% lies on one side, so it turns about its middle rather than its edge",
+      "verdict": "pass",
+      "reason": "the axis sits 9.2% into 'clamp_right' from its edge, within the 15% a real hinge occupies",
       "measured": {
-        "side_fraction": 0.8333,
-        "positive": 20,
-        "negative": 4,
-        "on_axis": 0
+        "edge_inset": 0.0919,
+        "extent_m": 0.116198
       },
       "threshold": {
-        "anchor_side_fraction_min": 0.95
+        "anchor_edge_inset_max": 0.15
       },
       "evidence": {
         "part": "clamp_right",
