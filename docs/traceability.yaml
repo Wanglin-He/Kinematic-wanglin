@@ -296,7 +296,16 @@ items:
 
   - id: P3.KF1.bullet1
     spec: "复用 Gate 的 part → body/joint 绑定，核对 parent、joint type 与固定附件"
-    disposition: deferred
+    disposition: clarified
+    where: evo_p0p3/p3/kf1.py::parent
+    note: >
+      Parent implemented; joint type and rigid followers still owed. Decided on the
+      NEAREST DECLARED ANCESTOR rather than on ancestry alone: a lower drawer hung off an
+      upper drawer still has the carcass somewhere up its chain, so "is the declared
+      parent an ancestor?" passes an asset where opening the upper drawer drags the lower
+      one out. Bodies the contract never declared are transparent, since generators insert
+      unnamed intermediate links freely and treating one as a parent would fail correct
+      assets over an authoring style the contract says nothing about.
 
   - id: P3.KF1.bullet2
     spec: "把局部 axis 和 anchor 转到统一坐标系，测量轴夹角与锚点偏差"

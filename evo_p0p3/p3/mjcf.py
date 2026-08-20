@@ -93,9 +93,18 @@ class Mimic:
 
 
 def parse_mimics(text: str) -> tuple[Mimic, ...]:
-    """Every ``<mimic>`` in a URDF, paired with the joint that declares it."""
+    """Every ``<mimic>`` in a URDF, paired with the joint that declares it.
+
+    Commented-out joints are skipped: a coupling someone disabled by commenting it is a
+    coupling the model does not have, and reviving it here would credit an asset for a
+    constraint it deliberately does not carry.
+    """
+    spans = _comment_spans(text)
     out = []
-    for joint_name, body in _JOINT_BLOCK.findall(text):
+    for match in _JOINT_BLOCK.finditer(text):
+        if _in_comment(match.start(), spans):
+            continue
+        joint_name, body = match.group(1), match.group(2)
         found = _MIMIC.search(body)
         if not found:
             continue
@@ -213,12 +222,45 @@ class LoadedAsset:
         return tuple(out)
 
 
+_COMMENT = re.compile(r"<!--.*?-->", re.S)
+
+
+def _comment_spans(text: str) -> list[tuple[int, int]]:
+    return [(m.start(), m.end()) for m in _COMMENT.finditer(text)]
+
+
+def _in_comment(index: int, spans: list[tuple[int, int]]) -> bool:
+    return any(start <= index < end for start, end in spans)
+
+
 def patch_urdf(text: str) -> tuple[str, bool]:
-    """Return the URDF MuJoCo will accept, and whether inertia had to be invented."""
+    """Return the URDF MuJoCo will accept, and whether inertia had to be invented.
+
+    Comment-aware throughout, which is not fussiness. A URDF whose header says "no
+    ``<inertial>`` here" reads as *having* one under a substring search, so the injection
+    is skipped and the asset fails to compile with a message about mass that points
+    nowhere near the cause. Injecting into a commented-out ``<link>`` fails just as
+    quietly, in the other direction.
+    """
+    spans = _comment_spans(text)
+    needs_inertia = not any(
+        not _in_comment(m.start(), spans) for m in re.finditer(r"<inertial\b", text)
+    )
+
     patched = _ROBOT.sub(lambda m: m.group(1) + "\n" + COMPILER_DIRECTIVE, text, count=1)
-    needs_inertia = "<inertial" not in text
     if needs_inertia:
-        patched = _LINK.sub(lambda m: m.group(1) + "\n    " + SYNTHETIC_INERTIAL, patched)
+        # Recompute spans against the patched text, whose offsets have shifted.
+        patched_spans = _comment_spans(patched)
+        out: list[str] = []
+        cursor = 0
+        for m in _LINK.finditer(patched):
+            if _in_comment(m.start(), patched_spans):
+                continue
+            out.append(patched[cursor : m.end()])
+            out.append("\n    " + SYNTHETIC_INERTIAL)
+            cursor = m.end()
+        out.append(patched[cursor:])
+        patched = "".join(out)
     return patched, needs_inertia
 
 
@@ -355,22 +397,41 @@ def body_pair_distance(
     return best, which
 
 
-def subtree_aabb(asset: LoadedAsset, bodies: tuple[int, ...]) -> tuple[np.ndarray, np.ndarray]:
+def subtree_aabb(
+    asset: LoadedAsset, bodies: tuple[int, ...], *, conservative: bool = False
+) -> tuple[np.ndarray, np.ndarray]:
     """World-frame axis-aligned bounds of a set of bodies' geometry at the current pose.
 
-    Uses ``geom_rbound``, MuJoCo's bounding-sphere radius, rather than the exact mesh:
-    it is conservative, cheap, and available for every geom type including meshes. A
-    conservative bound is the right side to err on here, since these AABBs gate whether
-    a pair of degrees of freedom is swept jointly at all.
+    Two bounds, because the two uses want opposite errors.
+
+    The default is tight: ``geom_aabb`` gives each geom's own box in its local frame, and
+    a rotated local box maps to a world box by ``|R| @ half_extents`` -- exact for every
+    primitive and for a mesh's stored bounds. Use it whenever the number is compared
+    against a threshold, since a loose bound there turns into a false verdict.
+
+    ``conservative=True`` uses ``geom_rbound``, the bounding-sphere radius. It over-states
+    size -- a 0.34 x 0.34 x 0.20 drawer gets a 0.26 m radius, half its own diagonal -- and
+    that is the right direction for the sweep's adjacency gate, where the cost of an
+    over-estimate is sweeping a pair of joints that could not have interacted, and the cost
+    of an under-estimate is missing the interference the gate exists to find.
     """
     lo = np.full(3, np.inf)
     hi = np.full(3, -np.inf)
     for b in bodies:
         for g in asset.geoms_of(b):
-            centre = asset.data.geom_xpos[g]
-            r = float(asset.model.geom_rbound[g])
-            lo = np.minimum(lo, centre - r)
-            hi = np.maximum(hi, centre + r)
+            centre = np.asarray(asset.data.geom_xpos[g], dtype=float)
+            if conservative:
+                r = float(asset.model.geom_rbound[g])
+                lo = np.minimum(lo, centre - r)
+                hi = np.maximum(hi, centre + r)
+                continue
+            local_centre = np.asarray(asset.model.geom_aabb[g][:3], dtype=float)
+            half = np.asarray(asset.model.geom_aabb[g][3:], dtype=float)
+            rot = np.asarray(asset.data.geom_xmat[g], dtype=float).reshape(3, 3)
+            world_centre = centre + rot @ local_centre
+            extent = np.abs(rot) @ half
+            lo = np.minimum(lo, world_centre - extent)
+            hi = np.maximum(hi, world_centre + extent)
     if not np.isfinite(lo).all():
         return np.zeros(3), np.zeros(3)
     return lo, hi

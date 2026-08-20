@@ -276,3 +276,27 @@ def test_the_residual_grows_with_the_ratio_error(tmp_path: Path, qpos, expected)
     ]
     assert rows
     assert float(np.abs(asset.data.efc_pos[rows]).max()) == pytest.approx(expected, abs=1e-6)
+
+
+def test_the_tight_aabb_matches_the_authored_box(cabinet):
+    # The drawer is authored 0.26 x 0.34 x 0.12 with its frame at the box centre, so the
+    # tight bound must reproduce those extents. The conservative one must not: it uses the
+    # bounding-sphere radius and over-states every dimension by the same amount.
+    import numpy as np
+
+    drawer = cabinet.body_id("drawer")
+    lo, hi = mjcf.subtree_aabb(cabinet, (drawer,))
+    assert np.allclose(hi - lo, [0.26, 0.34, 0.12], atol=1e-6)
+
+    clo, chi = mjcf.subtree_aabb(cabinet, (drawer,), conservative=True)
+    assert np.all((chi - clo) > (hi - lo))
+
+
+def test_the_conservative_bound_never_understates_the_tight_one(cabinet):
+    import numpy as np
+
+    for name in ("cabinet_body", "drawer", "handle"):
+        body = cabinet.body_id(name)
+        lo, hi = mjcf.subtree_aabb(cabinet, (body,))
+        clo, chi = mjcf.subtree_aabb(cabinet, (body,), conservative=True)
+        assert np.all(clo <= lo + 1e-9) and np.all(chi >= hi - 1e-9)

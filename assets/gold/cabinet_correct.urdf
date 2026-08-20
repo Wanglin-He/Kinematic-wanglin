@@ -1,0 +1,134 @@
+<!--
+  Gold standard: a cabinet that is correct by construction.
+
+  Every KF predicate must pass on this asset. If one fails here, the predicate is wrong,
+  not the asset -- that is the whole reason this file exists. Its geometry is chosen so
+  the claims are true by measurement rather than by assertion:
+
+    carcass cavity   x [-0.18, 0.18]  y [-0.20, 0.18]  z [0.02, 0.88], open at -y
+    drawer           0.34 x 0.34 x 0.20, closed with its front flush at y = -0.20
+    drawer travel    0.18 m along -y, leaving 0.16 m of its 0.34 m depth still inside
+    door             flat panel hinged on its LEFT edge, x = -0.17, axis vertical
+    handles          rigidly attached, no joint of their own
+
+  Authored in the frame P0 assumes: +z up (which gravity fixes for free), drawers pulling
+  toward -y. Nothing here depends on that choice except axis.numeric, which the contract
+  leaves unset for exactly that reason.
+
+  Visual geometry only and no <inertial>, matching the real materialised Articraft assets;
+  the loader synthesises inertia and flags it.
+-->
+<robot name="gold_cabinet">
+
+  <!-- ============================ carcass (fixed) ============================ -->
+  <link name="cabinet_body">
+    <visual name="bottom">
+      <origin xyz="0 0 0.01"/>
+      <geometry><box size="0.40 0.40 0.02"/></geometry>
+    </visual>
+    <visual name="top">
+      <origin xyz="0 0 0.89"/>
+      <geometry><box size="0.40 0.40 0.02"/></geometry>
+    </visual>
+    <visual name="left_wall">
+      <origin xyz="-0.19 0 0.45"/>
+      <geometry><box size="0.02 0.40 0.90"/></geometry>
+    </visual>
+    <visual name="right_wall">
+      <origin xyz="0.19 0 0.45"/>
+      <geometry><box size="0.02 0.40 0.90"/></geometry>
+    </visual>
+    <visual name="back_wall">
+      <origin xyz="0 0.19 0.45"/>
+      <geometry><box size="0.40 0.02 0.90"/></geometry>
+    </visual>
+    <visual name="mid_shelf">
+      <origin xyz="0 0 0.39"/>
+      <geometry><box size="0.36 0.38 0.01"/></geometry>
+    </visual>
+  </link>
+
+  <!-- ============================ upper drawer ============================ -->
+  <link name="drawer_1">
+    <visual name="box">
+      <origin xyz="0 0 0"/>
+      <geometry><box size="0.34 0.34 0.20"/></geometry>
+    </visual>
+  </link>
+  <joint name="drawer_1_slide" type="prismatic">
+    <parent link="cabinet_body"/>
+    <child link="drawer_1"/>
+    <origin xyz="0 -0.03 0.72"/>
+    <axis xyz="0 -1 0"/>
+    <limit lower="0.0" upper="0.18" effort="50" velocity="0.5"/>
+  </joint>
+
+  <link name="handle_1">
+    <visual name="bar">
+      <origin xyz="0 0 0" rpy="0 1.5708 0"/>
+      <geometry><cylinder radius="0.008" length="0.16"/></geometry>
+    </visual>
+  </link>
+  <joint name="handle_1_fixed" type="fixed">
+    <parent link="drawer_1"/>
+    <child link="handle_1"/>
+    <origin xyz="0 -0.178 0"/>
+  </joint>
+
+  <!-- ============================ lower drawer ============================ -->
+  <link name="drawer_2">
+    <visual name="box">
+      <origin xyz="0 0 0"/>
+      <geometry><box size="0.34 0.34 0.20"/></geometry>
+    </visual>
+  </link>
+  <joint name="drawer_2_slide" type="prismatic">
+    <parent link="cabinet_body"/>
+    <child link="drawer_2"/>
+    <origin xyz="0 -0.03 0.50"/>
+    <axis xyz="0 -1 0"/>
+    <limit lower="0.0" upper="0.18" effort="50" velocity="0.5"/>
+  </joint>
+
+  <link name="handle_2">
+    <visual name="bar">
+      <origin xyz="0 0 0" rpy="0 1.5708 0"/>
+      <geometry><cylinder radius="0.008" length="0.16"/></geometry>
+    </visual>
+  </link>
+  <joint name="handle_2_fixed" type="fixed">
+    <parent link="drawer_2"/>
+    <child link="handle_2"/>
+    <origin xyz="0 -0.178 0"/>
+  </joint>
+
+  <!-- ==================== door, hinged on its left edge ==================== -->
+  <!-- The child frame sits ON the hinge line, so the panel occupies x in [0, 0.34]
+       of its own frame and swings about that edge. -->
+  <link name="door">
+    <visual name="panel">
+      <origin xyz="0.17 0 0"/>
+      <geometry><box size="0.34 0.02 0.34"/></geometry>
+    </visual>
+  </link>
+  <joint name="door_hinge" type="revolute">
+    <parent link="cabinet_body"/>
+    <child link="door"/>
+    <origin xyz="-0.17 -0.19 0.21"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="0.0" upper="1.92" effort="20" velocity="1.0"/>
+  </joint>
+
+  <link name="door_knob">
+    <visual name="knob">
+      <origin xyz="0 0 0"/>
+      <geometry><sphere radius="0.018"/></geometry>
+    </visual>
+  </link>
+  <joint name="door_knob_fixed" type="fixed">
+    <parent link="door"/>
+    <child link="door_knob"/>
+    <origin xyz="0.30 -0.025 0"/>
+  </joint>
+
+</robot>
