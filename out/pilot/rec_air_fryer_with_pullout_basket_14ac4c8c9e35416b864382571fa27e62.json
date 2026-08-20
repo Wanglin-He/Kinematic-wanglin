@@ -45,6 +45,7 @@
     "inertia_synthesized": true,
     "collidable_geoms": 0,
     "distance_backend": "mj_geomDistance",
+    "mujoco_version": "3.12.0",
     "mimics_translated": [],
     "notes": [
       "no <inertial> in source; mass and inertia synthesised to satisfy the compiler. Never used in scoring.",
@@ -222,7 +223,7 @@
       "verdict": "pass",
       "reason": "declared and built as slide",
       "measured": {
-        "joint_type": "slide"
+        "joint_type": "2"
       },
       "threshold": {
         "declared": "slide"
@@ -237,7 +238,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -252,7 +253,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -267,7 +268,7 @@
       "verdict": "pass",
       "reason": "declared and built as slide",
       "measured": {
-        "joint_type": "slide"
+        "joint_type": "2"
       },
       "threshold": {
         "declared": "slide"
@@ -282,7 +283,7 @@
       "verdict": "pass",
       "reason": "declared and built as slide",
       "measured": {
-        "joint_type": "slide"
+        "joint_type": "2"
       },
       "threshold": {
         "declared": "slide"
@@ -928,10 +929,10 @@
       "predicate": "KF3.forbidden_pair",
       "subject": "temperature_dial+time_dial@all",
       "verdict": "pass",
-      "reason": "'temperature_dial' and 'time_dial' stay clear across 1697 configurations, closest approach 0.0000 m",
+      "reason": "'temperature_dial' and 'time_dial' stay clear across 1697 configurations, closest approach 0.0060 m",
       "measured": {
         "max_penetration_m": 0.0,
-        "min_clearance_m": 0.0,
+        "min_clearance_m": 0.005999,
         "samples_evaluated": 1697
       },
       "threshold": {
@@ -940,7 +941,7 @@
       "evidence": {
         "worst_configuration": null,
         "first_failing_configuration": null,
-        "closest_configuration": "halton[696]",
+        "closest_configuration": "halton[825]",
         "distmax": 0.5
       }
     },
@@ -948,10 +949,10 @@
       "predicate": "KF3.forbidden_pair",
       "subject": "drawer+control_tower@all",
       "verdict": "pass",
-      "reason": "'drawer' and 'control_tower' stay clear across 1697 configurations, closest approach 0.0000 m",
+      "reason": "'drawer' and 'control_tower' stay clear across 1697 configurations, closest approach 0.0990 m",
       "measured": {
         "max_penetration_m": 0.0,
-        "min_clearance_m": 0.0,
+        "min_clearance_m": 0.099,
         "samples_evaluated": 1697
       },
       "threshold": {
@@ -960,7 +961,7 @@
       "evidence": {
         "worst_configuration": null,
         "first_failing_configuration": null,
-        "closest_configuration": "drawer_slide=+0.07875",
+        "closest_configuration": "drawer_slide=+0.004375",
         "distmax": 0.5
       }
     },

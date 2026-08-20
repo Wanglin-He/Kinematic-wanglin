@@ -30,11 +30,18 @@ from evo_p0p3.p3.binding import Binding, BindingError
 from evo_p0p3.p3.verdict import ClaimResult, Verdict
 
 _DOFS_PER_TYPE = {
-    mujoco.mjtJoint.mjJNT_FREE: 6,
-    mujoco.mjtJoint.mjJNT_BALL: 3,
-    mujoco.mjtJoint.mjJNT_SLIDE: 1,
-    mujoco.mjtJoint.mjJNT_HINGE: 1,
+    int(mujoco.mjtJoint.mjJNT_FREE): 6,
+    int(mujoco.mjtJoint.mjJNT_BALL): 3,
+    int(mujoco.mjtJoint.mjJNT_SLIDE): 1,
+    int(mujoco.mjtJoint.mjJNT_HINGE): 1,
 }
+"""Keyed by plain int, and looked up through ``int()``.
+
+``model.jnt_type[j]`` is a numpy scalar. Whether ``np.int32(3)`` hashes equal to an IntEnum
+member depends on the numpy version, so a dict keyed by the enum works on one machine and
+raises KeyError on another -- which is what happened here after a dependency refresh.
+Neither side of that lookup is worth leaving to chance.
+"""
 """Degrees of freedom a joint contributes.
 
 Derived from the type rather than read from a field: MuJoCo exposes ``jnt_dofadr`` but no
@@ -327,7 +334,7 @@ def expected_dof(contract: Contract, binding: Binding) -> tuple[ClaimResult, ...
 
         model = binding.asset.model
         members = [dep, ind]
-        dofs = sum(_DOFS_PER_TYPE[model.jnt_type[j]] for j in members)
+        dofs = sum(_DOFS_PER_TYPE[int(model.jnt_type[j])] for j in members)
 
         # How many independent motions the members retain *among themselves*. Two members
         # in the same connected component of the active equality graph have one motion

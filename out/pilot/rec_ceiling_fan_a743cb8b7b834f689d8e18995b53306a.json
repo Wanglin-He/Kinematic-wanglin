@@ -45,6 +45,7 @@
     "inertia_synthesized": false,
     "collidable_geoms": 0,
     "distance_backend": "mj_geomDistance",
+    "mujoco_version": "3.12.0",
     "mimics_translated": [],
     "notes": [
       "no <collision> in source; all geoms are visual-only, so mjData.contact is always empty and every distance goes through mj_geomDistance."
@@ -121,7 +122,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -136,7 +137,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -257,7 +258,7 @@
       "measured": {
         "offset_over_diagonal": 0.0,
         "offset_m": 0.0,
-        "part_diagonal_m": 2.745251
+        "part_diagonal_m": 2.745249
       },
       "threshold": {
         "anchor_center_offset_max": 0.05

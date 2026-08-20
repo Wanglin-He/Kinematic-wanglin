@@ -45,6 +45,7 @@
     "inertia_synthesized": false,
     "collidable_geoms": 0,
     "distance_backend": "mj_geomDistance",
+    "mujoco_version": "3.12.0",
     "mimics_translated": [],
     "notes": [
       "no <collision> in source; all geoms are visual-only, so mjData.contact is always empty and every distance goes through mj_geomDistance."
@@ -123,7 +124,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -138,7 +139,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -280,7 +281,7 @@
       "measured": {
         "offset_over_diagonal": 0.1606,
         "offset_m": 0.013503,
-        "part_diagonal_m": 0.084078
+        "part_diagonal_m": 0.084077
       },
       "threshold": {
         "anchor_center_offset_max": 0.05
@@ -409,9 +410,9 @@
       "predicate": "KF3.required_contact",
       "subject": "work_surface+mounting_structure@all",
       "verdict": "pass",
-      "reason": "'work_surface' and 'mounting_structure' meet in state 'all', closest -0.0532 m",
+      "reason": "'work_surface' and 'mounting_structure' meet in state 'all', closest -0.0132 m",
       "measured": {
-        "min_clearance_m": -0.053154,
+        "min_clearance_m": -0.013176,
         "samples_evaluated": 662
       },
       "threshold": {
@@ -419,7 +420,7 @@
       },
       "evidence": {
         "relation": "mesh_contact",
-        "closest_configuration": "halton[220]",
+        "closest_configuration": "table_tilt=+0.79",
         "state": "all"
       }
     },

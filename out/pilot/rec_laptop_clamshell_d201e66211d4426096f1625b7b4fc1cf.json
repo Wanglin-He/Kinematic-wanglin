@@ -45,6 +45,7 @@
     "inertia_synthesized": true,
     "collidable_geoms": 0,
     "distance_backend": "mj_geomDistance",
+    "mujoco_version": "3.12.0",
     "mimics_translated": [],
     "notes": [
       "no <inertial> in source; mass and inertia synthesised to satisfy the compiler. Never used in scoring.",
@@ -122,7 +123,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -137,7 +138,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -436,19 +437,19 @@
       "predicate": "KF3.forbidden_pair",
       "subject": "display+clickpad@all",
       "verdict": "fail",
-      "reason": "'display' passes 0.1318 m into 'clickpad' at halton[122], first exceeding 0.001 m at display_hinge=+1.575",
+      "reason": "'display' passes 0.0165 m into 'clickpad' at halton[147], first exceeding 0.001 m at display_hinge=+1.575",
       "measured": {
-        "max_penetration_m": 0.131793,
-        "min_clearance_m": -0.131793,
+        "max_penetration_m": 0.016496,
+        "min_clearance_m": -0.016496,
         "samples_evaluated": 664
       },
       "threshold": {
         "forbidden_penetration_m": 0.001
       },
       "evidence": {
-        "worst_configuration": "halton[122]",
+        "worst_configuration": "halton[147]",
         "first_failing_configuration": "display_hinge=+1.575",
-        "closest_configuration": "halton[122]",
+        "closest_configuration": "halton[147]",
         "distmax": 0.5
       }
     },

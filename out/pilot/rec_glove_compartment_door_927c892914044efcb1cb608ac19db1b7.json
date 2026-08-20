@@ -45,6 +45,7 @@
     "inertia_synthesized": true,
     "collidable_geoms": 0,
     "distance_backend": "mj_geomDistance",
+    "mujoco_version": "3.12.0",
     "mimics_translated": [
       {
         "dependent": "bin_to_limiter_0",
@@ -157,7 +158,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -172,7 +173,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -187,7 +188,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -665,9 +666,9 @@
       "predicate": "KF3.required_contact",
       "subject": "door+storage_bin@shut",
       "verdict": "pass",
-      "reason": "'door' and 'storage_bin' meet in state 'shut', closest 0.0000 m",
+      "reason": "'door' and 'storage_bin' meet in state 'shut', closest 0.0020 m",
       "measured": {
-        "min_clearance_m": 0.0,
+        "min_clearance_m": 0.002,
         "samples_evaluated": 57
       },
       "threshold": {

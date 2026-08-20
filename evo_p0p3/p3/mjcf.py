@@ -155,6 +155,12 @@ class LoadedAsset:
             "inertia_synthesized": self.inertia_synthesized,
             "collidable_geoms": self.collidable_geoms,
             "distance_backend": "mj_geomDistance",
+            # The engine version belongs in the record because the distance it returns is
+            # not stable across versions. A gold-standard contact claim passed under 3.3.7
+            # and failed under 3.12.0: the older build reported zero distance for a pair
+            # whose true clearance is 10 mm, which hid a missing stop in the asset. Two
+            # runs are only comparable if this line matches.
+            "mujoco_version": mujoco.__version__,
             "mimics_translated": [
                 {
                     "dependent": m.dependent,

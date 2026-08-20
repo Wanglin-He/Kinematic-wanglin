@@ -45,6 +45,7 @@
     "inertia_synthesized": true,
     "collidable_geoms": 0,
     "distance_backend": "mj_geomDistance",
+    "mujoco_version": "3.12.0",
     "mimics_translated": [],
     "notes": [
       "no <inertial> in source; mass and inertia synthesised to satisfy the compiler. Never used in scoring.",
@@ -150,7 +151,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -165,7 +166,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -180,7 +181,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -587,10 +588,10 @@
       "predicate": "KF3.forbidden_pair",
       "subject": "screen_door+objective@all",
       "verdict": "pass",
-      "reason": "'screen_door' and 'objective' stay clear across 1113 configurations, closest approach 0.0000 m",
+      "reason": "'screen_door' and 'objective' stay clear across 1113 configurations, closest approach 0.0223 m",
       "measured": {
         "max_penetration_m": 0.0,
-        "min_clearance_m": 0.0,
+        "min_clearance_m": 0.022344,
         "samples_evaluated": 1113
       },
       "threshold": {
@@ -599,7 +600,7 @@
       "evidence": {
         "worst_configuration": null,
         "first_failing_configuration": null,
-        "closest_configuration": "screen_door_hinge=+0.589",
+        "closest_configuration": "reference",
         "distmax": 0.5
       }
     },
@@ -627,9 +628,9 @@
       "predicate": "KF3.required_contact",
       "subject": "screen_door+body_shell@closed",
       "verdict": "pass",
-      "reason": "'screen_door' and 'body_shell' meet in state 'closed', closest -0.0000 m",
+      "reason": "'screen_door' and 'body_shell' meet in state 'closed', closest 0.0000 m",
       "measured": {
-        "min_clearance_m": -0.0,
+        "min_clearance_m": 0.0,
         "samples_evaluated": 184
       },
       "threshold": {
@@ -637,7 +638,7 @@
       },
       "evidence": {
         "relation": "stop_contact",
-        "closest_configuration": "halton[64]",
+        "closest_configuration": "halton[32]",
         "state": "closed"
       }
     },

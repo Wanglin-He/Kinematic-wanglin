@@ -52,11 +52,24 @@
     </visual>
   </link>
 
+  <!-- Both drawers carry a front panel wider than the 0.36 m opening. That panel is what
+       actually stops a drawer at closed: without it the box slides flush into the carcass
+       and nothing touches, so the contract's stop_contact claim goes unsatisfied. An older
+       MuJoCo hid this by reporting zero distance for a pair whose true clearance is 10 mm.
+       Same defect class as the door, which had no geometric stop until front_lip was added
+       -- and found the same way, by the control failing a check it was supposed to pass.
+
+       Keep each <link> body contiguous: the defect manifest substitutes on exact text. -->
+
   <!-- ============================ upper drawer ============================ -->
   <link name="drawer_1">
     <visual name="box">
       <origin xyz="0 0 0"/>
       <geometry><box size="0.34 0.34 0.20"/></geometry>
+    </visual>
+    <visual name="front_panel">
+      <origin xyz="0 -0.18 0"/>
+      <geometry><box size="0.40 0.02 0.18"/></geometry>
     </visual>
   </link>
   <joint name="drawer_1_slide" type="prismatic">
@@ -84,6 +97,10 @@
     <visual name="box">
       <origin xyz="0 0 0"/>
       <geometry><box size="0.34 0.34 0.20"/></geometry>
+    </visual>
+    <visual name="front_panel">
+      <origin xyz="0 -0.18 0"/>
+      <geometry><box size="0.40 0.02 0.18"/></geometry>
     </visual>
   </link>
   <joint name="drawer_2_slide" type="prismatic">

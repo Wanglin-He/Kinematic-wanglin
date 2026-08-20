@@ -54,6 +54,15 @@ font-family:var(--mono);font-size:.8rem}
 .ch{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
 .ch .p{font-family:var(--mono);font-size:.88rem;font-weight:700;color:var(--red)}
 .ch .s{font-family:var(--mono);font-size:.82rem;color:var(--muted)}
+.says{margin:7px 0;padding:9px 13px;border-left:3px solid var(--red);border-radius:7px;
+background:var(--red-s);color:#742d1e;font-size:.9rem;line-height:1.65}
+.says b:first-child{color:#8d3423}
+details.num{margin:7px 0}
+details.num>summary{cursor:pointer;color:var(--teal);font-size:.83rem;padding:2px 0;
+list-style:none;user-select:none}
+details.num>summary::before{content:"▸ ";}
+details.num[open]>summary::before{content:"▾ ";}
+.raw{margin:5px 0 0;color:var(--muted);font-size:.75rem;font-family:var(--mono);line-height:1.5}
 .mrow{margin:7px 0;padding:8px 12px;border-radius:7px;background:#f4f2ec;
 font-family:var(--mono);font-size:.79rem;line-height:1.7;white-space:pre-wrap}
 .mrow b{color:var(--red)}
@@ -135,6 +144,61 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 """
 
+def verdict_cn(sh):
+    """One sentence in the reader's language saying what is wrong.
+
+    Built from the numbers the predicate already recorded, per predicate, so it says the
+    same thing the English ``reason`` says rather than a loose paraphrase. Falls back to
+    the machine's own sentence if a predicate has no template yet.
+    """
+    p, m, t = sh["predicate"], sh["measured"], sh["threshold"]
+    ev = sh["evidence"] or {}
+    parts = sh["parts"]
+    a = parts[0] if parts else "?"
+    b = parts[1] if len(parts) > 1 else "?"
+    g = lambda d, k, dv=None: d.get(k, dv)
+    try:
+        if p == "KF1.parent":
+            return (f"{a} 实际挂在 <b>{g(m,'nearest_declared_ancestor')}</b> 下面"
+                    f"（上溯 {g(m,'links_up')} 层），不是契约声明的父件——"
+                    f"它跟着动的不是该跟的那个部件。")
+        if p == "KF1.axis_semantic":
+            return (f"这根轴与声明的方向差 <b>{g(m,'deviation_deg')}°</b>，"
+                    f"超过允许的 {g(t,'axis_angle_deg')}°——声明说的方向和它实际指的方向不是一回事。")
+        if p == "KF1.anchor" and "edge_inset" in m:
+            return (f"轴线扎进 {a} 内部 <b>{g(m,'edge_inset')*100:.1f}%</b>"
+                    f"（部件跨度 {g(m,'extent_m')} m），超过允许的 {g(t,'anchor_edge_inset_max')*100:.0f}%——"
+                    f"它绕的是<b>中间</b>而不是边缘。")
+        if p == "KF1.anchor":
+            return (f"轴线偏离 {a} 的中心 <b>{g(m,'offset_over_diagonal')*100:.1f}%</b>"
+                    f"（{g(m,'offset_m')} m ÷ 部件自身对角线 {g(m,'part_diagonal_m')} m），"
+                    f"超过允许的 {g(t,'anchor_center_offset_max')*100:.0f}%——它不是绕自己中心转。")
+        if p == "KF1.range_and_reference":
+            ms, ds = g(m,'model_span'), g(t,'declared_span')
+            return (f"模型自己只能动 <b>{ms}</b>，契约声明 <b>{ds}</b>，"
+                    f"相差 {abs(ms-ds)/ds*100:.0f}%——两边说的行程对不上。")
+        if p == "KF3.forbidden_pair":
+            return (f"{a} 与 {b} 在扫掠中最深互相嵌入 <b>{g(m,'max_penetration_m')} m</b>"
+                    f"（允许 {g(t,'forbidden_penetration_m')} m），"
+                    f"最坏构型 {ev.get('worst_configuration')}，"
+                    f"共查了 {g(m,'samples_evaluated')} 个构型。")
+        if p == "KF3.state_reachability":
+            return (f"状态 <b>{sh['subject']}</b> 停不干净：{a} 与 {b} 嵌入 "
+                    f"<b>{g(m,'max_penetration_m')} m</b>（允许 {g(t,'forbidden_penetration_m')} m），"
+                    f"该状态共 {g(m,'configurations_in_state')} 个构型。")
+        if p == "KF3.required_contact":
+            return (f"{a} 与 {b} 全程最近只到 <b>{g(m,'min_clearance_m')} m</b>，"
+                    f"要求 ≤ {g(t,'required_contact_m')} m——"
+                    f"契约说这里该有接触，<b>但它们从来没碰上</b>。")
+        if p == "KF2.bound":
+            return f"模型里没有任何约束强制这条耦合，两个关节各动各的。"
+        if p == "KF2.expected_dof":
+            return (f"剩余自由度是 {g(m,'remaining_dof')}，契约声明 {g(t,'expected_dof')}。")
+    except Exception:
+        pass
+    return sh.get("why") or ""
+
+
 def mrow(sh):
     m, t = sh["measured"], sh["threshold"]
     lines = []
@@ -165,7 +229,11 @@ for a in D:
         blocks.append(f"""
       <div class="claim">
         <div class="ch"><span class="p">{E(sh["predicate"])}</span><span class="s">{E(sh["subject"])}</span></div>
-        <div class="mrow">{E(mrow(sh))}</div>
+        <div class="says"><b>机器判负：</b>{verdict_cn(sh)}</div>
+        <details class="num"><summary>展开：判它的那几个数</summary>
+          <div class="mrow">{E(mrow(sh))}</div>
+          <p class="raw">{E(sh.get("why") or "")}</p>
+        </details>
         <p class="legend">{E(legend)}</p>
         <div class="pics">
           <div class="pic"><img src="data:image/png;base64,{sh["ref"]}" alt=""><span>参考姿态</span></div>

@@ -45,6 +45,7 @@
     "inertia_synthesized": true,
     "collidable_geoms": 0,
     "distance_backend": "mj_geomDistance",
+    "mujoco_version": "3.12.0",
     "mimics_translated": [],
     "notes": [
       "no <inertial> in source; mass and inertia synthesised to satisfy the compiler. Never used in scoring.",
@@ -261,7 +262,7 @@
       "verdict": "pass",
       "reason": "declared and built as slide",
       "measured": {
-        "joint_type": "slide"
+        "joint_type": "2"
       },
       "threshold": {
         "declared": "slide"
@@ -276,7 +277,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -291,7 +292,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -306,7 +307,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -321,7 +322,7 @@
       "verdict": "pass",
       "reason": "declared and built as slide",
       "measured": {
-        "joint_type": "slide"
+        "joint_type": "2"
       },
       "threshold": {
         "declared": "slide"
@@ -336,7 +337,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -648,7 +649,7 @@
       "reason": "moving 0.015 m along the declared axis keeps 'drip_tray' clear of 'base'",
       "measured": {
         "clearance_before": 0.0,
-        "clearance_after": 0.0,
+        "clearance_after": 0.015,
         "penetration_gained": 0.0,
         "step_m": 0.015
       },
@@ -758,7 +759,7 @@
       "measured": {
         "offset_over_diagonal": 0.0,
         "offset_m": 1e-06,
-        "part_diagonal_m": 0.289962
+        "part_diagonal_m": 0.289959
       },
       "threshold": {
         "anchor_center_offset_max": 0.05
@@ -1116,10 +1117,10 @@
       "predicate": "KF3.forbidden_pair",
       "subject": "clamp_left+base@all",
       "verdict": "pass",
-      "reason": "'clamp_left' and 'base' stay clear across 2496 configurations, closest approach 0.0000 m",
+      "reason": "'clamp_left' and 'base' stay clear across 2496 configurations, closest approach 0.0855 m",
       "measured": {
         "max_penetration_m": 0.0,
-        "min_clearance_m": 0.0,
+        "min_clearance_m": 0.085525,
         "samples_evaluated": 2496
       },
       "threshold": {
@@ -1128,7 +1129,7 @@
       "evidence": {
         "worst_configuration": null,
         "first_failing_configuration": null,
-        "closest_configuration": "clamp_left_pivot=+0.4125",
+        "closest_configuration": "reference",
         "distmax": 0.5
       }
     },
@@ -1136,10 +1137,10 @@
       "predicate": "KF3.forbidden_pair",
       "subject": "clamp_right+base@all",
       "verdict": "pass",
-      "reason": "'clamp_right' and 'base' stay clear across 2496 configurations, closest approach 0.0000 m",
+      "reason": "'clamp_right' and 'base' stay clear across 2496 configurations, closest approach 0.0855 m",
       "measured": {
         "max_penetration_m": 0.0,
-        "min_clearance_m": 0.0,
+        "min_clearance_m": 0.085525,
         "samples_evaluated": 2496
       },
       "threshold": {
@@ -1148,7 +1149,7 @@
       "evidence": {
         "worst_configuration": null,
         "first_failing_configuration": null,
-        "closest_configuration": "clamp_right_pivot=+0.7875",
+        "closest_configuration": "reference",
         "distmax": 0.5
       }
     },
@@ -1156,10 +1157,10 @@
       "predicate": "KF3.forbidden_pair",
       "subject": "lid+base@all",
       "verdict": "pass",
-      "reason": "'lid' and 'base' stay clear across 2496 configurations, closest approach 0.0000 m",
+      "reason": "'lid' and 'base' stay clear across 2496 configurations, closest approach 0.1221 m",
       "measured": {
         "max_penetration_m": 0.0,
-        "min_clearance_m": 0.0,
+        "min_clearance_m": 0.12209,
         "samples_evaluated": 2496
       },
       "threshold": {
@@ -1168,7 +1169,7 @@
       "evidence": {
         "worst_configuration": null,
         "first_failing_configuration": null,
-        "closest_configuration": "lid_hinge=+0.3436",
+        "closest_configuration": "reference",
         "distmax": 0.5
       }
     },

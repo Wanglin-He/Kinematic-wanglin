@@ -62,7 +62,11 @@ def control_for(defect, materialised) -> mjcf.LoadedAsset:
 def test_the_control_compiles_with_its_geometry_intact(control):
     assert control.model.nbody == 8
     assert control.model.njnt == 3
-    assert control.model.ngeom == 13  # six carcass panels + front lip + drawers, handles, door, knob
+    # 15, not 13: each drawer gained a front panel wider than the opening. Without it the
+    # drawer slides flush into the carcass and nothing touches, so the contract's
+    # stop_contact claim went unsatisfied -- the control failing a check it was written to
+    # pass, which is the second time this asset has taught that lesson.
+    assert control.model.ngeom == 15
     assert control.inertia_synthesized  # visual-only, like the real assets
 
 
@@ -81,7 +85,10 @@ def test_the_drawers_start_inside_the_carcass(control):
     # Stated in the file's header as a measured property; checked here so it stays one.
     for drawer in ("drawer_1", "drawer_2"):
         lo, hi = mjcf.subtree_aabb(control, (control.body_id(drawer),))
-        assert lo[1] > -0.21 and hi[1] < 0.19
+        # -0.23 rather than -0.21: each drawer now carries a front panel that overhangs
+        # the carcass face, which is what stops it at closed. The box itself still starts
+        # inside; what this guards against is a drawer parked outside the carcass entirely.
+        assert lo[1] > -0.23 and hi[1] < 0.19
 
 
 @pytest.mark.parametrize("defect", gold.defects(), ids=lambda d: d.name)

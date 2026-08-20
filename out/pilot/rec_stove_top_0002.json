@@ -45,6 +45,7 @@
     "inertia_synthesized": false,
     "collidable_geoms": 0,
     "distance_backend": "mj_geomDistance",
+    "mujoco_version": "3.12.0",
     "mimics_translated": [],
     "notes": [
       "no <collision> in source; all geoms are visual-only, so mjData.contact is always empty and every distance goes through mj_geomDistance."
@@ -182,7 +183,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -197,7 +198,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -212,7 +213,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -227,7 +228,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -452,7 +453,7 @@
       "measured": {
         "offset_over_diagonal": 0.004,
         "offset_m": 0.00025,
-        "part_diagonal_m": 0.062914
+        "part_diagonal_m": 0.062905
       },
       "threshold": {
         "anchor_center_offset_max": 0.05
@@ -474,7 +475,7 @@
       "measured": {
         "offset_over_diagonal": 0.004,
         "offset_m": 0.00025,
-        "part_diagonal_m": 0.062914
+        "part_diagonal_m": 0.062905
       },
       "threshold": {
         "anchor_center_offset_max": 0.05
@@ -496,7 +497,7 @@
       "measured": {
         "offset_over_diagonal": 0.004,
         "offset_m": 0.00025,
-        "part_diagonal_m": 0.062914
+        "part_diagonal_m": 0.062905
       },
       "threshold": {
         "anchor_center_offset_max": 0.05
@@ -518,7 +519,7 @@
       "measured": {
         "offset_over_diagonal": 0.004,
         "offset_m": 0.00025,
-        "part_diagonal_m": 0.062914
+        "part_diagonal_m": 0.062905
       },
       "threshold": {
         "anchor_center_offset_max": 0.05

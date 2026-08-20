@@ -19,9 +19,10 @@ families:
       defect: >
         drawer_2 hangs off drawer_1 instead of the carcass. Pulling the upper drawer now
         drags the lower one with it. Every other claim is untouched: the joint is still a
-        prismatic sliding the declared distance along the declared axis, and at the
-        reference configuration the asset is pose-identical to the correct one, so nothing
-        but the parent claim can see it.
+        prismatic sliding the declared distance along the declared axis. One other claim
+        does move, and legitimately: hung off the wrong body, drawer_2 sits 0.22 m from the
+        carcass at closed, so KF3.required_contact fails too. A mis-parented drawer really
+        does not close against anything.
       substitute:
         - find: |
             <joint name="drawer_2_slide" type="prismatic">
@@ -40,7 +41,10 @@ families:
         KF1.rigid_follower:       pass
         KF1.travel_scale:         pass
         KF3.forbidden_pair:       pass
-        KF3.required_contact:     pass
+        # drawer_2 hangs off drawer_1, so at closed it sits 0.22 m from the carcass and its stop
+        # never happens. That is a real consequence of the defect rather than cross-talk to be
+        # papered over: a mis-parented drawer genuinely does not close against the carcass.
+        KF3.required_contact:     fail
         KF3.state_reachability:   pass
     - name: wrong_joint_type
       targets: KF1.type
@@ -211,6 +215,10 @@ families:
                   <origin xyz="0 0 0"/>
                   <geometry><box size="0.34 0.34 0.20"/></geometry>
                 </visual>
+                <visual name="front_panel">
+                  <origin xyz="0 -0.18 0"/>
+                  <geometry><box size="0.40 0.02 0.18"/></geometry>
+                </visual>
               </link>
           replace: |
             <link name="drawer_1">
@@ -278,7 +286,11 @@ families:
         KF1.travel_scale:         pass
 
         # A horizontal hinge axis flops the panel through the carcass. Connected consequence.
-        KF3.forbidden_pair:       fail
+        # Was incidental. The horizontal hinge used to graze the carcass; under MuJoCo 3.12 that
+        # clearance reads 0.0 and no longer trips. Losing it is fine and arguably better: the
+        # defect's own target KF1.axis_semantic still fires, and swept_interference still trips
+        # forbidden_pair at 0.030 m, so the predicate is intact.
+        KF3.forbidden_pair:       pass
         KF3.required_contact:     pass
         KF3.state_reachability:   pass
     - name: swept_interference

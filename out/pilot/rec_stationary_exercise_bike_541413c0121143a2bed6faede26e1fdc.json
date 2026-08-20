@@ -45,6 +45,7 @@
     "inertia_synthesized": true,
     "collidable_geoms": 0,
     "distance_backend": "mj_geomDistance",
+    "mujoco_version": "3.12.0",
     "mimics_translated": [],
     "notes": [
       "no <inertial> in source; mass and inertia synthesised to satisfy the compiler. Never used in scoring.",
@@ -153,7 +154,7 @@
       "verdict": "pass",
       "reason": "declared and built as hinge",
       "measured": {
-        "joint_type": "hinge"
+        "joint_type": "3"
       },
       "threshold": {
         "declared": "hinge"
@@ -168,7 +169,7 @@
       "verdict": "pass",
       "reason": "declared and built as slide",
       "measured": {
-        "joint_type": "slide"
+        "joint_type": "2"
       },
       "threshold": {
         "declared": "slide"
@@ -183,7 +184,7 @@
       "verdict": "pass",
       "reason": "declared and built as slide",
       "measured": {
-        "joint_type": "slide"
+        "joint_type": "2"
       },
       "threshold": {
         "declared": "slide"
