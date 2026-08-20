@@ -11,6 +11,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import types
+
+import mujoco
 import pytest
 import yaml
 
@@ -175,7 +178,59 @@ def test_the_coupling_survives_the_urdf_import(materialised, contract):
 def test_the_ratio_the_model_enforces_is_read_not_inferred(materialised, contract):
     result = evaluate("gearbox_correct", materialised, contract)["KF2.coefficient"]
     assert result.measured["coefficient"] == pytest.approx(-3.0)
-    assert result.measured["polycoef"][:2] == [0.0, -3.0]
+    assert result.measured["offset"] == pytest.approx(0.0)
+    assert result.measured["chain_length"] == 1
+
+
+TWIN_LINKAGE = """
+<mujoco><worldbody>
+  <body name="door"><joint name="d" type="hinge" axis="0 0 1"/><geom size="0.05"/>
+    <body name="l0" pos="0.2 0 0"><joint name="a" type="hinge" axis="0 0 1"/><geom size="0.02"/></body>
+    <body name="l1" pos="-0.2 0 0"><joint name="b" type="hinge" axis="0 0 1"/><geom size="0.02"/></body>
+  </body>
+</worldbody><equality>
+  <joint joint1="a" joint2="d" polycoef="0 0.55 0 0 0"/>
+  <joint joint1="b" joint2="d" polycoef="0 0.55 0 0 0"/>
+</equality></mujoco>
+"""
+
+
+def test_a_relation_routed_through_a_third_joint_is_still_a_relation():
+    """Two links both slaved to a door at 0.55 do move exactly 1:1 with each other.
+
+    P0 writes ``mechanism: any`` -- it declares how parts move together, not which
+    constraint object implements it. An earlier version looked only for an equality
+    written directly between the declared pair, so it reported this correct mechanism as
+    absent and scored the glove compartment zero. Composing the chain is arithmetic:
+    multiply the slopes, carry the offsets.
+    """
+    from evo_p0p3.p3.kf2 import _relation
+
+    model = mujoco.MjModel.from_xml_string(TWIN_LINKAGE)
+    asset = types.SimpleNamespace(model=model, data=mujoco.MjData(model))
+    binding = types.SimpleNamespace(asset=asset)
+    a, b = model.joint("a").id, model.joint("b").id
+
+    found = _relation(binding, a, b)
+    assert found is not None, "the two links are coupled, through the door"
+    assert found.coefficient == pytest.approx(1.0)
+    assert found.offset == pytest.approx(0.0)
+    assert len(found.edges) == 2
+    assert [w[0] for w in found.waypoints] == [model.joint("d").id]
+
+
+def test_an_unconstrained_joint_yields_no_chain():
+    """Composition does not manufacture relations: the route has to be constrained."""
+    from evo_p0p3.p3.kf2 import _relation
+
+    xml = TWIN_LINKAGE.replace(
+        '<joint joint1="b" joint2="d" polycoef="0 0.55 0 0 0"/>', ""
+    )
+    model = mujoco.MjModel.from_xml_string(xml)
+    binding = types.SimpleNamespace(
+        asset=types.SimpleNamespace(model=model, data=mujoco.MjData(model))
+    )
+    assert _relation(binding, model.joint("a").id, model.joint("b").id) is None
 
 
 def test_results_carry_the_configuration_a_failure_first_appeared_at(

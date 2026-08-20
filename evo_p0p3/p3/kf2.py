@@ -20,6 +20,8 @@ configuration -- position level, no stepping, no dynamics, inside P3's declared 
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import mujoco
 import numpy as np
 
@@ -71,24 +73,93 @@ def _mj_joint(binding: Binding, contract: Contract, joint_id: str) -> int | None
     return start if count == 1 else None
 
 
-def _equalities_for(binding: Binding, dep: int, ind: int) -> list[tuple[int, bool]]:
-    """Every joint-equality linking these two joints, with whether the roles are swapped.
+@dataclass(frozen=True, slots=True)
+class _Relation:
+    """The affine relation the model enforces between two joints, however it spells it.
 
-    A model may write ``q_ind = a0 + a1 q_dep`` instead of ``q_dep = a0 + a1 q_ind``. The
-    two describe the same mechanism, so both are accepted and the coefficient comparison
-    inverts accordingly rather than failing an asset over which way round it was typed.
+    ``q_dep = coefficient * q_ind + offset``, recovered by composing every equality along
+    the shortest chain that connects them. A directly written equality is the one-edge case.
     """
-    model = binding.asset.model
-    out = []
+
+    coefficient: float
+    offset: float
+    edges: tuple[int, ...]
+    active: bool
+    higher_order: float
+    waypoints: tuple[tuple[int, float, float], ...]
+    """Joints between the two ends, each with the model's own ``(slope, offset)`` from the
+    independent joint. The residual sweep needs them: a chain routed through a third joint
+    is only meaningful once that joint sits where the model says it should."""
+
+
+def _equality_graph(model, *, active_only: bool = False) -> dict[int, list]:
+    """Adjacency for the joint-equality graph.
+
+    An edge ``u -> (v, m, b, e)`` reads "equality e constrains q_v = m*q_u + b". MuJoCo
+    writes ``q_obj1 = a0 + a1 q_obj2``, which is an edge obj2 -> obj1; the inverse edge
+    exists whenever a1 is non-zero, because the same constraint read the other way round
+    describes the same mechanism. That is also what makes a model writing the relation
+    backwards pass rather than fail over which way round it was typed.
+    """
+    graph: dict[int, list] = {}
     for e in range(model.neq):
         if model.eq_type[e] != mujoco.mjtEq.mjEQ_JOINT:
             continue
+        if active_only and not bool(model.eq_active0[e]):
+            continue
         o1, o2 = int(model.eq_obj1id[e]), int(model.eq_obj2id[e])
-        if (o1, o2) == (dep, ind):
-            out.append((e, False))
-        elif (o1, o2) == (ind, dep):
-            out.append((e, True))
-    return out
+        a0, a1 = float(model.eq_data[e][0]), float(model.eq_data[e][1])
+        graph.setdefault(o2, []).append((o1, a1, a0, e))
+        if abs(a1) > 1e-12:
+            graph.setdefault(o1, []).append((o2, 1.0 / a1, -a0 / a1, e))
+    return graph
+
+
+def _relation(binding: Binding, dep: int, ind: int) -> _Relation | None:
+    """What the model enforces between these two joints, or None if nothing does.
+
+    Chains are followed, not only equalities written directly between the pair, because P0
+    declares a *relation* and says ``mechanism: any``. The claim is about how two parts move
+    together, not about which constraint object implements it, and an earlier version that
+    demanded a direct equality contradicted the contract's own stated semantics.
+
+    The glove compartment is the case that settled it. Its contract declares the twin
+    limiter links move 1:1 -- the only ratio the prompt supports, since it never gives a
+    door-to-link figure -- and the asset slaves both limiters to the door at 0.55. The two
+    limiters therefore do move exactly 1:1; requiring an equality written between them
+    reported a correct mechanism as absent and scored the asset zero.
+
+    Composing gives nothing away. The composed coefficient still has to match the declared
+    one, the residual sweep still runs, and a chain routed through an unconstrained joint
+    yields no path at all. It stays arithmetic: multiply the slopes, carry the offsets.
+    """
+    model = binding.asset.model
+    graph = _equality_graph(model)
+    # Breadth-first, so the shortest chain wins: a model carrying both a direct equality
+    # and a longer route is read the direct way.
+    frontier = [(ind, 1.0, 0.0, (), ())]
+    seen = {ind}
+    while frontier:
+        node, m, b, edges, nodes = frontier.pop(0)
+        for nxt, edge_m, edge_b, e in graph.get(node, ()):
+            if nxt in seen:
+                continue
+            slope, offset, path = edge_m * m, edge_m * b + edge_b, edges + (e,)
+            if nxt == dep:
+                return _Relation(
+                    coefficient=slope,
+                    offset=offset,
+                    edges=path,
+                    active=all(bool(model.eq_active0[x]) for x in path),
+                    higher_order=max(
+                        float(np.abs(np.asarray(model.eq_data[x][2:5], dtype=float)).max())
+                        for x in path
+                    ),
+                    waypoints=nodes,
+                )
+            seen.add(nxt)
+            frontier.append((nxt, slope, offset, path, nodes + ((nxt, slope, offset),)))
+    return None
 
 
 def _resolve(binding: Binding, contract: Contract, coupling: Coupling):
@@ -99,8 +170,7 @@ def _resolve(binding: Binding, contract: Contract, coupling: Coupling):
             f"could not resolve {coupling.relation.dependent!r} or "
             f"{coupling.relation.independent!r} to a single MuJoCo joint"
         )
-    found = _equalities_for(binding, dep, ind)
-    return dep, ind, (found[0] if found else None), None
+    return dep, ind, _relation(binding, dep, ind), None
 
 
 # --------------------------------------------------------------------------------------
@@ -125,35 +195,41 @@ def bound(contract: Contract, binding: Binding) -> tuple[ClaimResult, ...]:
             continue
 
         model = binding.asset.model
-        equalities = _equalities_for(binding, dep, ind)
-        active = [e for e, _ in equalities if bool(model.eq_active0[e])]
+        chain = len(found.edges) if found else 0
         shared = {
-            "measured": {"constraints_found": len(equalities), "active": len(active)},
+            "measured": {"chain_length": chain,
+                         "active": bool(found and found.active)},
             "evidence": {
                 "dependent": coupling.relation.dependent,
                 "independent": coupling.relation.independent,
+                "equality_ids": list(found.edges) if found else [],
                 "total_equalities_in_model": int(model.neq),
                 "mimics_recovered": [m.dependent for m in binding.asset.mimics],
             },
         }
-        if active:
+        if found and found.active:
+            how = (
+                "a joint equality" if chain == 1
+                else f"a chain of {chain} joint equalities"
+            )
             results.append(ClaimResult(
                 "KF2.bound", coupling.id, Verdict.PASS,
-                f"an active joint equality links {coupling.relation.dependent!r} and "
+                f"{how} actively links {coupling.relation.dependent!r} and "
                 f"{coupling.relation.independent!r}", **shared,
             ))
-        elif equalities:
+        elif found:
             results.append(ClaimResult(
                 "KF2.bound", coupling.id, Verdict.FAIL,
-                f"a constraint links the two joints but is inactive, so nothing enforces "
-                f"the declared relation", **shared,
+                "a constraint links the two joints but is inactive, so nothing enforces "
+                "the declared relation", **shared,
             ))
         else:
             results.append(ClaimResult(
                 "KF2.bound", coupling.id, Verdict.FAIL,
                 f"nothing in the model links {coupling.relation.dependent!r} to "
-                f"{coupling.relation.independent!r}; the two joints move independently, so "
-                f"the declared coupling exists only in the contract", **shared,
+                f"{coupling.relation.independent!r}, directly or through any chain of "
+                f"equalities; the two joints move independently, so the declared coupling "
+                f"exists only in the contract", **shared,
             ))
     return tuple(results)
 
@@ -184,35 +260,28 @@ def coefficient(contract: Contract, binding: Binding) -> tuple[ClaimResult, ...]
             ))
             continue
 
-        index, swapped = found
-        poly = np.asarray(binding.asset.model.eq_data[index][:5], dtype=float)
+        got_c, got_o = found.coefficient, found.offset
+        higher = found.higher_order
         want_c, want_o = coupling.relation.coefficient, coupling.relation.offset
+        if abs(got_c) < 1e-12:
+            results.append(ClaimResult(
+                "KF2.coefficient", coupling.id, Verdict.FAIL,
+                "the constraint pins the dependent joint to a constant rather than "
+                "coupling it to the independent one",
+                measured={"coefficient": got_c, "offset": got_o},
+            ))
+            continue
 
-        if swapped:
-            # The model wrote q_ind = a0 + a1 q_dep; the same mechanism inverted.
-            a0, a1 = float(poly[0]), float(poly[1])
-            if abs(a1) < 1e-12:
-                results.append(ClaimResult(
-                    "KF2.coefficient", coupling.id, Verdict.FAIL,
-                    "the constraint pins the independent joint to a constant rather than "
-                    "coupling it", measured={"polycoef": poly.round(6).tolist()},
-                ))
-                continue
-            got_c, got_o = 1.0 / a1, -a0 / a1
-        else:
-            got_c, got_o = float(poly[1]), float(poly[0])
-
-        higher = float(np.abs(poly[2:]).max())
         tol = coupling.epsilon or contract.kinematic_claims.tolerances.coupling_residual
         rel = abs(got_c - want_c) / (abs(want_c) or 1.0)
         shared = {
             "measured": {"coefficient": round(got_c, 6), "offset": round(got_o, 6),
-                         "polycoef": poly.round(6).tolist(),
-                         "roles_swapped": swapped,
+                         "chain_length": len(found.edges),
                          "higher_order_terms": round(higher, 9)},
             "threshold": {"coefficient": want_c, "offset": want_o, "epsilon": tol},
             "evidence": {"dependent": coupling.relation.dependent,
-                         "independent": coupling.relation.independent},
+                         "independent": coupling.relation.independent,
+                         "equality_ids": list(found.edges)},
         }
         if rel <= tol and abs(got_o - want_o) <= tol and higher <= 1e-9:
             results.append(ClaimResult(
@@ -242,12 +311,12 @@ def expected_dof(contract: Contract, binding: Binding) -> tuple[ClaimResult, ...
     Counted as member joint DOFs minus the active equalities acting among them: two hinges
     and one joint equality leave one.
 
-    Counting rows rather than taking the rank of the constraint Jacobian assumes those
-    rows are independent. For a single equality between two joints they trivially are.
-    Two redundant equalities on one pair would be over-counted here and under-report the
-    remaining freedom -- recorded as a limitation rather than papered over, and it does not
-    arise in the corpus, where couplings come from ``<mimic>`` and MuJoCo permits one per
-    joint.
+    Counted as member joint DOFs minus the freedoms the active equalities remove, where
+    "removes a freedom" means two members land in the same connected component of the
+    equality graph -- so a linkage routed through a third joint counts, matching what
+    KF2.bound accepts. Grouping rather than counting rows also removes an over-count the
+    row version had: two redundant equalities on one pair used to subtract two freedoms
+    where physically they remove one.
     """
     results = []
     for coupling in contract.kinematic_claims.couplings:
@@ -257,15 +326,32 @@ def expected_dof(contract: Contract, binding: Binding) -> tuple[ClaimResult, ...
             continue
 
         model = binding.asset.model
-        members = {dep, ind}
+        members = [dep, ind]
         dofs = sum(_DOFS_PER_TYPE[model.jnt_type[j]] for j in members)
-        constraints = sum(
-            1
-            for e in range(model.neq)
-            if model.eq_type[e] == mujoco.mjtEq.mjEQ_JOINT
-            and bool(model.eq_active0[e])
-            and {int(model.eq_obj1id[e]), int(model.eq_obj2id[e])} <= members
-        )
+
+        # How many independent motions the members retain *among themselves*. Two members
+        # in the same connected component of the active equality graph have one motion
+        # between them, whether the constraint is written directly between them or routed
+        # through a third joint. Counting components rather than equality rows also drops
+        # the old over-count: two redundant equalities on one pair form one component and
+        # remove one freedom, which is what they physically do.
+        graph = _equality_graph(model, active_only=True)
+
+        def _reachable(start: int) -> set[int]:
+            seen, stack = {start}, [start]
+            while stack:
+                node = stack.pop()
+                for nxt, *_ in graph.get(node, ()):
+                    if nxt not in seen:
+                        seen.add(nxt)
+                        stack.append(nxt)
+            return seen
+
+        remaining, components = set(members), 0
+        while remaining:
+            remaining -= _reachable(remaining.pop())
+            components += 1
+        constraints = len(members) - components
         observed = dofs - constraints
         shared = {
             "measured": {"member_dofs": dofs, "active_constraints": constraints,
@@ -321,7 +407,6 @@ def residual(contract: Contract, binding: Binding) -> tuple[ClaimResult, ...]:
 
         asset = binding.asset
         model, data = asset.model, asset.data
-        index, _ = found
         declared = contract.kinematic_claims.joint(coupling.relation.independent)
         lo, hi = declared.range.min, declared.range.max
 
@@ -332,14 +417,21 @@ def residual(contract: Contract, binding: Binding) -> tuple[ClaimResult, ...]:
         for value in np.linspace(lo, hi, SAMPLES):
             mujoco.mj_resetData(model, data)
             data.qpos[int(model.jnt_qposadr[ind])] = value
+            # Intermediate joints go where the *model* says, so the reading below is about
+            # the declared relation and not about a waypoint left at zero.
+            for node, slope, offset in found.waypoints:
+                data.qpos[int(model.jnt_qposadr[node])] = slope * value + offset
+            # The dependent end goes where the *contract* says. The gap between the two
+            # descriptions is exactly what the equality residual then reports.
             data.qpos[int(model.jnt_qposadr[dep])] = (
                 coupling.relation.coefficient * value + coupling.relation.offset
             )
             mujoco.mj_forward(model, data)
+            on_chain = set(found.edges)
             rows = [
                 i for i in range(data.nefc)
                 if data.efc_type[i] == mujoco.mjtConstraint.mjCNSTR_EQUALITY
-                and int(data.efc_id[i]) == index
+                and int(data.efc_id[i]) in on_chain
             ]
             if not rows:
                 continue

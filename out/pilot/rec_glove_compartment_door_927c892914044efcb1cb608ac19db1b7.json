@@ -26,7 +26,7 @@
   ],
   "profile": {
     "KF1": 0.8333333333333334,
-    "KF2": 0.0,
+    "KF2": 1.0,
     "KF3": 1.0
   },
   "sub_scores": {
@@ -35,7 +35,7 @@
   },
   "applicability": {
     "KF1": "18/24",
-    "KF2": "2/4",
+    "KF2": "4/4",
     "KF3": "4/4"
   },
   "tolerance_digest": "956063b9148f7749",
@@ -517,16 +517,20 @@
     {
       "predicate": "KF2.bound",
       "subject": "twin_limiters",
-      "verdict": "fail",
-      "reason": "nothing in the model links 'limiter_right_pivot' to 'limiter_left_pivot'; the two joints move independently, so the declared coupling exists only in the contract",
+      "verdict": "pass",
+      "reason": "a chain of 2 joint equalities actively links 'limiter_right_pivot' and 'limiter_left_pivot'",
       "measured": {
-        "constraints_found": 0,
-        "active": 0
+        "chain_length": 2,
+        "active": true
       },
       "threshold": {},
       "evidence": {
         "dependent": "limiter_right_pivot",
         "independent": "limiter_left_pivot",
+        "equality_ids": [
+          0,
+          1
+        ],
         "total_equalities_in_model": 2,
         "mimics_recovered": [
           "bin_to_limiter_0",
@@ -537,21 +541,37 @@
     {
       "predicate": "KF2.coefficient",
       "subject": "twin_limiters",
-      "verdict": "na",
-      "reason": "no constraint implements this coupling, so there are no coefficients to compare; KF2.bound owns that failure",
-      "measured": {},
-      "threshold": {},
-      "evidence": {}
+      "verdict": "pass",
+      "reason": "the model enforces +1 as declared",
+      "measured": {
+        "coefficient": 1.0,
+        "offset": 0.0,
+        "chain_length": 2,
+        "higher_order_terms": 0.0
+      },
+      "threshold": {
+        "coefficient": 1.0,
+        "offset": 0.0,
+        "epsilon": 0.01
+      },
+      "evidence": {
+        "dependent": "limiter_right_pivot",
+        "independent": "limiter_left_pivot",
+        "equality_ids": [
+          0,
+          1
+        ]
+      }
     },
     {
       "predicate": "KF2.expected_dof",
       "subject": "twin_limiters",
-      "verdict": "fail",
-      "reason": "P0 declares 1 remaining degree(s) of freedom and the model leaves 2: 2 member DOFs with 0 constraint(s) among them",
+      "verdict": "pass",
+      "reason": "2 member degrees of freedom less 1 constraint leaves 1, as declared",
       "measured": {
         "member_dofs": 2,
-        "active_constraints": 0,
-        "remaining_dof": 2
+        "active_constraints": 1,
+        "remaining_dof": 1
       },
       "threshold": {
         "expected_dof": 1
@@ -566,11 +586,26 @@
     {
       "predicate": "KF2.residual",
       "subject": "twin_limiters",
-      "verdict": "na",
-      "reason": "no constraint implements this coupling, so there is no residual to read; KF2.bound owns that failure",
-      "measured": {},
-      "threshold": {},
-      "evidence": {}
+      "verdict": "pass",
+      "reason": "the model's constraint agrees with the declared relation across the whole range, worst disagreement 1.11e-16",
+      "measured": {
+        "max_residual": 0.0,
+        "at_independent_q": 0.59375,
+        "first_failing_q": null,
+        "samples": 33
+      },
+      "threshold": {
+        "epsilon": 0.01,
+        "normalisation": "absolute"
+      },
+      "evidence": {
+        "dependent": "limiter_right_pivot",
+        "independent": "limiter_left_pivot",
+        "swept_range": [
+          0.0,
+          1.0
+        ]
+      }
     },
     {
       "predicate": "KF3.state_reachability",
