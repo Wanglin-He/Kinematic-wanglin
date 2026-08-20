@@ -9,6 +9,11 @@ dependencies = [
     "pyyaml>=6.0",
 ]
 
+# Pillow encodes PNGs for the human review page. It is deliberately not a runtime
+# dependency: install it only to make pictures, and a scoring run never needs it.
+[project.optional-dependencies]
+review = ["pillow>=10.0"]
+
 [project.scripts]
 p0 = "evo_p0p3.p0.cli:main"
 p3 = "evo_p0p3.p3.cli:main"

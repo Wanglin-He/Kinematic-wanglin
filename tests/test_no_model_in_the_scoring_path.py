@@ -50,6 +50,18 @@ in the sweep, for instance -- must be constructed from a frozen seed, not drawn.
 """
 
 ALLOWED_THIRD_PARTY = frozenset({"mujoco", "numpy", "yaml", "PIL"})
+
+RENDERING_MODULES = frozenset({"render.py", "review.py"})
+"""The only modules allowed to produce pixels.
+
+Pictures are for people. They are made after scoring, from the configuration a frozen
+result already recorded, and nothing downstream of them feeds a verdict. Keeping that
+true needs a rule rather than an intention, which is the test below: no module that
+decides anything may import an imaging library, so a picture can never quietly become
+the reason a claim passed or failed. The prohibition matters because P3's own scope
+forbids rendering as evidence -- it is why travel_scale measures a part's size instead
+of watching it fail to move.
+"""
 """``PIL`` is rendering only: pictures are evidence for a human reader, never an input to
 a score."""
 
@@ -94,6 +106,34 @@ def test_third_party_imports_stay_on_the_declared_list(path: Path):
         and r not in sys.stdlib_module_names
     }
     assert not unexpected, f"{path.name} imports undeclared third party: {sorted(unexpected)}"
+
+
+@pytest.mark.parametrize("path", python_files(), ids=lambda p: p.name)
+def test_only_the_rendering_modules_touch_an_imaging_library(path: Path):
+    if path.name in RENDERING_MODULES:
+        return
+    assert "PIL" not in imported_roots(path), (
+        f"{path.name} decides things, so it must not import an imaging library. "
+        f"If it needs a picture, the picture belongs in one of {sorted(RENDERING_MODULES)}, "
+        f"which run after scoring and cannot change a verdict."
+    )
+
+
+def test_the_rendering_modules_are_not_reachable_from_a_verdict(path=None):
+    """Nothing in the scoring path may import the renderers either."""
+    offenders = []
+    for p in python_files():
+        if p.name in RENDERING_MODULES:
+            continue
+        text = p.read_text(encoding="utf-8")
+        for module in RENDERING_MODULES:
+            stem = module[:-3]
+            if f"import {stem}" in text or f"from evo_p0p3.p3.{stem}" in text:
+                offenders.append(f"{p.name} -> {module}")
+    assert not offenders, (
+        f"a scoring module reaches a renderer: {offenders}. Pictures are produced from "
+        f"frozen results, never consulted while producing them."
+    )
 
 
 def test_no_source_line_calls_out_to_a_network():
