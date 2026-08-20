@@ -309,12 +309,22 @@ items:
 
   - id: P3.KF1.bullet2
     spec: "把局部 axis 和 anchor 转到统一坐标系，测量轴夹角与锚点偏差"
-    disposition: deferred
-    note: "Depends on the axis and anchor rework; see P0.joints.axis and P0.joints.anchor."
+    disposition: clarified
+    where: evo_p0p3/p3/kf1.py::axis_semantic
+    note: >
+      Split three ways because one comparison cannot carry it. axis_semantic settles
+      vertical against horizontal from gravity alone, needing no object frame and
+      surviving any rotation about the vertical. axis_admits_motion settles the finer
+      direction geometrically: a drawer sliding sideways into a wall is exactly as
+      horizontal as one sliding out through its opening, so only the geometry knows which
+      is which. anchor measures where the line sits relative to the part rather than at
+      what coordinate, since P0 is written before the asset exists. The numeric form is
+      implemented as N/A until canonical_frame.front is anchored.
 
   - id: P3.KF1.bullet3
     spec: "核对 range、limited、ref/qpos0，以及 closed/open 等语义状态"
-    disposition: deferred
+    disposition: clarified
+    where: evo_p0p3/p3/kf1.py::range_and_reference
     note: >
       Will be scored as ONE combined claim, not four: closed, ref/qpos0 and range.min are
       typically the same declared number, and counting it repeatedly inflates the
@@ -322,7 +332,8 @@ items:
 
   - id: P3.KF1.bullet4
     spec: "slide 不得产生额外旋转；hinge 的 anchor 在小扰动下必须保持固定"
-    disposition: decided
+    disposition: replaced
+    where: evo_p0p3/p3/kf1.py::dof_composition
     replaced_by: "a DOF-composition check, and the frame-free anchor predicates"
     reason: >
       Both halves are tautologies on a compiled mjModel. A MuJoCo slide is pure

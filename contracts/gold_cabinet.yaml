@@ -60,8 +60,8 @@ kinematic_claims:
         semantic: horizontal
         relational: {type: interface_normal, from: cabinet_body, to: drawer_1}
       anchor: null        # a translation has no centre; MuJoCo ignores a slide's pos
-      range:  {unit: m, min: 0.0, max: 0.24}
-      states: {closed: 0.0, open: 0.24}
+      range:  {unit: m, min: 0.0, max: 0.18}
+      states: {closed: 0.0, open: 0.18}
 
     - id: drawer_2_slide
       part: drawer_2
@@ -71,8 +71,8 @@ kinematic_claims:
         semantic: horizontal
         relational: {type: interface_normal, from: cabinet_body, to: drawer_2}
       anchor: null
-      range:  {unit: m, min: 0.0, max: 0.24}
-      states: {closed: 0.0, open: 0.24}
+      range:  {unit: m, min: 0.0, max: 0.18}
+      states: {closed: 0.0, open: 0.18}
 
     - id: door_hinge
       part: door

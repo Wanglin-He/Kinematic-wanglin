@@ -29,10 +29,15 @@ defects:
           <joint name="drawer_2_slide" type="prismatic">
               <parent link="drawer_1"/>
     expect:
-      KF1.parent: fail
-      KF1.type: pass
-      KF1.range_and_reference: pass
-
+      KF1.parent:               fail
+      KF1.type:                 pass
+      KF1.dof_composition:      pass
+      KF1.axis_semantic:        pass
+      KF1.axis_admits_motion:   pass
+      KF1.anchor:               pass
+      KF1.range_and_reference:  pass
+      KF1.rigid_follower:       pass
+      KF1.travel_scale:         pass
   - name: wrong_joint_type
     targets: KF1.type
     defect: >
@@ -49,9 +54,19 @@ defects:
           <axis xyz="0 0 1"/>
               <limit lower="0.0" upper="0.30" effort="20" velocity="1.0"/>
     expect:
-      KF1.type: fail
-      KF1.parent: pass
-
+      # Two claims break, and the manifest says so rather than pretending otherwise: a
+      # revolute turned prismatic changes the unit its range is measured in, so the
+      # declared 1.92 rad of travel cannot survive as 1.92 m. Forcing the numbers to line
+      # up would isolate the predicate by making the asset absurd.
+      KF1.type:                 fail
+      KF1.range_and_reference:  fail
+      KF1.parent:               pass
+      KF1.dof_composition:      pass
+      KF1.axis_semantic:        pass
+      KF1.axis_admits_motion:   pass
+      KF1.anchor:               pass
+      KF1.rigid_follower:       pass
+      KF1.travel_scale:         pass
   - name: hinge_through_middle
     targets: KF1.anchor
     defect: >
@@ -69,10 +84,15 @@ defects:
           <visual name="panel">
                 <origin xyz="0 0 0"/>
     expect:
-      KF1.anchor: fail
-      KF1.axis: pass
-      KF1.parent: pass
-
+      KF1.anchor:               fail
+      KF1.parent:               pass
+      KF1.type:                 pass
+      KF1.dof_composition:      pass
+      KF1.axis_semantic:        pass
+      KF1.axis_admits_motion:   pass
+      KF1.range_and_reference:  pass
+      KF1.rigid_follower:       pass
+      KF1.travel_scale:         pass
   - name: axis_rotated_90
     targets: KF1.axis
     defect: >
@@ -87,10 +107,18 @@ defects:
           <origin xyz="0 -0.03 0.72"/>
               <axis xyz="-1 0 0"/>
     expect:
-      KF1.axis: fail
-      KF1.parent: pass
-      KF1.type: pass
-
+      # axis_semantic cannot see this and does not claim to: sliding sideways is just as
+      # horizontal as sliding outward. Only the geometry knows which direction leaves
+      # through the opening and which drives into a wall.
+      KF1.axis_admits_motion:   fail
+      KF1.axis_semantic:        pass
+      KF1.parent:               pass
+      KF1.type:                 pass
+      KF1.dof_composition:      pass
+      KF1.anchor:               pass
+      KF1.range_and_reference:  pass
+      KF1.rigid_follower:       pass
+      KF1.travel_scale:         pass
   - name: range_too_small
     targets: KF1.range_and_reference
     defect: >
@@ -110,9 +138,15 @@ defects:
 
             <link name="handle_1">
     expect:
-      KF1.range_and_reference: fail
-      KF1.axis: pass
-
+      KF1.range_and_reference:  fail
+      KF1.parent:               pass
+      KF1.type:                 pass
+      KF1.dof_composition:      pass
+      KF1.axis_semantic:        pass
+      KF1.axis_admits_motion:   pass
+      KF1.anchor:               pass
+      KF1.rigid_follower:       pass
+      KF1.travel_scale:         pass
   - name: detached_follower
     targets: KF1.rigid_follower
     defect: >
@@ -133,9 +167,15 @@ defects:
               <child link="handle_1"/>
               <origin xyz="0 -0.208 0.72"/>
     expect:
-      KF1.rigid_follower: fail
-      KF1.parent: pass
-
+      KF1.rigid_follower:       fail
+      KF1.parent:               pass
+      KF1.type:                 pass
+      KF1.dof_composition:      pass
+      KF1.axis_semantic:        pass
+      KF1.axis_admits_motion:   pass
+      KF1.anchor:               pass
+      KF1.range_and_reference:  pass
+      KF1.travel_scale:         pass
   - name: fake_joint_decoy_geom
     targets: KF1.travel_scale
     defect: >
@@ -175,7 +215,44 @@ defects:
                 <geometry><box size="0.34 0.34 0.20"/></geometry>
               </visual>
     expect:
-      KF1.travel_scale: fail
-      KF1.parent: pass
-      KF1.type: pass
-      KF1.range_and_reference: pass
+      # This table collapses per asset, so axis_admits_motion reads `pass`: drawer_1
+      # abstains -- the stub starts buried inside the decoy belonging to the carcass, and
+      # no direction is judgeable for a part already overlapping its parent -- while
+      # drawer_2 genuinely passes. That per-subject abstention is pinned by a named test
+      # in tests/test_kf1.py rather than flattened into this column.
+      KF1.travel_scale:         fail
+      KF1.axis_admits_motion:   pass
+      KF1.parent:               pass
+      KF1.type:                 pass
+      KF1.dof_composition:      pass
+      KF1.axis_semantic:        pass
+      KF1.anchor:               pass
+      KF1.range_and_reference:  pass
+      KF1.rigid_follower:       pass
+  - name: door_axis_horizontal
+    targets: KF1.axis_semantic
+    defect: >
+      The door's hinge axis lies horizontal instead of vertical, so the panel flops
+      forward like a drawbridge rather than swinging open. Contract, anchor position,
+      range and parent are all untouched; only the direction of the line changed, and it
+      changed by enough that gravity alone settles the question -- no object frame needed.
+    substitute:
+      - find: |
+          <origin xyz="-0.17 -0.19 0.21"/>
+              <axis xyz="0 0 1"/>
+        replace: |
+          <origin xyz="-0.17 -0.19 0.21"/>
+              <axis xyz="1 0 0"/>
+    expect:
+      # anchor breaks as a consequence, and legitimately: a horizontal axis through the
+      # panel's mid-height no longer runs along any edge of it. The defect really does
+      # break both claims.
+      KF1.axis_semantic:        fail
+      KF1.anchor:               fail
+      KF1.parent:               pass
+      KF1.type:                 pass
+      KF1.dof_composition:      pass
+      KF1.axis_admits_motion:   pass
+      KF1.range_and_reference:  pass
+      KF1.rigid_follower:       pass
+      KF1.travel_scale:         pass
