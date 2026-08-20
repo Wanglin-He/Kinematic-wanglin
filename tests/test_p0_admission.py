@@ -283,3 +283,33 @@ def test_parsing_is_stable_across_repeated_loads(raw):
     a = parse_contract(copy.deepcopy(raw), record_id="g")
     b = parse_contract(copy.deepcopy(raw), record_id="g")
     assert a == b
+
+
+# --------------------------------------------------------------------------------------
+# A10's joint-type split, measured rather than assumed
+# --------------------------------------------------------------------------------------
+
+
+def test_anchor_applies_to_the_joints_whose_kinematics_it_moves():
+    # Displacing pos by 0.25 m moves the child geometry by: slide 0.000000,
+    # hinge 0.171449, ball 0.191345, free 0.000000. An anchor claim is checkable for
+    # exactly the two that move.
+    from evo_p0p3.p0.schema import JointType
+
+    assert [t for t in JointType if t.has_anchor] == [JointType.HINGE, JointType.BALL]
+
+
+def test_a_ball_joint_may_declare_an_anchor(raw):
+    # A ball joint rotates about its anchor point; putting that point in the wrong place
+    # swings the child through a different arc, so the claim can genuinely fail.
+    j = joint(raw, "door_hinge")
+    j["type"] = "ball"
+    j["anchor"] = {"through_center_of": "door"}
+    assert "A10" not in rules_fired(raw)
+
+
+def test_a_ball_joint_without_an_anchor_is_rejected(raw):
+    j = joint(raw, "door_hinge")
+    j["type"] = "ball"
+    j["anchor"] = None
+    assert "A10" in rules_fired(raw)

@@ -1,0 +1,911 @@
+predicates:
+- id: KF3.helper.rigid_sets
+  claim: Every part id and every driven joint resolves to a frozen, disjointness-checked geom set derived
+    by body-tree traversal that never crosses a joint, and every geom resolves to an exact world AABB
+    and an 8-corner rigid point cloud.
+  p0_inputs: required_parts[].id, required_parts[].role, required_parts[].group, kinematic_claims.joints[].id,
+    kinematic_claims.joints[].part, kinematic_claims.joints[].parent
+  mj_inputs: 'm.nbody, m.body_parentid, m.body_jntnum, m.body_geomadr, m.body_geomnum, m.geom_bodyid,
+    m.geom_type, m.geom_aabb (ngeom x 6: local centre + half-extents), m.geom_rbound, m.jnt_bodyid, d.geom_xpos,
+    d.geom_xmat; Gate G1 binding table part_id -> body_id'
+  algorithm: '1. RigidSubtree(b): S={b}; repeat { for every body c with m.body_parentid[c] in S and m.body_jntnum[c]==0
+    and c not in S: add c } until fixpoint. The root b is included even though it may carry joints; any
+    descendant that carries >=1 joint terminates that branch and is excluded together with everything
+    below it.
+
+    2. GeomsOf(S) = { g : m.geom_bodyid[g] in S }, enumerated via body_geomadr[b] .. body_geomadr[b]+body_geomnum[b]-1
+    for b in S, in ascending b then ascending g. Never enumerate by geom name: MuJoCo renames duplicate
+    names to unnamed, so names are unusable.
+
+    3. Drop g if m.geom_type[g] == mjGEOM_PLANE or mjGEOM_HFIELD; record dropped ids under skipped_geom_types.
+
+    4. Never filter by contype, conaffinity or group. In this corpus every geom has contype=0, conaffinity=0,
+    group=1; any such filter would empty every set.
+
+    5. M_j (the geom set rigidly attached to joint j''s child) = GeomsOf(RigidSubtree(m.jnt_bodyid[j])).
+
+    6. G_p (the geom set of part p) = GeomsOf(RigidSubtree(body_p)) minus every geom whose body lies in
+    RigidSubtree(body_p'') for some other bound part p'' != p whose body_p'' is a strict descendant of
+    body_p. Compute by first assigning each body to its nearest bound ancestor-or-self in the tree, then
+    G_p = geoms of bodies assigned to p and reachable from body_p without crossing a joint.
+
+    7. worldAABB(g): c = m.geom_aabb[6g:6g+3], h = m.geom_aabb[6g+3:6g+6], R = reshape(d.geom_xmat[9g:9g+9],3,3),
+    t = d.geom_xpos[3g:3g+3]. Corners w_i = t + R @ (c + s_i * h) for i=0..7 with s_i = (2*((i>>0)&1)-1,
+    2*((i>>1)&1)-1, 2*((i>>2)&1)-1). AABB = (min_i w_i, max_i w_i). The corner order i=0..7 is frozen
+    and gives a stable point correspondence across samples, which KF3.motion.type_semantics relies on.
+
+    8. worldAABB(set) = elementwise min/max of the member AABBs. diag(A) = ||A.max - A.min||_2. vol(A)
+    = prod(A.max - A.min).
+
+    9. CornerCloud(set) = concatenation of the 8 corners of every member geom in the frozen (g ascending,
+    i ascending) order.'
+  pass_condition: 'Structural precondition, not scored. Assert: every required_parts id has a Gate binding;
+    G_p and G_p'' are disjoint for p != p''; every joint id in independent_dofs maps to a MuJoCo joint.
+    Any violation aborts KF3 for the asset and is reported as a Gate regression, not as a KF3 score.'
+  na_condition: Never N/A; it is a precondition. If Gate bindings are missing the asset never reaches
+    P3.
+  evidence: part_id, bound_body_id, geom_ids, geom_count, skipped_geom_types, overlapping_parts (if disjointness
+    fails), joint_id, child_body_id, rigid_subtree_bodies
+  can_it_fail: Not an asset predicate; it is a definition plus an assertion on the Gate's own output.
+    A Gate that bound two parts to the same body would trip the disjointness assertion.
+  deviates_from_spec: ''
+- id: KF3.sweep.bounds_and_reference
+  claim: Every driven DOF has a frozen scan interval taken from the contract (never from the model's own
+    limits) and every non-driven joint has a frozen reference value, so that the sample set is a function
+    of the contract alone and is identical across generators.
+  p0_inputs: kinematic_claims.independent_dofs, kinematic_claims.joints[].id, .type, .range.unit, .range.min,
+    .range.max, .states, kinematic_claims.couplings[].relation.dependent
+  mj_inputs: m.jnt_type, m.jnt_qposadr, m.jnt_dofadr, m.jnt_limited, m.jnt_range, m.qpos0, m.nq
+  algorithm: '1. D = independent_dofs, in the order written in the contract; d = |D|.
+
+    2. For j in D: lo_j = joints[j].range.min, hi_j = joints[j].range.max, taken verbatim. Do NOT intersect
+    with m.jnt_range: the declared range is the thing under test, and mj_kinematics never clamps qpos,
+    so writing outside the model''s limits is legal and produces exactly the pose the model would show
+    there.
+
+    3. span_j = hi_j - lo_j. If span_j <= 0 or either bound is non-finite or |bound| >= 1e6, the declared
+    range is unusable; substitute: hinge/ball -> [-pi, +pi]; slide/free -> [-L, +L] with L = diag(worldAABB(M_j))
+    evaluated at the all-reference pose; record range_substituted with the substituted interval. If span_j
+    == 0 exactly after substitution, mark the DOF undriven and record declared_travel_zero.
+
+    4. Scan coordinate per type. hinge, slide: the single scalar at m.jnt_qposadr[j]. ball: a scalar theta
+    applied as qpos[adr:adr+4] = quat(u_j, theta), u_j = the first resolvable of (a) axis.numeric rotated
+    into the parent body frame when canonical_frame.front is anchored, (b) the axis.relational reference
+    direction expressed in the parent body frame, (c) world +z expressed in the parent body frame at qpos0;
+    record ball_axis_source. free: qpos[adr:adr+3] = qpos0[adr:adr+3] + theta * u_j with u_j resolved
+    the same way, quaternion held at qpos0; record free_joint_scan_reduced_to_translation.
+
+    5. Reference value ref_j for every joint j not driven, evaluated by this frozen ladder, first match
+    wins: (a) joints[j].states[''closed'']; (b) joints[j].states[''home'']; (c) m.qpos0[adr_j] if lo_j
+    <= m.qpos0[adr_j] <= hi_j; (d) clamp(m.qpos0[adr_j], lo_j, hi_j). For a joint the contract does not
+    declare at all, ref_j = m.qpos0[adr_j] (ball/free: the qpos0 block verbatim).
+
+    6. write_qpos(x): (i) mj_resetData(m,d) so qpos = m.qpos0 everywhere; (ii) write ref_j for every declared
+    non-driven, non-dependent joint; (iii) write x_j for every j in D per step 4; (iv) write dependents
+    per KF3.sweep.dependent_dofs; (v) d.qvel[:]=0, d.qacc[:]=0; (vi) mj_kinematics(m,d). mj_kinematics
+    alone populates xpos, xquat, xmat, geom_xpos, geom_xmat, xanchor, xaxis, which is everything KF3 reads;
+    call mj_forward instead only on samples also consumed by KF2 (which needs efc_pos).
+
+    7. Trap to respect: MuJoCo''s hinge and slide transforms use (qpos - qpos0), not qpos. All KF3 predictions
+    therefore use differences q_k - q_0 relative to a sample in the same scan, never absolute qpos, and
+    are correct whatever qpos0 is.'
+  pass_condition: 'Harness assertion, not scored: after write_qpos(x), reading back qpos at every driven
+    address must reproduce x bitwise, and every declared joint address must hold exactly its intended
+    value. Failure aborts the run.'
+  na_condition: 'd == 0 (no independent_dofs): the sample set collapses to the single all-reference pose,
+    S_motion becomes N/A, and the collision half still runs on that one sample.'
+  evidence: joint_id, jnt_type, lo, hi, span, range_substituted, declared_travel_zero, ball_axis_source,
+    free_joint_scan_reduced_to_translation, ref_source (states.closed | states.home | qpos0 | qpos0_clamped)
+  can_it_fail: Not an asset predicate. The write-back assertion fails only on a harness bug (wrong qpos
+    address for a ball/free joint, or a dependent overwriting a driven address).
+  deviates_from_spec: P3 says only 'deterministic feasible q-sweep'. The choice to sweep the DECLARED
+    range rather than the model's jnt_range is a decision the spec does not make; intersecting with the
+    model's limits would hide exactly the failure 'the drawer only opens 5 cm', so the declared range
+    wins.
+- id: KF3.sweep.dependent_dofs
+  claim: At every sample of every layer, each coupling-dependent joint is written from the coupling relation
+    applied to the current sample rather than held at a reference, so the sample set lies on the coupling-feasible
+    manifold.
+  p0_inputs: kinematic_claims.couplings[].id, .relation.dependent, .relation.independent, .relation.coefficient,
+    .relation.offset, kinematic_claims.independent_dofs
+  mj_inputs: m.jnt_qposadr, m.jnt_type of the dependent and independent joints
+  algorithm: '1. Build a directed graph over joint ids with an edge independent -> dependent for every
+    coupling. A6 guarantees no dependent is in independent_dofs, but a dependent may serve as another
+    coupling''s independent, so chains exist.
+
+    2. Topologically sort. If a cycle exists, record coupling_cycle with the member ids, hold every joint
+    on the cycle at ref_j, and mark every KF3 predicate that reads those joints N/A.
+
+    3. In topological order, for each coupling g: q[dependent] = coefficient * q[independent] + offset,
+    written to m.jnt_qposadr[dependent]. For a ball dependent, the scalar is applied as quat(u_dep, value)
+    with u_dep resolved by the same ladder as a driven ball. If two couplings write the same dependent,
+    record coupling_dependent_conflict and use the one that appears first in the contract.
+
+    4. This runs inside write_qpos step (iv), i.e. at every sample of layers 1, 2, 3 and 4 without exception,
+    and after the driven writes so it always sees the current sample.
+
+    5. Dependent joints are never sampled independently and never appear as a scan dimension.'
+  pass_condition: 'Harness assertion, not scored: after step 3, for every coupling g, |q[dependent] -
+    (coefficient*q[independent] + offset)| <= 1e-12.'
+  na_condition: 'couplings == [] (the cabinet example): the step is a no-op and emits nothing.'
+  evidence: coupling_id, dependent_joint, independent_joint, coefficient, offset, topological_order, coupling_cycle,
+    coupling_dependent_conflict
+  can_it_fail: Not an asset predicate; the contract, not the model, supplies the relation. The model's
+    own realization of the coupling is KF2's business (efc_pos residual). Here the relation is used only
+    to place samples on the intended manifold.
+  deviates_from_spec: ''
+- id: KF3.sweep.layer1_scan
+  claim: Each driven DOF is scanned alone over its full declared interval on a 33-point endpoint-inclusive
+    grid that also contains the model's own qpos0 value, all other joints at their reference, and this
+    layer alone feeds every motion predicate.
+  p0_inputs: kinematic_claims.independent_dofs, joints[].range
+  mj_inputs: m.qpos0, m.jnt_qposadr
+  algorithm: '1. For each j in D: base grid t_k = k/32 for k = 0..32, q_k = lo_j + t_k * span_j. Exactly
+    33 points, both endpoints included.
+
+    2. q0_model = m.qpos0[m.jnt_qposadr[j]] (hinge/slide only). If lo_j < q0_model < hi_j and min_k |q_k
+    - q0_model| > 1e-12, insert q0_model into the sorted list, giving 34 points; record qpos0_inserted.
+    If q0_model lies outside [lo_j, hi_j], do not insert and record qpos0_outside_declared_range (evidence
+    only; the range-vs-reference claim itself belongs to KF1).
+
+    3. Index 0 is always the lowest q (= lo_j) and index N-1 always the highest (= hi_j); insertion cannot
+    change that.
+
+    4. Forward pass: for k = 0 .. N-1 call write_qpos with x_j = q_k and every other driven DOF at ref.
+    Record the sample with layer=1, dof=j, grid_index=k.
+
+    5. Reverse pass: for k = N-1 .. 0 the same q values, but STATEFULLY: do not call mj_resetData; write
+    only the addresses that change (x_j, plus every dependent recomputed) and call mj_kinematics. Its
+    purpose is stated in KF3.sweep.determinism.
+
+    6. Motion predicates read ONLY the forward pass of layer 1. Collision predicates read all samples
+    of all layers. Layer-1 samples are the first block of the global sample order: j ascending in contract
+    order, then k ascending.'
+  pass_condition: 'Harness certificate, not scored: the recorded grid for each j has N in {33,34}, is
+    strictly increasing, starts at lo_j, ends at hi_j, and has max adjacent gap <= span_j/32 + 1e-9.'
+  na_condition: A DOF marked undriven by declared_travel_zero contributes no layer-1 block; if D is empty
+    the whole layer is absent.
+  evidence: joint_id, n_points, qpos0_inserted, qpos0_outside_declared_range, grid_min, grid_max, max_gap,
+    global_sample_index_range
+  can_it_fail: Not an asset predicate. The certificate fails only if the grid builder is wrong.
+  deviates_from_spec: ''
+- id: KF3.sweep.determinism
+  claim: The reverse traversal of layer 1 reproduces the forward traversal bitwise; because forward kinematics
+    is a pure function of qpos and P3 forbids dynamic rollout, a mismatch is a harness fault and never
+    an asset defect.
+  p0_inputs: none
+  mj_inputs: d.geom_xpos, d.geom_xmat, d.xanchor, d.xaxis at every layer-1 sample
+  algorithm: '1. During the forward pass, for each sample store a signature: the byte-exact concatenation
+    of d.geom_xpos and d.geom_xmat restricted to the union of all G_p and all M_j, plus d.xanchor and
+    d.xaxis of every driven joint.
+
+    2. During the stateful reverse pass, recompute the signature at the same q and compare with memcmp.
+
+    3. State plainly why this is not an asset test: mjData carries no state that influences mj_kinematics
+    other than qpos, so hysteresis cannot exist without integration. A stateless reverse pass would be
+    bit-identical by construction and would be a pure tautology. The pass is made STATEFUL precisely so
+    that it does have teeth: it detects a stale qpos address left unwritten (a forgotten dependent, a
+    ball joint written with the wrong stride, a reference value not restored), which is a real and frequent
+    bug class.'
+  pass_condition: memcmp equal on every layer-1 sample. A mismatch ABORTS the asset's KF3 evaluation with
+    status harness_nondeterminism; no score is emitted.
+  na_condition: d == 0, or a DOF with no layer-1 block.
+  evidence: joint_id, grid_index, first_mismatching_field (geom_xpos | geom_xmat | xanchor | xaxis), mismatching_geom_or_joint_id,
+    forward_value, reverse_value
+  can_it_fail: No model can fail it, and the specification says so. It is included as a harness self-check
+    because P3's 'traversed forward and reverse' has no other implementable meaning under a no-rollout
+    scope. It contributes nothing to S_motion and is excluded from every denominator.
+  deviates_from_spec: The sweep rule asks for forward and reverse traversal. Under P3's Scope ('no dynamic
+    rollout') the two traversals are provably identical, so the reverse pass cannot be an asset predicate.
+    It is retained as a stateful harness self-check rather than deleted, which is the closest admissible
+    substitute.
+- id: KF3.sweep.layer2_pair_grid
+  claim: Every pair of driven DOFs whose swept child-subtree AABBs come within a frozen inflation margin
+    of each other is sampled on a 9x9 endpoint-inclusive grid, so interactions that only appear when two
+    DOFs move together are covered.
+  p0_inputs: kinematic_claims.independent_dofs
+  mj_inputs: m.geom_aabb, m.geom_type, d.geom_xpos, d.geom_xmat at the layer-1 samples
+  algorithm: '1. Swept child-subtree AABB SA_j = union over the 33 forward layer-1 samples of DOF j of
+    worldAABB(M_j) at that sample. (Union of per-geom world AABBs computed by the 8-corner rule of KF3.helper.rigid_sets;
+    the whole point of taking the union over the scan rather than a single pose is that a drawer''s swept
+    volume, not its closed volume, is what can meet the door.)
+
+    2. Inflation margin for the ordered-independent pair (j,k): margin(j,k) = pair_inflation_frac * min(diag(SA_j),
+    diag(SA_k)). The min, not the max, so a large fixed part paired with a small knob does not get a margin
+    the size of the cabinet. It is never relative to a whole-asset bounding-box diagonal: only 19 of 607
+    assets can produce one.
+
+    3. Adjacency: (j,k) is adjacent iff for every axis a in {0,1,2}: SA_j.min[a] - margin <= SA_k.max[a]
+    AND SA_k.min[a] - margin <= SA_j.max[a]. Additionally (j,k) is adjacent unconditionally if M_j and
+    M_k share any geom or if the child body of one lies in the rigid subtree of the other (nested joints
+    always interact).
+
+    4. Grid: t_a = a/8 for a = 0..8 on DOF j and t_b = b/8 on DOF k, giving 81 samples; all other driven
+    DOFs at ref; dependents recomputed. Order: pairs in ascending (j,k) by contract index, then row-major
+    a ascending outer, b ascending inner.
+
+    5. Cap: if the number of adjacent pairs exceeds pair_grid_max = 64, keep the 64 with the largest vol(SA_j
+    intersect SA_k), ties broken by ascending (j,k), and record pair_grid_truncated with the dropped pairs.
+
+    6. Layer-2 samples feed the collision half and the state classifier only. They are never read by a
+    motion predicate, because every motion predicate is defined with all other DOFs at reference.'
+  pass_condition: 'Harness certificate, not scored: every adjacent pair produced exactly 81 samples; every
+    non-adjacent pair produced zero; the adjacency decision for each pair is recorded with the three per-axis
+    gaps so it can be re-derived.'
+  na_condition: d < 2, or no pair is adjacent.
+  evidence: dof_pair, SA_j_min, SA_j_max, SA_k_min, SA_k_max, margin, per_axis_gap[3], adjacent (bool),
+    adjacency_reason (aabb | shared_geoms | nested_subtree), overlap_volume, pair_grid_truncated
+  can_it_fail: Not an asset predicate; it is a sample-set construction rule.
+  deviates_from_spec: ''
+- id: KF3.sweep.layer3_state_combinations
+  claim: Every combination of the declared per-joint semantic state values across the driven DOFs is sampled
+    exactly, so every asset_state that is reachable within the declared ranges is hit exactly rather than
+    approximately.
+  p0_inputs: kinematic_claims.joints[].states, kinematic_claims.asset_states, kinematic_claims.independent_dofs
+  mj_inputs: m.jnt_qposadr
+  algorithm: '1. For each j in D: V_j = the distinct values of joints[j].states, deduplicated at 1e-12,
+    sorted ascending. If joints[j].states is absent or empty, V_j = [ref_j]. Values outside [lo_j, hi_j]
+    are kept (they are exactly the interesting case) but flagged state_value_outside_range.
+
+    2. Full set = the Cartesian product of V_1 x ... x V_d, enumerated in mixed-radix order with j=1 as
+    the most significant digit. Size T = prod |V_j|.
+
+    3. If T <= state_combo_max = 4096, take all of it.
+
+    4. If T > state_combo_max, take the union of: (a) UNIFORM: for i = 0 .. min_j|V_j| - 1, every DOF
+    at V_j[i]; (b) ONE-HOT: for each j and each i >= 1, every DOF at V_*[0] except DOF j at V_j[i]; (c)
+    a deterministic fill drawn from the frozen Sobol generator of KF3.sweep.layer4_sobol instantiated
+    in dimension d with shift stream seed 0x5EED5081C0DE0002, points n = sobol_skip .. , mapping index_j
+    = min(floor(u_j * |V_j|), |V_j| - 1); duplicates against (a),(b) and against each other are discarded;
+    drawing stops when |a|+|b|+|c| = state_combo_max or after 8 * state_combo_max draws. Record state_combos_truncated
+    with T and the retained count.
+
+    5. Layer-3 samples feed the collision half and the state classifier, and nothing else.
+
+    6. Note the consequence that makes this layer necessary: with a relative state tolerance of 0.02 and
+    a 33-point scan whose spacing is 1/32 = 0.031 of the span, a state value at an arbitrary interior
+    point of the range can be missed by every layer-1 sample. Layer 3 places the exact value.'
+  pass_condition: 'Harness certificate, not scored: for every state label s and every joint j declaring
+    it, at least one layer-3 sample has q_j exactly equal to joints[j].states[s] (bitwise), provided j
+    is in D.'
+  na_condition: No driven DOF declares any state, i.e. every V_j fell back to [ref_j] — then layer 3 degenerates
+    to the single all-reference sample and is merged with layer 1's records.
+  evidence: per_dof_state_values, total_combinations, retained_combinations, state_combos_truncated, state_value_outside_range,
+    global_sample_index_range
+  can_it_fail: Not an asset predicate.
+  deviates_from_spec: ''
+- id: KF3.sweep.layer4_sobol
+  claim: The full d-cube is filled with M = 256*d digitally shifted Sobol points generated from an embedded
+    direction-number table with a frozen seed and skip, so the fill is identical for every asset, every
+    generator and every run, and uses no unseeded randomness.
+  p0_inputs: kinematic_claims.independent_dofs (only for d and for lo/span)
+  mj_inputs: m.jnt_qposadr for writing; none for generation
+  algorithm: '1. Direction numbers. Embed as a Python literal the first 32 rows of the Joe-Kuo new-joe-kuo-6.21201
+    table: per dimension k >= 2 a degree s_k, a primitive-polynomial coefficient word a_k (bits a_{k,1}..a_{k,s_k-1}),
+    and initial odd values m_{k,1..s_k}. Dimension 1 is the identity: m_{1,i} = 1 for all i. The literal
+    is hashed into the frozen sweep-config hash, so the point set is auditable.
+
+    2. Recurrence for k >= 2, i > s_k:  m_{k,i} = m_{k,i-s_k} XOR (m_{k,i-s_k} << s_k) XOR ( XOR over
+    q = 1..s_k-1 of ((a_k >> (s_k-1-q)) & 1) * (m_{k,i-q} << q) ).
+
+    3. Direction integers: v_{k,i} = m_{k,i} << (32 - i), i = 1..32, all arithmetic masked to 32 bits.
+
+    4. Gray-code point generation: x_{k,0} = 0; for n >= 1, c = 1 + (index of the lowest zero bit of n-1)
+    = 1 + trailing_zeros(~(n-1)); x_{k,n} = x_{k,n-1} XOR v_{k,c}.
+
+    5. Scrambling = digital shift (a scramble that preserves the (t,m,s)-net property). Owen scrambling
+    is NOT used and is not required. Shift words s_k are drawn from SplitMix64 seeded with SOBOL_SEED
+    = 0x5EED5081C0DE0001, one draw per dimension in ascending k, taking s_k = (next() >> 32) & 0xFFFFFFFF.
+    SplitMix64: state += 0x9E3779B97F4A7C15; z = state; z = (z XOR (z >> 30)) * 0xBF58476D1CE4E5B9; z
+    = (z XOR (z >> 27)) * 0x94D049BB133111EB; return z XOR (z >> 31); all masked to 64 bits.
+
+    6. Skip: generate n = 1, 2, ... and discard every n < SOBOL_SKIP = 1024. Emit points n = 1024 .. 1024
+    + M - 1, M = 256 * d.
+
+    7. u_{k,n} = ((x_{k,n} XOR s_k) & 0xFFFFFFFF) / 2**32, always in [0,1) so the endpoints are never
+    produced here; the endpoints are already guaranteed by layers 1 and 3.
+
+    8. q_j = lo_j + u_{j,n} * span_j for each driven DOF j (dimension index = position of j in independent_dofs).
+    Dependents recomputed at every point.
+
+    9. If d > sobol_dim_max = 32, use the first 32 driven DOFs as the Sobol dimensions, hold the remainder
+    at ref, and record sobol_dim_exceeded.
+
+    10. Global sample budget: total_samples_max = 20000. If the four layers exceed it, truncate in this
+    frozen order: first drop layer-4 points from the tail until the budget fits; if still over, reduce
+    layer 3 to its UNIFORM + ONE-HOT core; if still over, reduce the layer-2 pair cap to the highest-overlap
+    pairs that fit. Record every truncation.'
+  pass_condition: 'Harness certificate, not scored: regenerating the sequence in a fresh process reproduces
+    the same M x d matrix bitwise; the first two moments of each coordinate are within 1e-3 of 0.5 and
+    1/12 for M >= 256.'
+  na_condition: d == 0.
+  evidence: d, M, sobol_seed, sobol_skip, direction_table_hash, sobol_dim_exceeded, layer4_truncated,
+    retained_points, sweep_config_hash
+  can_it_fail: Not an asset predicate.
+  deviates_from_spec: ''
+- id: KF3.motion.travel_scale
+  claim: 'The geometry rigidly attached to a driven joint is large enough relative to the travel that
+    joint declares that the joint is not driving a decoy: diag(AABB(M_j)) >= travel_scale_min * T_j.'
+  p0_inputs: kinematic_claims.joints[].id, .type, .range.min, .range.max, kinematic_claims.independent_dofs,
+    tolerances.travel_scale_min
+  mj_inputs: m.jnt_type, m.geom_aabb, m.geom_type, d.geom_xpos, d.geom_xmat, d.xanchor[j], d.xaxis[j]
+    at layer-1 forward sample k=0
+  algorithm: '1. Evaluate at layer-1 forward sample k=0 (q_j = lo_j, all others at ref). Let A_0 = worldAABB(M_j),
+    P_0 = CornerCloud(M_j).
+
+    2. Axis line L: point a = d.xanchor[3j:3j+3], direction u = d.xaxis[3j:3j+3] (already unit and already
+    in world).
+
+    3. r_max = max over p in P_0 of || (p - a) - ((p - a) . u) u ||_2, the largest perpendicular distance
+    from the axis.
+
+    4. Declared travel expressed as a LENGTH: slide -> T_j = |span_j| (metres, directly). hinge or ball
+    -> T_j = 2 * r_max * sin(min(|span_j|, pi) / 2), the chord swept by the farthest point, capped at
+    the diameter. free -> T_j = |span_j| under the translation reduction.
+
+    5. Compare diag(A_0) against travel_scale_min * T_j.'
+  pass_condition: diag(A_0) >= tolerances.travel_scale_min * T_j, with travel_scale_min = 0.50.
+  na_condition: N/A when M_j is empty (that case is a hard FAIL of KF3.motion.travel_displacement instead,
+    and would double-count here); when span_j == 0 or the DOF was marked declared_travel_zero; when r_max
+    == 0 for a hinge or ball (all geometry sits exactly on the axis, so T_j is 0 and the inequality is
+    vacuous) — record axis_degenerate_geometry.
+  evidence: joint_id, joint_type, span, r_max, T_j, aabb_min, aabb_max, aabb_diag, ratio = aabb_diag /
+    T_j, threshold, geom_count(M_j)
+  can_it_fail: Yes. A generator that emits a 10 mm decoy cube as the child of a slide joint declaring
+    0.40 m of travel gives diag = 0.0173 against a threshold of 0.20 and fails by an order of magnitude.
+    This is the 'decoy geometry fake joint' member of the gold-standard set.
+  deviates_from_spec: P3's bullet is 'no fake joint'. That bullet names no measurement. This implements
+    the owner's scale-anchor half of the fake-joint predicate literally, using the part's own AABB and
+    the joint's own declared travel, never a whole-asset diagonal.
+- id: KF3.motion.travel_displacement
+  claim: 'Driving a joint over its declared range actually moves the geometry rigidly attached to it:
+    the AABB centre travels at least travel_realized_min of the geometrically expected distance, and the
+    closed-pose and open-pose AABBs are not the same box.'
+  p0_inputs: kinematic_claims.joints[].id, .type, .range, .anchor, kinematic_claims.independent_dofs,
+    tolerances (travel_realized_min, aabb_overlap_max, eccentricity_min, displacement_resolution_frac)
+  mj_inputs: m.jnt_type, m.geom_aabb, m.geom_type, d.geom_xpos, d.geom_xmat, d.xanchor[j], d.xaxis[j]
+    over the N layer-1 forward samples of DOF j
+  algorithm: '1. For k = 0..N-1 of the layer-1 forward scan of DOF j, let A_k = worldAABB(M_j) and c_k
+    = (A_k.min + A_k.max)/2. Let A_lo = A_0, A_hi = A_{N-1}.
+
+    2. Measured displacement: Delta_j = max over k of ||c_k - c_0||_2.
+
+    3. Bulk centroid offset from the axis: cbar = mean of CornerCloud(M_j) at k=0; r_c = ||(cbar - a)
+    - ((cbar - a).u) u||; r_max as in KF3.motion.travel_scale.
+
+    4. Expected displacement X_j: slide or free -> X_j = |span_j|. hinge or ball -> X_j = 2 * r_c * sin(min(|span_j|,
+    pi)/2).
+
+    5. Eccentricity e_j = r_c / r_max (0/0 -> 0). This is the applicability gate for rotational joints:
+    a gear or wheel or knob whose bulk sits on its own axis has e_j near 0 and CANNOT be tested by any
+    AABB method, because a body symmetric about its rotation axis produces an AABB that genuinely does
+    not move.
+
+    6. Overlap fraction: ov = vol(A_lo ∩ A_hi) / min(vol(A_lo), vol(A_hi)), where ∩ is the elementwise
+    interval intersection and vol of an empty intersection is 0. Degenerate-volume fallback, applied in
+    order: if min(vol) == 0, replace vol(A) by the product of the two largest extents of A; if still 0,
+    by the largest extent; if still 0, set ov = 1.
+
+    7. Both conditions must hold.'
+  pass_condition: Delta_j >= tolerances.travel_realized_min * X_j (travel_realized_min = 0.50) AND ov
+    <= tolerances.aabb_overlap_max (aabb_overlap_max = 0.95).
+  na_condition: 'N/A when e_j < tolerances.eccentricity_min (= 0.20) for a hinge, ball or free joint —
+    evidence axis_centered_geometry; when X_j < tolerances.displacement_resolution_frac (= 0.10) * diag(A_0)
+    — evidence expected_displacement_below_resolution (a 5-degree lid whose swept chord is under a tenth
+    of its own size cannot be resolved by an AABB); when span_j == 0. It is NOT N/A when M_j is empty:
+    that is a FAIL.'
+  evidence: joint_id, joint_type, M_j_geom_count, empty_child_geom_set (bool), Delta_j, X_j, ratio = Delta_j
+    / X_j, ov, r_c, r_max, eccentricity, aabb_lo, aabb_hi, aabb_diag_0, argmax_grid_index, q_at_argmax
+  can_it_fail: 'Yes, two ways, both observed in practice. (a) The generator writes the drawer mesh onto
+    the cabinet body and gives the empty child body the slider: M_j is empty -> hard FAIL with empty_child_geom_set.
+    (b) The child body carries geometry but a nested weld or a stale body_pos means the drawer geometry
+    stays put while qpos runs 0 -> 0.40: Delta_j = 0 against a threshold of 0.20 and ov = 1.0 against
+    0.95, failing both conditions. Note explicitly that the previously observed non-detection — displacing
+    a joint origin by a link diagonal — does NOT fail this predicate and is not supposed to: moving jnt_pos
+    moves the child frame and carries the geometry with it, so nothing about the motion changes. This
+    predicate tests motion, not placement.'
+  deviates_from_spec: 'P3 bullet ''no changing qpos with a visually stationary part'' names rendering,
+    which P3''s own Scope box forbids. Restated with no rendering: stationary means the world AABB of
+    the rigidly attached geom set does not move (Delta_j) and does not leave its own box (ov). The owner''s
+    sketched AABB-overlap condition is kept verbatim as the second conjunct; the displacement conjunct
+    is added because overlap alone is scale-blind for a part much larger than its travel.'
+- id: KF3.motion.range_coverage
+  claim: 'The realized motion is distributed across the declared range rather than concentrated in a sliver
+    of it: the normalized displacement profile crosses half its maximum somewhere in the middle 60 percent
+    of the travel.'
+  p0_inputs: kinematic_claims.joints[].range, kinematic_claims.independent_dofs, tolerances.coverage_midpoint_min,
+    tolerances.coverage_midpoint_max
+  mj_inputs: m.geom_aabb, d.geom_xpos, d.geom_xmat over the N layer-1 forward samples of DOF j
+  algorithm: '1. Using the same c_k and Delta_j as KF3.motion.travel_displacement, define f_k = ||c_k
+    - c_0||_2 / Delta_j in [0,1], and t_k = (q_k - lo_j) / span_j in [0,1].
+
+    2. t_star = t_k at the smallest k with f_k >= 0.5. (Delta_j > 0 is guaranteed by the N/A condition
+    below.)
+
+    3. Compare t_star against the frozen window.
+
+    4. Reference values for correct mechanisms: a slide gives f_k = t_k exactly and t_star = 0.5; a 120-degree
+    hinge gives f(t) = sin(t*span/2)/sin(span/2) and t_star = 0.42; both sit comfortably inside the window.'
+  pass_condition: tolerances.coverage_midpoint_min <= t_star <= tolerances.coverage_midpoint_max, with
+    0.20 and 0.80.
+  na_condition: 'N/A when |span_j| > pi for a hinge or ball: past half a turn the chord is non-monotone
+    in q and t_star loses meaning — evidence span_exceeds_half_turn. N/A when Delta_j == 0 or when KF3.motion.travel_displacement
+    is itself N/A or FAIL for this DOF (a joint that does not move has no profile to distribute; scoring
+    it twice would double-count one defect). N/A when span_j == 0.'
+  evidence: joint_id, t_star, f_profile (the N pairs (t_k, f_k)), Delta_j, window, first_index_above_half,
+    q_at_t_star
+  can_it_fail: 'Yes. A two-stage telescoping drawer whose outer stage is driven through a coupling with
+    a large coefficient completes its whole visible travel inside the first 8 percent of the driven range
+    and then sits still: t_star = 0.08 < 0.20 -> FAIL. Symmetrically, a joint whose child is welded for
+    the first 90 percent of travel and snaps at the end gives t_star = 0.94 > 0.80 -> FAIL.'
+  deviates_from_spec: 'P3''s bullet says ''the path covers the declared range''. The literal reading —
+    compare the declared range against m.jnt_range — is already KF1''s single merged ''range and reference''
+    claim (revised P0 section 07 explicitly deduplicates states/ref/range.min into one KF1 claim), so
+    repeating it here would violate ''one claim serves one check''. The closest admissible substitute
+    is the geometric one: coverage means the geometry is actually distributed over the interior of the
+    range, which no other metric measures.'
+- id: KF3.motion.type_semantics
+  claim: 'The part named by a joint moves, across that joint''s whole scan, as one rigid body executing
+    exactly the motion its declared type permits: pure translation along a fixed direction for slide and
+    free, pure rotation about the joint''s world axis line for hinge and ball.'
+  p0_inputs: kinematic_claims.joints[].id, .part, .type, kinematic_claims.independent_dofs, tolerances.rigid_motion_tol_frac
+  mj_inputs: m.jnt_type, m.geom_aabb, m.geom_type, d.geom_xpos, d.geom_xmat, d.xanchor[j], d.xaxis[j]
+    over the N layer-1 forward samples
+  algorithm: "1. Point cloud with stable correspondence: P_k = CornerCloud(G_p) at layer-1 forward sample\
+    \ k, where p = joints[j].part and the corner order is the frozen one from KF3.helper.rigid_sets. Crucially\
+    \ this uses the PART's geom set G_p, not the joint's child rigid set M_j — the two coincide only when\
+    \ the binding is right, and that is what gives this predicate its power.\n2. Axis constancy self-check:\
+    \ assert max_k ||d.xaxis[j](k) - d.xaxis[j](0)|| <= 1e-9 and the same for xanchor. Only DOF j varies\
+    \ in a layer-1 scan and a joint's own coordinate never moves its own anchor, so a violation is a harness\
+    \ fault.\n3. Prediction, with dq_k = q_k - q_0 and u, a taken at k = 0:\n   slide, free: phat_i(k)\
+    \ = p_i(0) + dq_k * u.\n   hinge, ball: phat_i(k) = a + R(u, dq_k) (p_i(0) - a), R by Rodrigues.\n\
+    4. Residual_k = max over i of ||p_i(k) - phat_i(k)||_2. Res = max over k of Residual_k.\n5. Normalize\
+    \ by the part's own size: rel = Res / diag(worldAABB(G_p) at k=0).\n6. Report separately, as evidence\
+    \ only, the rigidity residual: the maximum over k and over all corner pairs (i,i') of | ||p_i(k) -\
+    \ p_i'(k)|| - ||p_i(0) - p_i'(0)|| | / diag, which is zero for any rigid body and non-zero only if\
+    \ the part's geoms are split across a moving joint."
+  pass_condition: rel <= tolerances.rigid_motion_tol_frac, with rigid_motion_tol_frac = 0.02.
+  na_condition: N/A when G_p is empty (Gate G1 would already have failed) or when diag(worldAABB(G_p))
+    == 0. N/A when span_j == 0. Never N/A merely because the type is slide.
+  evidence: joint_id, part_id, declared_type, mj_jnt_type, G_p_geom_count, M_j_geom_count, sets_identical
+    (bool), Res, rel, threshold, argmax_grid_index, q_at_argmax, worst_corner_geom_id, rigidity_residual,
+    axis_world, anchor_world
+  can_it_fail: 'Yes, and this is the half of the predicate that is not a tautology. Stated bluntly: for
+    the joint''s own CHILD BODY, a MuJoCo slide is pure translation and a MuJoCo hinge is pure rotation
+    by construction, so testing the child body would be a tautology — this is the same trap as the already-known
+    ''a slide introduces no extra rotation'' bullet. Testing the PART can fail: (a) the generator names
+    the cabinet frame ''door'' so G_p binds to the parent side of the hinge and the part does not rotate
+    at all, giving rel equal to the full normalized chord, roughly 0.8; (b) G_p spans a nested joint that
+    a coupling also drives, so the cloud is not rigid and rel far exceeds 0.02 while rigidity_residual
+    is also non-zero; (c) the part is bound to a sibling body that shares no joint with j.'
+  deviates_from_spec: P3 says relative poses follow the semantics 'verified by KF1'. Applied to the joint's
+    child body the statement is unfalsifiable in MuJoCo. It is re-pointed at the contract's named part,
+    which is the object the claim is actually about and which can genuinely deviate.
+- id: KF3.motion.state_reachability
+  claim: Each declared semantic state value of each driven joint lies inside the joint's own limits as
+    the model wrote them, so the pose the state names is one the model would actually permit.
+  p0_inputs: kinematic_claims.joints[].states (each label -> value), joints[].range, kinematic_claims.asset_states
+    (label existence), tolerances.state_match_relative
+  mj_inputs: m.jnt_limited, m.jnt_range, m.jnt_qposadr, m.jnt_type
+  algorithm: '1. One instance per (driven joint j, state label s in joints[j].states).
+
+    2. v = joints[j].states[s].
+
+    3. If m.jnt_limited[j] == 1: [lim_lo, lim_hi] = m.jnt_range[2j : 2j+2] (MuJoCo internal units: metres
+    for slide, radians for hinge, whatever the MJCF compiler''s angle attribute said). Else [lim_lo, lim_hi]
+    = (-inf, +inf).
+
+    4. slack = tolerances.state_match_relative * span_j (state_match_relative = 0.02).
+
+    5. Compare v against the inflated limit interval.
+
+    6. Emphasis for the implementer: this is a declaration-reading check and the prior corpus showed such
+    checks carry little information (joint type parsed at 100 percent and matched in nearly every asset).
+    It is included because it is nearly free and because it catches one specific and real defect, but
+    its expected yield is low and it must be reported with its own applicable-n so it cannot inflate S_motion
+    by volume.'
+  pass_condition: lim_lo - slack <= v <= lim_hi + slack.
+  na_condition: N/A when m.jnt_limited[j] == 0 for a hinge originating from a URDF 'continuous' joint
+    (infinite range makes the test vacuous) — evidence joint_unlimited. N/A when joints[j].states is absent
+    or empty. N/A when j is not in independent_dofs (a coupling-dependent joint's states are KF2's business).
+  evidence: joint_id, state_label, declared_value, jnt_limited, model_range_lo, model_range_hi, slack,
+    margin_violated (which side), span
+  can_it_fail: 'Yes. The model writes range="0 0.05" on the drawer slide while the contract declares open
+    = 0.40: 0.40 > 0.05 + 0.008 -> FAIL, with the evidence naming both numbers. This is the ''the drawer
+    only opens 5 cm'' defect.'
+  deviates_from_spec: P3's bullet is 'closed, open and intermediate key states are reachable'. Read literally
+    against a sweep that writes qpos directly, reachability is vacuously true — every declared value is
+    written by layer 3 by construction, so the literal predicate is a tautology. The closest admissible
+    substitute is whether the model's own limits admit the value.
+- id: KF3.motion.path_continuity
+  claim: Successive scan samples produce pose changes bounded by the joint's Lipschitz constant times
+    the step in q; a violation is a harness fault, never an asset defect.
+  p0_inputs: kinematic_claims.independent_dofs
+  mj_inputs: d.geom_xpos, d.geom_xmat, d.xaxis[j], d.xanchor[j] over the layer-1 forward samples
+  algorithm: '1. L_j = 1 for slide and free (translation reduction); L_j = r_max (the largest perpendicular
+    distance of CornerCloud(M_j) from the axis line) for hinge and ball.
+
+    2. For k = 0..N-2: step_k = max over i of ||p_i(k+1) - p_i(k)||_2 over CornerCloud(M_j).
+
+    3. Assert step_k <= L_j * (q_{k+1} - q_k) * (1 + 1e-6) + 1e-9.'
+  pass_condition: The assertion holds at every k. A violation ABORTS the asset's KF3 with status harness_fault.
+    It contributes nothing to S_motion and enters no denominator.
+  na_condition: d == 0, or a DOF with span_j == 0.
+  evidence: joint_id, grid_index, step, bound, L_j, q_k, q_k1
+  can_it_fail: NO MODEL CAN FAIL IT, and the specification says so rather than pretending otherwise. Forward
+    kinematics is an analytic function of qpos; P3's Scope forbids dynamic rollout; therefore the pose
+    along a monotone qpos scan is Lipschitz in q with exactly this constant, for every model that compiles.
+    Any predicate presented as an asset-level 'no discontinuity' test would be a tautology of the same
+    family as 'a slide introduces no extra rotation'. Its only real value is catching a harness bug that
+    mutates the model or writes the wrong qpos address between samples.
+  deviates_from_spec: P3's bullet 'no discontinuity is allowed' is not implementable as an asset predicate
+    under P3's own no-rollout Scope. It is demoted to a harness assertion and excluded from the score;
+    the sliver-of-travel failure mode that a reader might expect this bullet to catch is instead caught
+    by KF3.motion.range_coverage, which is scored.
+- id: KF3.collision.pair_and_distance
+  claim: Every contact_policy entry resolves to an ordered-independent part pair with two non-empty geom
+    sets, and the pair's signed distance at a sample is the minimum mj_geomDistance over the cross product
+    of those sets, computed without reading mjData.contact and without consulting parent filtering, contype,
+    conaffinity or group.
+  p0_inputs: kinematic_claims.contact_policy.required[].parts, .permitted[].parts, .forbidden[].parts,
+    required_parts[].group, tolerances (new key distmax_m)
+  mj_inputs: mj_geomDistance(m, d, g1, g2, distmax, fromto), m.geom_rbound, d.geom_xpos, m.geom_type,
+    m.geom_bodyid
+  algorithm: '1. Expand parts. Each entry names two elements; an element is either a part id or {group:
+    X}. A group expands to its enumerated members in required_parts order. The entry expands to the cross
+    product of the two element sets, self-pairs (A == A) dropped, unordered duplicates collapsed by sorting
+    the two ids. Record the expansion.
+
+    2. Geom pair set for (A,B) = G_A x G_B from KF3.helper.rigid_sets, excluding pairs with g1 == g2.
+    Because G_A and G_B are disjoint by construction, no pair shares a body.
+
+    3. Bounding-sphere prefilter at each sample: skip the pair if ||d.geom_xpos[g1] - d.geom_xpos[g2]||_2
+    - m.geom_rbound[g1] - m.geom_rbound[g2] > distmax; a skipped pair contributes exactly distmax. This
+    is a guard against parts with hundreds of geoms and changes no result, since mj_geomDistance would
+    return distmax there anyway.
+
+    4. sd(A,B,q) = min over surviving pairs of mj_geomDistance(m, d, g1, g2, distmax_m, fromto), with
+    distmax_m = 0.05 frozen. Record the argmin geom pair and the fromto segment.
+
+    5. mj_geomDistance returns distmax when the true distance is larger, so sd is censored above; set
+    clearance_censored when sd >= distmax_m - 1e-12. distmax_m = 0.05 is 25x the required_contact threshold
+    and 50x the forbidden_penetration threshold, so neither decision is ever affected by the censoring.
+
+    6. Explicit handling of the three mechanisms P3 names. PARENT FILTERING: MuJoCo suppresses contacts
+    between bodies joined by a joint, which is exactly the door-and-frame and drawer-and-cabinet pair
+    that matters most; mj_geomDistance performs no such filtering and is therefore the only usable query.
+    CONTYPE and CONAFFINITY: every geom in this corpus is contype=0, conaffinity=0, group=1 because no
+    asset contains a <collision> element, so mjData.contact is always empty (ncon = 0); mj_geomDistance
+    ignores both fields entirely and we neither read nor modify them. TOOTH-MESHING CONTACT: declared
+    gear meshing is not read off the contact array either — it is the required/mesh_contact predicate
+    below, evaluated on the same signed distances.
+
+    7. Report contact_source = mj_geomDistance and contype_conaffinity = ignored_by_construction in every
+    result file.
+
+    8. Penetration accuracy: for deeply interpenetrating convex pairs mj_geomDistance''s negative value
+    may be approximate. This is irrelevant here because every decision is a comparison against 0.001 m,
+    and the measured behaviour (-0.004 for an interpenetrating pair, +0.345 for a separated one) is far
+    outside that band.'
+  pass_condition: 'Not scored. Structural assertion: every contact_policy entry resolves to at least one
+    pair with both geom sets non-empty, or the entry is marked N/A with pair_unresolvable.'
+  na_condition: An entry whose expansion is empty, or every expanded pair has an empty geom set on either
+    side, is N/A with pair_unresolvable and leaves both S_required and S_forbidden denominators.
+  evidence: entry_index, category, declared_parts, expanded_pairs, part_a, part_b, geom_count_a, geom_count_b,
+    pair_unresolvable, prefilter_skips, distmax_m
+  can_it_fail: Not an asset predicate; it is the measurement definition. Its assertion fails when a contract
+    names a part the Gate could not bind, which A1 is designed to make impossible before generation.
+  deviates_from_spec: ''
+- id: KF3.collision.state_classification
+  claim: Each sample is classified as belonging or not belonging to each declared asset_state, using the
+    state's own scope and relative tolerance, so state-conditioned contact claims have a well-defined
+    sample set.
+  p0_inputs: kinematic_claims.asset_states[label].scope, .tolerance.relative, kinematic_claims.joints[].states,
+    joints[].range, joints[].part, kinematic_claims.rigid_attachments, required_parts[].role, tolerances.state_match_relative
+  mj_inputs: none beyond the recorded q vector of each sample
+  algorithm: "1. For a claim c consuming state label s with asset_states[s].scope:\n   scope == 'named_parts'\
+    \ (default): Scope(c,s) = for each part id named in c, the joint j with joints[j].part == that id\
+    \ and s in joints[j].states; if the part's role is 'attached', substitute its leader's joint via rigid_attachments;\
+    \ if the part's role is 'fixed' it contributes no joint.\n   scope == 'all_declaring': Scope(s) =\
+    \ every joint j with s in joints[j].states, independent of the claim.\n2. tau_s = asset_states[s].tolerance.relative\
+    \ if present, else tolerances.state_match_relative (0.02).\n3. Sample x belongs to state s for claim\
+    \ c iff, for EVERY joint j in the scope set, |q_j(x) - joints[j].states[s]| <= tau_s * span_j, where\
+    \ span_j is the DECLARED span (hi_j - lo_j) and q_j(x) is the sample's value for j: the driven value\
+    \ if j is in independent_dofs, the coupling-derived value if j is a dependent, and ref_j otherwise.\n\
+    4. state == 'all' matches every sample unconditionally.\n5. If the scope set is empty, the claim is\
+    \ N/A with state_scope_empty. It must NOT be treated as vacuously matching every sample: a required\
+    \ contact claim evaluated at every sample under an empty scope would be a different claim entirely.\n\
+    6. Cache the classification as a boolean matrix (n_samples x n_state_labels_per_claim) so precedence\
+    \ and the required predicates read it without recomputation."
+  pass_condition: 'Not scored. Certificate: for each (claim, state) the number of matching samples is
+    recorded, and layer 3 guarantees it is >= 1 whenever every scope joint is driven and its state value
+    lies in its declared range.'
+  na_condition: state_scope_empty as above; or asset_states lacks the label, which A7 forbids before generation
+    and which is here recorded as state_undefined and makes the consuming claim N/A.
+  evidence: claim_index, state_label, scope_mode, scope_joint_ids, tau, matching_sample_count, matching_sample_indices
+    (first 8), state_never_matched, state_scope_empty, state_undefined
+  can_it_fail: Not an asset predicate; it partitions the sample set. The count it produces is what makes
+    the required predicates N/A rather than silently passing.
+  deviates_from_spec: ''
+- id: KF3.collision.precedence
+  claim: Where a part pair carries both an obligation or a permission and a prohibition, the obligation
+    or permission wins inside its declared state, implemented by removing those samples from the prohibition's
+    evaluated set.
+  p0_inputs: kinematic_claims.contact_policy.precedence (frozen value required_and_permitted_over_forbidden),
+    .required[], .permitted[], .forbidden[]
+  mj_inputs: none beyond the state classification
+  algorithm: '1. Key every entry by its unordered expanded part pair (sorted id tuple).
+
+    2. For each forbidden entry f on pair K with state s_f: E(f) = { samples matching s_f } (all samples
+    when s_f == ''all'').
+
+    3. For every required or permitted entry e on the same pair K with state s_e: remove from E(f) every
+    sample matching s_e. If s_e == ''all'', E(f) becomes empty.
+
+    4. If E(f) is empty, the forbidden entry is N/A with all_samples_overridden (or overridden_by_permitted
+    when a state-all permitted entry caused it), and it leaves the S_forbidden denominator.
+
+    5. Precedence never restricts a required or permitted entry; the relation is one-directional.
+
+    6. Why this rule exists at all: in the cabinet example the drawer/cabinet pair is required to touch
+    at closed and, if a naive reading also forbade penetration there, S_collision would be undefined at
+    the sweep''s own endpoints.
+
+    7. If contact_policy.precedence carries any value other than required_and_permitted_over_forbidden,
+    abort with unsupported_precedence rather than guessing.'
+  pass_condition: 'Not scored. Certificate: for each forbidden entry, |E(f)| and the list of overriding
+    entry indices are recorded.'
+  na_condition: No pair appears in more than one category — then the rule is inert and emits nothing.
+  evidence: forbidden_entry_index, pair, overriding_entry_indices, overriding_states, samples_before,
+    samples_after, overridden_by_permitted, all_samples_overridden
+  can_it_fail: Not an asset predicate; it is a set operation on the sample index space.
+  deviates_from_spec: ''
+- id: KF3.collision.forbidden_pair
+  claim: A forbidden part pair never interpenetrates by more than tolerances.forbidden_penetration_m anywhere
+    in its evaluated sample set.
+  p0_inputs: kinematic_claims.contact_policy.forbidden[].parts, .state, tolerances.forbidden_penetration_m
+  mj_inputs: mj_geomDistance over G_A x G_B at every evaluated sample; m.geom_rbound and d.geom_xpos for
+    the prefilter
+  algorithm: '1. One instance PER FORBIDDEN PAIR, never per sample. (Owner-fixed.)
+
+    2. Evaluated set E(f) from KF3.collision.precedence, drawn from ALL layers: layer-1 forward samples,
+    layer-2 grids, layer-3 combinations, layer-4 Sobol points. Layer-1 reverse samples are excluded, being
+    duplicates.
+
+    3. For each x in E(f): sd_x = sd(A,B,x) per KF3.collision.pair_and_distance.
+
+    4. min_sd = min over E(f) of sd_x; max_penetration = max(0, -min_sd); min_clearance = max(0, min_sd).
+
+    5. first_failing_index = the smallest GLOBAL sample index in E(f) with sd_x < -tolerances.forbidden_penetration_m,
+    under the frozen global order: layer 1 (DOF ascending, grid index ascending), then layer 2 (pair ascending,
+    row-major), then layer 3 (mixed-radix ascending), then layer 4 (Sobol n ascending). Evidence only;
+    it does not enter the score.
+
+    6. Compare max_penetration against the threshold.'
+  pass_condition: max_penetration <= tolerances.forbidden_penetration_m, with forbidden_penetration_m
+    = 0.001 m. Equivalently min_sd >= -0.001.
+  na_condition: N/A when the pair is unresolvable (either geom set empty) — pair_unresolvable; when E(f)
+    is empty after precedence — all_samples_overridden or overridden_by_permitted; when the declared state
+    was never matched by any sample and the entry named a state rather than 'all' — state_never_matched.
+    N/A entries leave the S_forbidden denominator entirely and are never scored as 1.0.
+  evidence: pair (part_a, part_b), entry_index, evaluated_sample_count, min_signed_distance, max_penetration,
+    min_clearance, clearance_censored, argmin_sample_index, argmin_layer, argmin_q_vector, argmin_geom_pair
+    (g1,g2), argmin_fromto (6 floats), first_failing_index, first_failing_layer, first_failing_q_vector,
+    threshold
+  can_it_fail: 'Yes. Two drawers modelled at the same vertical offset occupy the same slot: sd is roughly
+    -0.03 at every sample, max_penetration 0.03 against a threshold of 0.001 -> FAIL, with first_failing_q
+    pointing at layer-1 sample 0 and the argmin geom pair naming the two drawer bodies. Likewise the gold-standard
+    defect ''the drawer flies out through the cabinet in the open state'' fails the drawer/cabinet forbidden
+    pair at the high end of the scan.'
+  deviates_from_spec: P3's bullet reads 'evaluate at every sample ... forbidden penetration beyond tolerance
+    is a hard failure', which invites per-sample scoring. Per the owner's fixed decision, scoring is per
+    pair over the whole swept set with the sample index kept as evidence, so that one pair penetrating
+    in 900 of 1000 samples is one failure and not 900.
+- id: KF3.collision.required_stop_contact
+  claim: A part pair declared to make stop contact in a semantic state actually touches, to within tolerances.required_contact_m,
+    at some sample belonging to that state.
+  p0_inputs: kinematic_claims.contact_policy.required[] with relation == stop_contact, .parts, .state,
+    kinematic_claims.asset_states, tolerances.required_contact_m
+  mj_inputs: mj_geomDistance over G_A x G_B at the state-matched samples
+  algorithm: '1. One instance per required entry with relation == stop_contact.
+
+    2. S = the set of samples classified as the entry''s state s for this claim, per KF3.collision.state_classification,
+    drawn from all layers (layer-3 guarantees the exact state values are present).
+
+    3. min_sd_state = min over S of sd(A,B,x).
+
+    4. Compare against the threshold. The min, not the max: the claim is that a contacting configuration
+    exists at that state, which correctly does not require the other two drawers to also be closed when
+    drawer_1 is the subject.
+
+    5. Also record max_sd_state (the worst state-matched sample) as evidence.'
+  pass_condition: min_sd_state <= tolerances.required_contact_m, with required_contact_m = 0.002 m.
+  na_condition: N/A when either geom set is empty (pair_unresolvable); when no sample was classified into
+    the state (state_never_matched) — for instance because a scope joint is a coupling dependent whose
+    derived value never lands within tau of the state value; when the state's scope set is empty (state_scope_empty);
+    when the state label is not defined in asset_states (state_undefined, which A7 forbids pre-generation).
+  evidence: entry_index, pair, state_label, state_matched_sample_count, min_sd_state, max_sd_state, closest_approach_sample_index,
+    closest_approach_layer, closest_approach_q_vector, closest_approach_geom_pair, clearance_censored,
+    threshold, first_failing_q = null with reason required_failure_is_set_level
+  can_it_fail: Yes. A cabinet whose drawer at q = 0 still stands 8 mm proud of the front face gives min_sd_state
+    = 0.008 against 0.002 -> FAIL. This class of defect is invisible to any check that only reads declarations,
+    and was invisible in the previous contract because 'allowed' never said whether it was an obligation.
+  deviates_from_spec: 'Implements the frozen relation table of revised P0 section 11 literally (''该状态下
+    min sd <= required_contact_m''). Note that first failing q, which P3 asks for, is genuinely undefined
+    for an obligation: failure is the property of an entire sample set, not of one sample, so the field
+    is emitted as null with an explicit reason and the closest-approach sample is given instead.'
+- id: KF3.collision.required_mesh_contact
+  claim: A part pair declared to mesh, such as a gear pair, comes into contact somewhere over the whole
+    sweep to within tolerances.required_contact_m.
+  p0_inputs: kinematic_claims.contact_policy.required[] with relation == mesh_contact, .parts, .state,
+    tolerances.required_contact_m
+  mj_inputs: mj_geomDistance over G_A x G_B at every sample
+  algorithm: '1. One instance per required entry with relation == mesh_contact.
+
+    2. S = all samples of all layers when state == ''all'' (the case in the gear example), else the state-matched
+    set.
+
+    3. min_sd_all = min over S of sd(A,B,x); compare against the threshold.
+
+    4. Emit, as evidence and not as score, max_sd_all = max over S of sd(A,B,x) and the fraction of samples
+    with sd <= required_contact_m. This preserves the stricter reading (''teeth are in mesh at EVERY sample'')
+    for a later, calibrated tightening without changing the frozen score today.'
+  pass_condition: min_sd_all <= tolerances.required_contact_m, with required_contact_m = 0.002 m.
+  na_condition: N/A when either geom set is empty (pair_unresolvable); when the entry names a state that
+    no sample matched (state_never_matched); when the state is undefined (state_undefined).
+  evidence: entry_index, pair, state_label, evaluated_sample_count, min_sd_all, max_sd_all, fraction_in_contact,
+    argmin_sample_index, argmin_layer, argmin_q_vector, argmin_geom_pair, argmin_fromto, clearance_censored,
+    threshold
+  can_it_fail: 'Yes. The gear-pair defect named in revised P0 section 14: the two discs are placed with
+    a centre distance 1.4x too large and the tooth faces never come near each other, so min_sd_all is
+    roughly 0.021 against 0.002 -> FAIL. Note that no contact-array method could catch this, since ncon
+    is always 0 in this corpus.'
+  deviates_from_spec: The frozen relation table says '全行程 min sd <= required_contact_m', i.e. the minimum
+    over the whole travel is compared to the threshold — contact at least once. The stricter reading (in
+    mesh at every sample) is arguably what a gear claim means physically, but it is not what the frozen
+    table says; it is emitted as evidence (fraction_in_contact, max_sd_all) and listed as an open decision.
+- id: KF3.collision.permitted
+  claim: A permitted entry asserts nothing and is never scored; its only effect is to exempt its part
+    pair, inside its declared state, from any forbidden entry on the same pair.
+  p0_inputs: kinematic_claims.contact_policy.permitted[].parts, .state, .relation (rest_contact or absent)
+  mj_inputs: mj_geomDistance over the pair, for reporting only
+  algorithm: '1. Enter no instance into any numerator or denominator.
+
+    2. Feed the entry to KF3.collision.precedence as an override source.
+
+    3. Still record min_signed_distance and max_penetration over the entry''s state-matched samples, purely
+    so a human reading the report can see how hard the handle actually rubs the cabinet.
+
+    4. rest_contact is the only relation the frozen table assigns to this category, and it carries no
+    signed-distance predicate.'
+  pass_condition: None. The entry has no pass condition by construction.
+  na_condition: Always N/A with respect to scoring; the field is emitted as category = permitted, scored
+    = false.
+  evidence: entry_index, pair, state_label, relation, min_signed_distance, max_penetration, evaluated_sample_count,
+    overrides_forbidden_entries
+  can_it_fail: 'No, and that is the point of the revised P0''s split: the previous contract''s single
+    ''allowed'' category was ambiguous between permission and obligation, and read as a permission it
+    can never fail and contributes nothing. Making that explicit is what forced the obligation half (required)
+    into existence, where the gear-mesh failure lives.'
+  deviates_from_spec: P3's bullet says 'evaluate allowed and forbidden contact pairs'. Revised P0 section
+    11 splits 'allowed' into required and permitted; the permitted half is evaluated and reported but,
+    being a permission, is correctly unscored.
+- id: KF3.collision.evidence_recording
+  claim: For every evaluated part pair the report carries minimum clearance, maximum penetration and,
+    where the failure is per-sample, the first failing q, each resolvable to an exact configuration.
+  p0_inputs: contact_policy (all three categories)
+  mj_inputs: mj_geomDistance results, plus the recorded sample table
+  algorithm: '1. Store the sample table once per asset: an (n_samples x d) float64 array of driven-DOF
+    values, plus per-sample layer tag, DOF or pair index, grid indices, and the derived dependent values.
+    Every evidence field references a global sample index into this table, so no q vector is duplicated.
+
+    2. Per pair maintain streaming aggregates in the frozen global sample order: min_sd with its argmin
+    index and argmin geom pair and fromto segment; max_sd with its argmax index; the count of samples
+    with sd <= required_contact_m; the first index with sd < -forbidden_penetration_m.
+
+    3. Derived report fields: min_clearance = max(0, min_sd); max_penetration = max(0, -min_sd); clearance_censored
+    = (min_sd >= distmax_m - 1e-12).
+
+    4. first_failing_q is emitted only for forbidden entries. For required entries it is emitted as null
+    with reason required_failure_is_set_level and the closest-approach sample is given instead.
+
+    5. Cap stored exemplars at 8 sample indices per pair to bound report size; the aggregates are exact
+    regardless.
+
+    6. Every report also carries tolerances_hash and sweep_config_hash (covering scan_points, pair_grid,
+    pair_grid_max, state_combo_max, sobol_points_per_dof, sobol_skip, sobol_seed, sobol_dim_max, total_samples_max,
+    distmax_m, pair_inflation_frac and the embedded direction-number table), so a score is meaningless
+    without the exact thresholds and sampling rule that produced it.'
+  pass_condition: 'Not scored. Completeness assertion: every scored pair has non-null min_signed_distance
+    and evaluated_sample_count > 0; every failing forbidden pair has a non-null first_failing_index that
+    resolves in the sample table.'
+  na_condition: Never N/A; pairs that are N/A for scoring still carry their aggregates where computable,
+    with the N/A reason attached.
+  evidence: the fields listed in step 2 and 3, plus sample_table_rows, tolerances_hash, sweep_config_hash,
+    contact_source = mj_geomDistance, contype_conaffinity = ignored_by_construction
+  can_it_fail: Not an asset predicate; it is the reporting contract P3's Reporting box demands ('do not
+    hide failures in one scalar').
+  deviates_from_spec: ''
+aggregation: "THREE SCORES ARE REPORTED SEPARATELY AND NEVER MERGED BEFORE REPORTING.\n\nS_motion = (number\
+  \ of PASSED motion predicate instances) / (number of APPLICABLE motion predicate instances).\n  The\
+  \ instance set is: for each driven DOF j in independent_dofs with span_j > 0, one instance each of KF3.motion.travel_scale,\
+  \ KF3.motion.travel_displacement, KF3.motion.range_coverage and KF3.motion.type_semantics; plus one\
+  \ instance of KF3.motion.state_reachability for each (driven joint j, state label s in joints[j].states).\
+  \ Instances whose na_condition fires are removed from BOTH numerator and denominator. KF3.motion.path_continuity,\
+  \ KF3.sweep.determinism and every sweep certificate are harness self-checks and enter neither.\n  Denominator\
+  \ zero -> S_motion = N/A. This happens when d == 0 (no independent_dofs), when every driven DOF has\
+  \ declared_travel_zero, or when every rotational DOF was gated out by axis_centered_geometry and nothing\
+  \ else was applicable. N/A, never 1.0 and never 0.0.\n  Report alongside it: applicable_n, passed_n,\
+  \ and the per-predicate-family breakdown (travel_scale a/b, travel_displacement a/b, range_coverage\
+  \ a/b, type_semantics a/b, state_reachability a/b), because the five families have very different expected\
+  \ yields and a single ratio would let the cheap state_reachability instances dilute the expensive geometric\
+  \ ones.\n\nS_required = (number of SATISFIED required entries) / (number of APPLICABLE required entries),\
+  \ over KF3.collision.required_stop_contact and KF3.collision.required_mesh_contact instances. Entries\
+  \ that are pair_unresolvable, state_never_matched, state_scope_empty or state_undefined are removed\
+  \ from both.\n  Denominator zero -> S_required = N/A. This is the common case: an asset with no obligation\
+  \ claims has nothing to satisfy. Reporting 1.0 there would be the same defect the revised P0 fixed in\
+  \ KF2, where an empty constraint set made the worst model score 1.0.\n\nS_forbidden = (number of PASSED\
+  \ forbidden pairs) / (number of RESOLVABLE forbidden pairs), one instance per unordered expanded part\
+  \ pair, a pair failing iff its maximum penetration over its whole evaluated sample set exceeds tolerances.forbidden_penetration_m.\
+  \ Pairs that are pair_unresolvable, overridden_by_permitted, all_samples_overridden or state_never_matched\
+  \ are removed from both.\n  Denominator zero -> S_forbidden = N/A, never 1.0.\n\nS_collision = min over\
+  \ the members of {S_required, S_forbidden} that are not N/A; N/A if both are N/A. It exists only to\
+  \ satisfy P3's formula and is always printed next to its two components, never instead of them.\n\n\
+  KF3 = min over the members of {S_motion, S_collision} that are not N/A; N/A if both are N/A. Equivalently\
+  \ KF3 = min over the non-N/A members of {S_motion, S_required, S_forbidden}.\n  KF3 = N/A means the\
+  \ asset contributes to no KF3 numerator and no KF3 denominator in the corpus-level aggregate, per P3's\
+  \ rule that N/A dimensions are excluded from applicable-only aggregation. The corpus report must carry\
+  \ kf3_applicable_n next to the mean, since an asset with no joints, no couplings and no contact policy\
+  \ is silently absent otherwise.\n\nABORT STATES, distinct from N/A: harness_nondeterminism (KF3.sweep.determinism),\
+  \ harness_fault (KF3.motion.path_continuity, write-back assertion, axis-constancy assertion), unsupported_precedence,\
+  \ coupling_cycle affecting a driven DOF. An aborted asset emits no KF3 number at all and is listed separately;\
+  \ it is never folded in as a zero.\n\nEvery emitted result carries tolerances_hash and sweep_config_hash.\
+  \ A KF3 number without both is not comparable to any other KF3 number."
+open_decisions:
+- mesh_contact reading. The frozen relation table says the minimum signed distance over the whole travel
+  must be <= required_contact_m, i.e. the gear teeth need only touch once anywhere in the sweep. Physically
+  a mesh claim means they are in contact at EVERY sample. The spec implements the frozen (weak) reading
+  and emits fraction_in_contact and max_sd_all so the strict reading can be scored later without re-running.
+  Someone must decide which one the contract freezes, before calibration, because the two thresholds calibrate
+  differently.
+- 'Nine new frozen constants are introduced that revised P0''s tolerances block does not contain and that
+  must be added to it before freezing, or the hash is meaningless: distmax_m = 0.05, pair_inflation_frac
+  = 0.05, travel_realized_min = 0.50, aabb_overlap_max = 0.95, eccentricity_min = 0.20, displacement_resolution_frac
+  = 0.10, rigid_motion_tol_frac = 0.02, coverage_midpoint_min = 0.20, coverage_midpoint_max = 0.80. All
+  nine are protocol initial values, not calibrated numbers. Per revised P0 section 12 they must be set
+  by deterministic fault injection (detection-rate versus fault-severity curve, take the knee), not on
+  the 47 real positives.'
+- 'Sweep constants that are policy, not measurement, and need a sign-off: scan_points = 33, pair_grid
+  = 9, pair_grid_max = 64, state_combo_max = 4096, sobol_points_per_dof = 256, sobol_skip = 1024, sobol_seed
+  = 0x5EED5081C0DE0001, sobol_dim_max = 32, total_samples_max = 20000, and the truncation order (layer
+  4 tail first, then layer 3 down to its uniform plus one-hot core, then the layer-2 pair cap). At the
+  corpus median of 3 joints this is roughly 1200 samples and about 260k mj_geomDistance calls per asset;
+  someone should confirm that budget against the actual 545-asset run before it is frozen.'
+- Ball and free joints have no scalar scan coordinate in the contract. The spec reduces a ball to a rotation
+  about a resolved axis and a free joint to a translation along one, both flagged in evidence. URDF cannot
+  produce either type, so this affects no current asset, but if a generator ever adds a floating base
+  the reduction changes what is measured and should be revisited rather than inherited silently.
+- 'KF3.motion.type_semantics and KF3.motion.travel_displacement deliberately overlap: both read the motion
+  of the same geometry over the same scan. They test different things (moved as the right kind of rigid
+  body versus moved far enough) and have different repair actions, so per revised P0 section 03 the overlap
+  is declared rather than merged. If the corpus shows they fail together in nearly every case, one of
+  them is redundant and should be dropped rather than double-counted in S_motion.'
+- 'Two P3 bullets are specified as harness self-checks with an explicit statement that no model can fail
+  them: path continuity, and the forward-versus-reverse traversal. If the intent was that these be scored,
+  the scope box forbidding dynamic rollout has to change first, because without integration forward kinematics
+  is an analytic function of qpos and neither can be falsified. Someone should confirm they are content
+  with two bullets that produce no score.'
+- The eccentricity gate makes KF3.motion.travel_displacement and KF3.motion.range_coverage N/A for every
+  gear, wheel, knob and turntable, i.e. for every joint whose anchor predicate is through_center_of. This
+  is honest (an AABB genuinely cannot see a symmetric body spinning about its own axis) but it means rotationally
+  symmetric mechanisms get no motion score at all beyond travel_scale, type_semantics and state_reachability.
+  If the corpus is knob-heavy, S_motion's applicable-n will be thin and that has to be visible in the
+  report, not hidden behind a mean.
+- The direction-number table for the Sobol construction has to be physically embedded as a source literal
+  (32 rows of Joe-Kuo new-joe-kuo-6.21201). Someone must confirm that redistributing that table is acceptable
+  for this repository, and that its hash is included in sweep_config_hash.
+- 'Deviation to ratify: the sweep uses the DECLARED range as its bounds and never intersects with m.jnt_range.
+  This is what lets state_reachability and the geometric predicates see a model that under-declares its
+  own limits, but it also means qpos is routinely written outside the model''s limits. That is legal under
+  mj_kinematics with no stepping and produces exactly the pose the model would show, but it is a choice
+  a reviewer should see stated rather than discover.'

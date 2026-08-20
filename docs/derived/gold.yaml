@@ -1,0 +1,880 @@
+assets:
+- name: cabinet_correct
+  targets: none
+  defect: None. This is the control. A 0.44 x 0.40 x 1.20 m carcass built from seven boxes leaves an interior
+    of x in [-0.20,0.20], y in [-0.20,0.18], z in [0.02,1.18], divided into a drawer_1 cavity z in [0.94,1.18],
+    a drawer_2 cavity z in [0.68,0.92] and a door compartment z in [0.02,0.66]. Each drawer is one 0.38
+    x 0.36 x 0.22 box with 0.01 m clearance on all four sides of its cavity; closed, its back overlaps
+    the carcass back panel by 0.0005 m, which is what satisfies the required stop_contact, and its front
+    sits 0.0205 m behind the front plane so the door plane is free. Travel is 0.24 m along -y, leaving
+    39% of the tray AABB still inside the carcass at open. The door is one 0.43 x 0.02 x 0.62 panel lying
+    across the front at y in [-0.2195,-0.1995], overlapping the two side panels by 0.0005 m at closed;
+    its hinge is a vertical axis at (0.2155, -0.2095), 0.5 mm outside its own right edge, so 100% of the
+    panel's vertices lie strictly on one side of the pivot plane. The door's z-band never meets either
+    drawer's z-band, so both (door, drawer_i) forbidden pairs stay at least +0.04 m clear through the
+    whole 3-DOF sweep. handle_1, handle_2 and door_knob are joined by URDF fixed joints to drawer_1, drawer_2
+    and door, so with fusestatic=false they compile to their own bodies with zero joints inside their
+    leader's rigid subtree. Every geom is <visual> only, exactly like the real corpus, so contype=0 conaffinity=0
+    group=1 and ncon=0 in every state.
+  urdf: "<?xml version=\"1.0\"?>\n<!--\ngold-standard asset for Evo-Articraft P3 (Kinematic Fidelity).\n\
+    CONTROL. Contract A. Every KF predicate must PASS.\n-->\n<robot name=\"cabinet_correct\">\n  <link\
+    \ name=\"cabinet_body\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"20.0\"\
+    /><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n   \
+    \ <visual name=\"carcass_bottom\"><origin xyz=\"0 0 0.01\" rpy=\"0 0 0\"/><geometry><box size=\"0.44\
+    \ 0.4 0.02\"/></geometry></visual>\n    <visual name=\"carcass_top\"><origin xyz=\"0 0 1.19\" rpy=\"\
+    0 0 0\"/><geometry><box size=\"0.44 0.4 0.02\"/></geometry></visual>\n    <visual name=\"carcass_left\"\
+    ><origin xyz=\"-0.21 0 0.6\" rpy=\"0 0 0\"/><geometry><box size=\"0.02 0.4 1.16\"/></geometry></visual>\n\
+    \    <visual name=\"carcass_right\"><origin xyz=\"0.21 0 0.6\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.02 0.4 1.16\"/></geometry></visual>\n    <visual name=\"carcass_back\"><origin xyz=\"0 0.19 0.6\"\
+    \ rpy=\"0 0 0\"/><geometry><box size=\"0.4 0.02 1.16\"/></geometry></visual>\n    <visual name=\"\
+    carcass_shelf_a\"><origin xyz=\"0 -0.01 0.93\" rpy=\"0 0 0\"/><geometry><box size=\"0.4 0.38 0.02\"\
+    /></geometry></visual>\n    <visual name=\"carcass_shelf_b\"><origin xyz=\"0 -0.01 0.67\" rpy=\"0\
+    \ 0 0\"/><geometry><box size=\"0.4 0.38 0.02\"/></geometry></visual>\n  </link>\n  <link name=\"drawer_1\"\
+    >\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"3.0\"/><inertia ixx=\"0.01\" ixy=\"\
+    0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"drawer_1_tray\"\
+    ><origin xyz=\"0 0.0005 1.06\" rpy=\"0 0 0\"/><geometry><box size=\"0.38 0.36 0.22\"/></geometry></visual>\n\
+    \  </link>\n  <link name=\"drawer_2\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"\
+    3.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"drawer_2_tray\"><origin xyz=\"0 0.0005 0.8\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.38 0.36 0.22\"/></geometry></visual>\n  </link>\n  <link name=\"handle_1\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.3\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"handle_1_bar\"><origin xyz=\"0 0 0\"\
+    \ rpy=\"0 1.5708 0\"/><geometry><cylinder radius=\"0.012\" length=\"0.23\"/></geometry></visual>\n\
+    \  </link>\n  <link name=\"handle_2\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"\
+    0.3\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"handle_2_bar\"><origin xyz=\"0 0 0\" rpy=\"0 1.5708 0\"/><geometry><cylinder radius=\"\
+    0.012\" length=\"0.23\"/></geometry></visual>\n  </link>\n  <link name=\"door\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"4.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"door_panel\"><origin xyz=\"-0.2155\
+    \ 0 0.34\" rpy=\"0 0 0\"/><geometry><box size=\"0.43 0.02 0.62\"/></geometry></visual>\n  </link>\n\
+    \  <link name=\"door_knob\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.2\"\
+    /><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n   \
+    \ <visual name=\"door_knob_ball\"><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><geometry><sphere radius=\"\
+    0.02\"/></geometry></visual>\n  </link>\n  <joint name=\"drawer_1_slide\" type=\"prismatic\">\n  \
+    \  <parent link=\"cabinet_body\"/>\n    <child link=\"drawer_1\"/>\n    <origin xyz=\"0 0 0\" rpy=\"\
+    0 0 0\"/>\n    <axis xyz=\"0 -1 0\"/>\n    <limit lower=\"0\" upper=\"0.24\" effort=\"100\" velocity=\"\
+    1\"/>\n  </joint>\n  <joint name=\"drawer_2_slide\" type=\"prismatic\">\n    <parent link=\"cabinet_body\"\
+    />\n    <child link=\"drawer_2\"/>\n    <origin xyz=\"0 0 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 -1\
+    \ 0\"/>\n    <limit lower=\"0\" upper=\"0.24\" effort=\"100\" velocity=\"1\"/>\n  </joint>\n  <joint\
+    \ name=\"handle_1_fix\" type=\"fixed\">\n    <parent link=\"drawer_1\"/>\n    <child link=\"handle_1\"\
+    />\n    <origin xyz=\"0 -0.1905 1.06\" rpy=\"0 0 0\"/>\n  </joint>\n  <joint name=\"handle_2_fix\"\
+    \ type=\"fixed\">\n    <parent link=\"drawer_2\"/>\n    <child link=\"handle_2\"/>\n    <origin xyz=\"\
+    0 -0.1905 0.8\" rpy=\"0 0 0\"/>\n  </joint>\n  <joint name=\"door_hinge\" type=\"revolute\">\n   \
+    \ <parent link=\"cabinet_body\"/>\n    <child link=\"door\"/>\n    <origin xyz=\"0.2155 -0.2095 0\"\
+    \ rpy=\"0 0 0\"/>\n    <axis xyz=\"0 0 1\"/>\n    <limit lower=\"0\" upper=\"2.094\" effort=\"100\"\
+    \ velocity=\"1\"/>\n  </joint>\n  <joint name=\"door_knob_fix\" type=\"fixed\">\n    <parent link=\"\
+    door\"/>\n    <child link=\"door_knob\"/>\n    <origin xyz=\"-0.3855 -0.02 0.34\" rpy=\"0 0 0\"/>\n\
+    \  </joint>\n</robot>\n"
+  expected: Contract A (gold/contract_A_cabinet.yaml). KF1.parent pass 3/3. KF1.type pass 3/3 (slide,
+    slide, hinge). KF1.axis pass -- semantic 3/3 (drawer xaxis (0,-1,0) is 90.00 deg from world z = horizontal;
+    door xaxis (0,0,1) is 0.00 deg = vertical), relational 3/3, numeric na (canonical_frame.front is null).
+    KF1.anchor pass -- door_hinge on_edge_of fraction 1.0000 >= 0.95; the two slides are na. KF1.range_and_reference
+    pass 3/3 (jnt_range exactly [0,0.24], [0,0.24], [0,2.094], jnt_limited 1, qpos0 0 = states.closed).
+    KF1.rigid_follower pass 3/3 (all in the leader's rigid subtree, max relative drift 0.000000 m over
+    the sweep). KF1.fake_joint pass (drawer child AABB diag 0.5678 / travel 0.240 = 2.366; door 0.8562
+    / chord 0.860 = 0.995). KF2.bound / coefficient / expected_dof / residual all na (couplings is empty).
+    KF3.reachability pass. KF3.continuity pass. KF3.motion_semantics pass (retention 0.3903 of the tray
+    AABB stays inside the carcass at full extension). KF3.forbidden_pair pass 3/3 -- min signed distance
+    over a 13x13x13 sweep is +0.04000 (drawer_1,drawer_2), +0.30000 (door,drawer_1), +0.04000 m (door,drawer_2).
+    KF3.required_contact pass 3/3 -- min sd at closed is -0.00050 m on each pair, inside required_contact_m
+    = 0.002. If the verifier does not score this 1.0, the verifier is broken.
+- name: gearbox_correct
+  targets: none
+  defect: 'None. This is the coupling control. A housing (0.32 x 0.20 x 0.02 base plate plus two 0.008
+    m radius bosses of length 0.258 rising to z = 0.278) carries two hinges on parallel vertical axes
+    at x = -0.06 and x = +0.0595, both at z = 0.29. gear_large is a 0.09 m radius, 0.02 m thick disc centred
+    exactly on its own axis; gear_small is a 0.03 m radius disc likewise centred, so through_center_of
+    measures offset 0.000000 for both. Centre distance is 0.1195 m against a radius sum of 0.12 m, so
+    the rims overlap by 0.0005 m at every angle, satisfying the required mesh_contact at every sample;
+    the discs clear the boss tops by 0.002 m so both (gear, housing) forbidden pairs stay non-penetrating.
+    Radii are exactly 3:1 and gear_small''s range is exactly three times gear_large''s, so the whole independent
+    range maps inside the dependent range. The coupling is a literal MJCF <equality><joint joint1="gear_small_spin"
+    joint2="gear_large_spin" polycoef="0 3 0 0 0"/></equality> written as a direct child of <robot>. MEASURED
+    ON MuJoCo 3.11.0: URDF cannot express a coupling at all -- <mimic> is silently ignored, <equality>
+    and <tendon> inside <robot>/<mujoco> are silently dropped (neq stays 0), and a second <mujoco> element
+    under <robot> is a hard XML error, so an asset cannot carry its own compiler block beside the standard
+    injection. A bare <equality> under <robot> is likewise silently ignored, so the file still loads as
+    plain URDF, and gold/loader.py lifts it into the compiled model with MjSpec.add_equality after the
+    standard injection.'
+  urdf: "<?xml version=\"1.0\"?>\n<!--\ngold-standard asset for Evo-Articraft P3 (Kinematic Fidelity).\n\
+    CONTROL. Contract B. 3:1 coupling carried by a literal MJCF <equality> element\nsitting as a direct\
+    \ child of <robot> (MuJoCo's URDF reader ignores it; the loader\npromotes it through MjSpec). Every\
+    \ KF predicate must PASS.\n-->\n<robot name=\"gearbox_correct\">\n  <link name=\"housing\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"10.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"housing_base\"><origin xyz=\"0 0 0.01\"\
+    \ rpy=\"0 0 0\"/><geometry><box size=\"0.32 0.2 0.02\"/></geometry></visual>\n    <visual name=\"\
+    housing_boss_large\"><origin xyz=\"-0.06 0 0.149\" rpy=\"0 0 0\"/><geometry><cylinder radius=\"0.008\"\
+    \ length=\"0.258\"/></geometry></visual>\n    <visual name=\"housing_boss_small\"><origin xyz=\"0.0595\
+    \ 0 0.149\" rpy=\"0 0 0\"/><geometry><cylinder radius=\"0.008\" length=\"0.258\"/></geometry></visual>\n\
+    \  </link>\n  <link name=\"gear_large\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass\
+    \ value=\"1.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"gear_large_disc\"><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><geometry><cylinder radius=\"\
+    0.09\" length=\"0.02\"/></geometry></visual>\n  </link>\n  <link name=\"gear_small\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.4\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"gear_small_disc\"><origin xyz=\"0 0\
+    \ 0\" rpy=\"0 0 0\"/><geometry><cylinder radius=\"0.03\" length=\"0.02\"/></geometry></visual>\n \
+    \ </link>\n  <joint name=\"gear_large_spin\" type=\"revolute\">\n    <parent link=\"housing\"/>\n\
+    \    <child link=\"gear_large\"/>\n    <origin xyz=\"-0.06 0 0.29\" rpy=\"0 0 0\"/>\n    <axis xyz=\"\
+    0 0 1\"/>\n    <limit lower=\"-6.283\" upper=\"6.283\" effort=\"100\" velocity=\"1\"/>\n  </joint>\n\
+    \  <joint name=\"gear_small_spin\" type=\"revolute\">\n    <parent link=\"housing\"/>\n    <child\
+    \ link=\"gear_small\"/>\n    <origin xyz=\"0.0595 0 0.29\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 0 1\"\
+    />\n    <limit lower=\"-18.85\" upper=\"18.85\" effort=\"100\" velocity=\"1\"/>\n  </joint>\n  <equality>\n\
+    \    <joint joint1=\"gear_small_spin\" joint2=\"gear_large_spin\" polycoef=\"0 3 0 0 0\"/>\n  </equality>\n\
+    </robot>\n"
+  expected: 'Contract B (gold/contract_B_gearbox.yaml). KF1.parent pass 2/2. KF1.type pass 2/2 hinge.
+    KF1.axis pass -- semantic 2/2 (both xaxis (0,0,1), 0.00 deg from world z), relational 2/2 (symmetry_axis_of
+    a cylinder is its z axis), numeric na. KF1.anchor pass -- through_center_of offset/diag 0.000000 on
+    both gears, far inside anchor_center_offset_max 0.05. KF1.range_and_reference pass 2/2 ([-6.283,6.283]
+    and [-18.850,18.850], both limited, qpos0 0 = states.home). KF1.rigid_follower na (rigid_attachments
+    empty). KF1.fake_joint pass ONLY under a chord-based hinge form: 0.2553/0.18 = 1.42 for gear_large,
+    0.0872/0.06 = 1.45 for gear_small. Under an arc-length form (range span x radius = 1.131 m) the ratios
+    are 0.226 and 0.077, both under travel_scale_min 0.50, and this correct control would FAIL -- so KF1.fake_joint
+    must be slide-only or chord-based for hinges. KF2.bound pass (neq 1, mjEQ_JOINT, active, members exactly
+    the two bound joints). KF2.coefficient pass (eq_data polycoef 0 3 0 0 0, matching dependent = 3.0
+    x independent + 0.0 field for field). KF2.expected_dof pass (nv 2 - rank 1 = 1). KF2.residual pass
+    (max |efc_pos| 0.000000 rad over 41 samples of q_large in [-6.283,6.283] with q_small written as 3
+    q_large, epsilon 0.005). KF3.reachability pass (home reachable). KF3.continuity pass. KF3.motion_semantics
+    pass. KF3.forbidden_pair pass 2/2 (gear-housing penetration 0.000000 m). KF3.required_contact pass
+    (mesh_contact min sd -0.000500 m at every sample). Must score 1.0.'
+- name: cabinet_fake_joint_decoy_geom
+  targets: KF1.fake_joint
+  defect: Relative to cabinet_correct, exactly two things change. The 0.38 x 0.36 x 0.22 drawer_1_tray
+    box is moved out of link drawer_1 and into link cabinet_body (renamed decoy_drawer_1_tray, same origin
+    xyz="0 0.0005 1.06"), so the visible drawer sits exactly where it did and never moves; and link drawer_1
+    is left owning a single 0.02 x 0.02 x 0.02 stub at xyz="0 0.1705 1.06", buried at the back of the
+    cavity where it is hidden inside the decoy tray and overlaps the carcass back panel by 0.0005 m. Joint,
+    axis, limits, handles and door are byte-identical to the control. The stub is deliberately placed
+    so it still satisfies the required stop_contact (swallowed by the decoy tray, min sd -0.02000 m) and
+    still translates 0.24 m under its joint, so an FK-and-AABB motion check on the bound body sees a part
+    that genuinely moves. Only the size ratio gives it away.
+  urdf: "<?xml version=\"1.0\"?>\n<!--\ngold-standard asset for Evo-Articraft P3 (Kinematic Fidelity).\n\
+    DEFECT: drawer_1's jointed body owns only a 20 mm stub buried at the back of the\ncavity; the visible\
+    \ tray is a geom of the static cabinet_body. Targets KF1.fake_joint.\n-->\n<robot name=\"cabinet_fake_joint_decoy_geom\"\
+    >\n  <link name=\"cabinet_body\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"\
+    20.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"carcass_bottom\"><origin xyz=\"0 0 0.01\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.44 0.4 0.02\"/></geometry></visual>\n    <visual name=\"carcass_top\"><origin xyz=\"0 0 1.19\" rpy=\"\
+    0 0 0\"/><geometry><box size=\"0.44 0.4 0.02\"/></geometry></visual>\n    <visual name=\"carcass_left\"\
+    ><origin xyz=\"-0.21 0 0.6\" rpy=\"0 0 0\"/><geometry><box size=\"0.02 0.4 1.16\"/></geometry></visual>\n\
+    \    <visual name=\"carcass_right\"><origin xyz=\"0.21 0 0.6\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.02 0.4 1.16\"/></geometry></visual>\n    <visual name=\"carcass_back\"><origin xyz=\"0 0.19 0.6\"\
+    \ rpy=\"0 0 0\"/><geometry><box size=\"0.4 0.02 1.16\"/></geometry></visual>\n    <visual name=\"\
+    carcass_shelf_a\"><origin xyz=\"0 -0.01 0.93\" rpy=\"0 0 0\"/><geometry><box size=\"0.4 0.38 0.02\"\
+    /></geometry></visual>\n    <visual name=\"carcass_shelf_b\"><origin xyz=\"0 -0.01 0.67\" rpy=\"0\
+    \ 0 0\"/><geometry><box size=\"0.4 0.38 0.02\"/></geometry></visual>\n    <visual name=\"decoy_drawer_1_tray\"\
+    ><origin xyz=\"0 0.0005 1.06\" rpy=\"0 0 0\"/><geometry><box size=\"0.38 0.36 0.22\"/></geometry></visual>\n\
+    \  </link>\n  <link name=\"drawer_1\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"\
+    3.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"drawer_1_stub\"><origin xyz=\"0 0.1705 1.06\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.02 0.02 0.02\"/></geometry></visual>\n  </link>\n  <link name=\"drawer_2\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"3.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"drawer_2_tray\"><origin xyz=\"0 0.0005\
+    \ 0.8\" rpy=\"0 0 0\"/><geometry><box size=\"0.38 0.36 0.22\"/></geometry></visual>\n  </link>\n \
+    \ <link name=\"handle_1\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.3\"\
+    /><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n   \
+    \ <visual name=\"handle_1_bar\"><origin xyz=\"0 0 0\" rpy=\"0 1.5708 0\"/><geometry><cylinder radius=\"\
+    0.012\" length=\"0.23\"/></geometry></visual>\n  </link>\n  <link name=\"handle_2\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.3\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"handle_2_bar\"><origin xyz=\"0 0 0\"\
+    \ rpy=\"0 1.5708 0\"/><geometry><cylinder radius=\"0.012\" length=\"0.23\"/></geometry></visual>\n\
+    \  </link>\n  <link name=\"door\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"\
+    4.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"door_panel\"><origin xyz=\"-0.2155 0 0.34\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.43 0.02 0.62\"/></geometry></visual>\n  </link>\n  <link name=\"door_knob\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.2\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"door_knob_ball\"><origin xyz=\"0 0\
+    \ 0\" rpy=\"0 0 0\"/><geometry><sphere radius=\"0.02\"/></geometry></visual>\n  </link>\n  <joint\
+    \ name=\"drawer_1_slide\" type=\"prismatic\">\n    <parent link=\"cabinet_body\"/>\n    <child link=\"\
+    drawer_1\"/>\n    <origin xyz=\"0 0 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 -1 0\"/>\n    <limit lower=\"\
+    0\" upper=\"0.24\" effort=\"100\" velocity=\"1\"/>\n  </joint>\n  <joint name=\"drawer_2_slide\" type=\"\
+    prismatic\">\n    <parent link=\"cabinet_body\"/>\n    <child link=\"drawer_2\"/>\n    <origin xyz=\"\
+    0 0 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 -1 0\"/>\n    <limit lower=\"0\" upper=\"0.24\" effort=\"\
+    100\" velocity=\"1\"/>\n  </joint>\n  <joint name=\"handle_1_fix\" type=\"fixed\">\n    <parent link=\"\
+    drawer_1\"/>\n    <child link=\"handle_1\"/>\n    <origin xyz=\"0 -0.1905 1.06\" rpy=\"0 0 0\"/>\n\
+    \  </joint>\n  <joint name=\"handle_2_fix\" type=\"fixed\">\n    <parent link=\"drawer_2\"/>\n   \
+    \ <child link=\"handle_2\"/>\n    <origin xyz=\"0 -0.1905 0.8\" rpy=\"0 0 0\"/>\n  </joint>\n  <joint\
+    \ name=\"door_hinge\" type=\"revolute\">\n    <parent link=\"cabinet_body\"/>\n    <child link=\"\
+    door\"/>\n    <origin xyz=\"0.2155 -0.2095 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 0 1\"/>\n    <limit\
+    \ lower=\"0\" upper=\"2.094\" effort=\"100\" velocity=\"1\"/>\n  </joint>\n  <joint name=\"door_knob_fix\"\
+    \ type=\"fixed\">\n    <parent link=\"door\"/>\n    <child link=\"door_knob\"/>\n    <origin xyz=\"\
+    -0.3855 -0.02 0.34\" rpy=\"0 0 0\"/>\n  </joint>\n</robot>\n"
+  expected: 'Contract A. KF1.fake_joint FAIL -- drawer_1''s child AABB diagonal 0.0346 m against a declared
+    travel of 0.240 m, ratio 0.144, below travel_scale_min 0.50. Evidence: bound body drawer_1, geom count
+    1, half-extents (0.01,0.01,0.01), ratio 0.144, threshold 0.50, control value 2.366. EVERYTHING ELSE
+    PASSES, and that is the point of this asset: KF1.parent pass, KF1.type pass, KF1.axis pass, KF1.anchor
+    pass, KF1.range_and_reference pass, KF1.rigid_follower pass (handle_1 still rides the stub, drift
+    0.000000), KF2.* na, KF3.reachability pass, KF3.continuity pass, KF3.motion_semantics PASS (the stub
+    really does translate, so the restated ''changing qpos with a visually stationary part'' predicate
+    does not fire, and retention is 1.0000 -- if your implementation fails here it is measuring the decoy
+    geom instead of the bound body), KF3.forbidden_pair pass 3/3 (+0.14000, +0.41761, +0.04000 m), KF3.required_contact
+    pass 3/3 (drawer_1 min sd -0.02000 m at closed). Exactly one predicate must fire.'
+- name: cabinet_drawer_flies_out
+  targets: retention (proposed KF3.motion_semantics sub-clause); under P0/P3 as literally frozen, none
+  defect: 'Relative to cabinet_correct: drawer_1''s tray is shortened from 0.36 to 0.30 m deep (size 0.38
+    0.3 0.22, origin y moved to -0.0295 so the closed pose still seats against a stop), a 0.40 x 0.06
+    x 0.22 filler block is added to cabinet_body at y in [0.12,0.18] making drawer_1''s cavity exactly
+    0.32 m deep, and drawer_1_slide''s limit upper is raised from 0.24 to 0.40. This asset uses contract
+    A-prime (gold/contract_A_prime_cabinet.yaml), which declares drawer_1_slide range 0..0.40 and states.open
+    0.40, so the model range still matches the declared range exactly and KF1.range_and_reference cannot
+    fire. At q1 = 0.40 the tray occupies y in [-0.5795,-0.2795] while the carcass ends at y = -0.20: the
+    drawer has left its carcass completely with a 0.0795 m air gap, and the AABB overlap fraction with
+    the carcass falls to 0.0000 for every q1 >= 0.32 m. Nothing penetrates, no declared contact is lost,
+    and the child AABB diagonal is 0.5318 m against a 0.40 m travel, ratio 1.329, so the fake-joint size
+    test passes as well.'
+  urdf: "<?xml version=\"1.0\"?>\n<!--\ngold-standard asset for Evo-Articraft P3 (Kinematic Fidelity).\n\
+    DEFECT: drawer_1 is 0.30 deep in a 0.32 deep cavity yet travels 0.40; at `open`\nthe tray has left\
+    \ the carcass entirely. Contract A-prime (drawer_1 travel 0.40).\n-->\n<robot name=\"cabinet_drawer_flies_out\"\
+    >\n  <link name=\"cabinet_body\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"\
+    20.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"carcass_bottom\"><origin xyz=\"0 0 0.01\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.44 0.4 0.02\"/></geometry></visual>\n    <visual name=\"carcass_top\"><origin xyz=\"0 0 1.19\" rpy=\"\
+    0 0 0\"/><geometry><box size=\"0.44 0.4 0.02\"/></geometry></visual>\n    <visual name=\"carcass_left\"\
+    ><origin xyz=\"-0.21 0 0.6\" rpy=\"0 0 0\"/><geometry><box size=\"0.02 0.4 1.16\"/></geometry></visual>\n\
+    \    <visual name=\"carcass_right\"><origin xyz=\"0.21 0 0.6\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.02 0.4 1.16\"/></geometry></visual>\n    <visual name=\"carcass_back\"><origin xyz=\"0 0.19 0.6\"\
+    \ rpy=\"0 0 0\"/><geometry><box size=\"0.4 0.02 1.16\"/></geometry></visual>\n    <visual name=\"\
+    carcass_shelf_a\"><origin xyz=\"0 -0.01 0.93\" rpy=\"0 0 0\"/><geometry><box size=\"0.4 0.38 0.02\"\
+    /></geometry></visual>\n    <visual name=\"carcass_shelf_b\"><origin xyz=\"0 -0.01 0.67\" rpy=\"0\
+    \ 0 0\"/><geometry><box size=\"0.4 0.38 0.02\"/></geometry></visual>\n    <visual name=\"carcass_d1_filler\"\
+    ><origin xyz=\"0 0.15 1.06\" rpy=\"0 0 0\"/><geometry><box size=\"0.4 0.06 0.22\"/></geometry></visual>\n\
+    \  </link>\n  <link name=\"drawer_1\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"\
+    3.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"drawer_1_tray\"><origin xyz=\"0 -0.0295 1.06\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.38 0.3 0.22\"/></geometry></visual>\n  </link>\n  <link name=\"drawer_2\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"3.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"drawer_2_tray\"><origin xyz=\"0 0.0005\
+    \ 0.8\" rpy=\"0 0 0\"/><geometry><box size=\"0.38 0.36 0.22\"/></geometry></visual>\n  </link>\n \
+    \ <link name=\"handle_1\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.3\"\
+    /><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n   \
+    \ <visual name=\"handle_1_bar\"><origin xyz=\"0 0 0\" rpy=\"0 1.5708 0\"/><geometry><cylinder radius=\"\
+    0.012\" length=\"0.23\"/></geometry></visual>\n  </link>\n  <link name=\"handle_2\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.3\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"handle_2_bar\"><origin xyz=\"0 0 0\"\
+    \ rpy=\"0 1.5708 0\"/><geometry><cylinder radius=\"0.012\" length=\"0.23\"/></geometry></visual>\n\
+    \  </link>\n  <link name=\"door\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"\
+    4.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"door_panel\"><origin xyz=\"-0.2155 0 0.34\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.43 0.02 0.62\"/></geometry></visual>\n  </link>\n  <link name=\"door_knob\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.2\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"door_knob_ball\"><origin xyz=\"0 0\
+    \ 0\" rpy=\"0 0 0\"/><geometry><sphere radius=\"0.02\"/></geometry></visual>\n  </link>\n  <joint\
+    \ name=\"drawer_1_slide\" type=\"prismatic\">\n    <parent link=\"cabinet_body\"/>\n    <child link=\"\
+    drawer_1\"/>\n    <origin xyz=\"0 0 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 -1 0\"/>\n    <limit lower=\"\
+    0\" upper=\"0.4\" effort=\"100\" velocity=\"1\"/>\n  </joint>\n  <joint name=\"drawer_2_slide\" type=\"\
+    prismatic\">\n    <parent link=\"cabinet_body\"/>\n    <child link=\"drawer_2\"/>\n    <origin xyz=\"\
+    0 0 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 -1 0\"/>\n    <limit lower=\"0\" upper=\"0.24\" effort=\"\
+    100\" velocity=\"1\"/>\n  </joint>\n  <joint name=\"handle_1_fix\" type=\"fixed\">\n    <parent link=\"\
+    drawer_1\"/>\n    <child link=\"handle_1\"/>\n    <origin xyz=\"0 -0.1905 1.06\" rpy=\"0 0 0\"/>\n\
+    \  </joint>\n  <joint name=\"handle_2_fix\" type=\"fixed\">\n    <parent link=\"drawer_2\"/>\n   \
+    \ <child link=\"handle_2\"/>\n    <origin xyz=\"0 -0.1905 0.8\" rpy=\"0 0 0\"/>\n  </joint>\n  <joint\
+    \ name=\"door_hinge\" type=\"revolute\">\n    <parent link=\"cabinet_body\"/>\n    <child link=\"\
+    door\"/>\n    <origin xyz=\"0.2155 -0.2095 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 0 1\"/>\n    <limit\
+    \ lower=\"0\" upper=\"2.094\" effort=\"100\" velocity=\"1\"/>\n  </joint>\n  <joint name=\"door_knob_fix\"\
+    \ type=\"fixed\">\n    <parent link=\"door\"/>\n    <child link=\"door_knob\"/>\n    <origin xyz=\"\
+    -0.3855 -0.02 0.34\" rpy=\"0 0 0\"/>\n  </joint>\n</robot>\n"
+  expected: 'Contract A-prime. THIS ASSET IS THE SPEC-GAP PROBE. Under P0 revision 2026-08-19 and P3 as
+    literally written, every predicate passes and it scores 1.0: KF1.parent pass, KF1.type pass, KF1.axis
+    pass, KF1.anchor pass (door untouched, fraction 1.0000), KF1.range_and_reference PASS (model [0,0.40]
+    equals declared [0,0.40]), KF1.rigid_follower pass (drift 0.000000), KF1.fake_joint PASS (0.5318/0.400
+    = 1.329 >= 0.50), KF2.* na, KF3.reachability pass, KF3.continuity pass, KF3.forbidden_pair pass 3/3
+    (+0.04000, +0.30000, +0.04000 m), KF3.required_contact pass 3/3 (-0.00050 m at closed). The intended
+    verdict is KF3.motion_semantics FAIL through a retention clause that must be ADDED to the spec: for
+    every part declared `inside` X in part_relations, the AABB overlap fraction with X must stay >= tolerances.retention_overlap_min
+    (proposed 0.10) over the whole sweep. Measured here: 0.0000 at q1 = 0.35 m, first failing q1 = 0.32
+    m. Separation is wide -- cabinet_correct measures 0.3903 and cabinet_range_too_small 0.9458. If your
+    implementation scores this 1.0, that is executable evidence the retention clause is missing, not a
+    verifier bug.'
+- name: cabinet_wrong_parent
+  targets: KF1.parent
+  defect: 'One line differs from cabinet_correct: drawer_2_slide''s <parent link="cabinet_body"/> becomes
+    <parent link="drawer_1"/>. Because drawer_1''s link frame coincides with the world frame at q = 0
+    and the joint origin stays xyz="0 0 0", every part sits in exactly the same world pose at the zero
+    configuration; the model differs only in the body parent graph. The consequence is that drawer_2''s
+    travel composes with drawer_1''s, so at (q1,q2) = (0.24,0.24) drawer_2 has moved 0.48 m out of a 0.38
+    m deep cavity.'
+  urdf: "<?xml version=\"1.0\"?>\n<!--\ngold-standard asset for Evo-Articraft P3 (Kinematic Fidelity).\n\
+    DEFECT: drawer_2_slide hangs off drawer_1 instead of cabinet_body. Targets KF1.parent.\n-->\n<robot\
+    \ name=\"cabinet_wrong_parent\">\n  <link name=\"cabinet_body\">\n    <inertial><origin xyz=\"0 0\
+    \ 0\" rpy=\"0 0 0\"/><mass value=\"20.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\"\
+    \ iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"carcass_bottom\"><origin xyz=\"0 0 0.01\"\
+    \ rpy=\"0 0 0\"/><geometry><box size=\"0.44 0.4 0.02\"/></geometry></visual>\n    <visual name=\"\
+    carcass_top\"><origin xyz=\"0 0 1.19\" rpy=\"0 0 0\"/><geometry><box size=\"0.44 0.4 0.02\"/></geometry></visual>\n\
+    \    <visual name=\"carcass_left\"><origin xyz=\"-0.21 0 0.6\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.02 0.4 1.16\"/></geometry></visual>\n    <visual name=\"carcass_right\"><origin xyz=\"0.21 0 0.6\"\
+    \ rpy=\"0 0 0\"/><geometry><box size=\"0.02 0.4 1.16\"/></geometry></visual>\n    <visual name=\"\
+    carcass_back\"><origin xyz=\"0 0.19 0.6\" rpy=\"0 0 0\"/><geometry><box size=\"0.4 0.02 1.16\"/></geometry></visual>\n\
+    \    <visual name=\"carcass_shelf_a\"><origin xyz=\"0 -0.01 0.93\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.4 0.38 0.02\"/></geometry></visual>\n    <visual name=\"carcass_shelf_b\"><origin xyz=\"0 -0.01\
+    \ 0.67\" rpy=\"0 0 0\"/><geometry><box size=\"0.4 0.38 0.02\"/></geometry></visual>\n  </link>\n \
+    \ <link name=\"drawer_1\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"3.0\"\
+    /><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n   \
+    \ <visual name=\"drawer_1_tray\"><origin xyz=\"0 0.0005 1.06\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.38 0.36 0.22\"/></geometry></visual>\n  </link>\n  <link name=\"drawer_2\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"3.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"drawer_2_tray\"><origin xyz=\"0 0.0005\
+    \ 0.8\" rpy=\"0 0 0\"/><geometry><box size=\"0.38 0.36 0.22\"/></geometry></visual>\n  </link>\n \
+    \ <link name=\"handle_1\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.3\"\
+    /><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n   \
+    \ <visual name=\"handle_1_bar\"><origin xyz=\"0 0 0\" rpy=\"0 1.5708 0\"/><geometry><cylinder radius=\"\
+    0.012\" length=\"0.23\"/></geometry></visual>\n  </link>\n  <link name=\"handle_2\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.3\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"handle_2_bar\"><origin xyz=\"0 0 0\"\
+    \ rpy=\"0 1.5708 0\"/><geometry><cylinder radius=\"0.012\" length=\"0.23\"/></geometry></visual>\n\
+    \  </link>\n  <link name=\"door\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"\
+    4.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"door_panel\"><origin xyz=\"-0.2155 0 0.34\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.43 0.02 0.62\"/></geometry></visual>\n  </link>\n  <link name=\"door_knob\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.2\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"door_knob_ball\"><origin xyz=\"0 0\
+    \ 0\" rpy=\"0 0 0\"/><geometry><sphere radius=\"0.02\"/></geometry></visual>\n  </link>\n  <joint\
+    \ name=\"drawer_1_slide\" type=\"prismatic\">\n    <parent link=\"cabinet_body\"/>\n    <child link=\"\
+    drawer_1\"/>\n    <origin xyz=\"0 0 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 -1 0\"/>\n    <limit lower=\"\
+    0\" upper=\"0.24\" effort=\"100\" velocity=\"1\"/>\n  </joint>\n  <joint name=\"drawer_2_slide\" type=\"\
+    prismatic\">\n    <parent link=\"drawer_1\"/>\n    <child link=\"drawer_2\"/>\n    <origin xyz=\"\
+    0 0 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 -1 0\"/>\n    <limit lower=\"0\" upper=\"0.24\" effort=\"\
+    100\" velocity=\"1\"/>\n  </joint>\n  <joint name=\"handle_1_fix\" type=\"fixed\">\n    <parent link=\"\
+    drawer_1\"/>\n    <child link=\"handle_1\"/>\n    <origin xyz=\"0 -0.1905 1.06\" rpy=\"0 0 0\"/>\n\
+    \  </joint>\n  <joint name=\"handle_2_fix\" type=\"fixed\">\n    <parent link=\"drawer_2\"/>\n   \
+    \ <child link=\"handle_2\"/>\n    <origin xyz=\"0 -0.1905 0.8\" rpy=\"0 0 0\"/>\n  </joint>\n  <joint\
+    \ name=\"door_hinge\" type=\"revolute\">\n    <parent link=\"cabinet_body\"/>\n    <child link=\"\
+    door\"/>\n    <origin xyz=\"0.2155 -0.2095 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 0 1\"/>\n    <limit\
+    \ lower=\"0\" upper=\"2.094\" effort=\"100\" velocity=\"1\"/>\n  </joint>\n  <joint name=\"door_knob_fix\"\
+    \ type=\"fixed\">\n    <parent link=\"door\"/>\n    <child link=\"door_knob\"/>\n    <origin xyz=\"\
+    -0.3855 -0.02 0.34\" rpy=\"0 0 0\"/>\n  </joint>\n</robot>\n"
+  expected: 'Contract A. KF1.parent FAIL -- 1 of 3 claims: drawer_2_slide''s model parent body is drawer_1,
+    the contract declares cabinet_body. Evidence: joint drawer_2_slide, model_parent drawer_1, declared_parent
+    cabinet_body, chain drawer_2 -> drawer_1 -> cabinet_body -> world. KF1.type pass, KF1.axis pass, KF1.anchor
+    pass, KF1.range_and_reference pass, KF1.rigid_follower pass (handle_2 still rides drawer_2, drift
+    0.000000), KF1.fake_joint pass (2.366 both drawers), KF2.* na, KF3.reachability pass, KF3.continuity
+    pass, KF3.forbidden_pair pass 3/3 (+0.04000, +0.30000, +0.04000 m), KF3.required_contact pass 3/3
+    (the min over the closed-classified samples is still -0.00050 m because scope named_parts admits the
+    q1 = 0 sample -- an implementation that takes a max or a mean over the state instead of a min will
+    wrongly fail here). SECOND EXPECTED FAILURE if the retention clause is implemented: KF3.motion_semantics
+    FAIL, drawer_2 AABB overlap 0.0000 at (q1,q2) = (0.15,0.24). That overlap between KF1.parent and retention
+    is real, not an artefact -- a wrongly parented drawer genuinely does leave its carcass -- and should
+    be reported as two failing claims rather than deduplicated.'
+- name: cabinet_wrong_joint_type
+  targets: KF1.type
+  defect: 'Two attributes differ from cabinet_correct: door_hinge''s type becomes "prismatic" and its
+    axis becomes "0 0 -1". The joint origin, panel geometry, limits (0..2.094) and knob are untouched,
+    so the closed pose is identical and the numeric range still matches the declared min/max exactly.
+    The axis is still parallel to world z, which is what the contract''s semantic (vertical) and relational
+    (interface_line) forms both assert, so the axis claim cannot fire either. The sign is negative so
+    the panel slides straight down out of the building rather than up through the drawer cavities, which
+    keeps both (door, drawer_i) forbidden pairs clear and isolates the defect to the joint type alone.'
+  urdf: "<?xml version=\"1.0\"?>\n<!--\ngold-standard asset for Evo-Articraft P3 (Kinematic Fidelity).\n\
+    DEFECT: door_hinge is prismatic (sliding straight down the declared vertical axis)\ninstead of revolute;\
+    \ the numeric range is kept at 0..2.094 so only the type differs.\nTargets KF1.type.\n-->\n<robot\
+    \ name=\"cabinet_wrong_joint_type\">\n  <link name=\"cabinet_body\">\n    <inertial><origin xyz=\"\
+    0 0 0\" rpy=\"0 0 0\"/><mass value=\"20.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\"\
+    \ iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"carcass_bottom\"><origin xyz=\"0 0 0.01\"\
+    \ rpy=\"0 0 0\"/><geometry><box size=\"0.44 0.4 0.02\"/></geometry></visual>\n    <visual name=\"\
+    carcass_top\"><origin xyz=\"0 0 1.19\" rpy=\"0 0 0\"/><geometry><box size=\"0.44 0.4 0.02\"/></geometry></visual>\n\
+    \    <visual name=\"carcass_left\"><origin xyz=\"-0.21 0 0.6\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.02 0.4 1.16\"/></geometry></visual>\n    <visual name=\"carcass_right\"><origin xyz=\"0.21 0 0.6\"\
+    \ rpy=\"0 0 0\"/><geometry><box size=\"0.02 0.4 1.16\"/></geometry></visual>\n    <visual name=\"\
+    carcass_back\"><origin xyz=\"0 0.19 0.6\" rpy=\"0 0 0\"/><geometry><box size=\"0.4 0.02 1.16\"/></geometry></visual>\n\
+    \    <visual name=\"carcass_shelf_a\"><origin xyz=\"0 -0.01 0.93\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.4 0.38 0.02\"/></geometry></visual>\n    <visual name=\"carcass_shelf_b\"><origin xyz=\"0 -0.01\
+    \ 0.67\" rpy=\"0 0 0\"/><geometry><box size=\"0.4 0.38 0.02\"/></geometry></visual>\n  </link>\n \
+    \ <link name=\"drawer_1\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"3.0\"\
+    /><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n   \
+    \ <visual name=\"drawer_1_tray\"><origin xyz=\"0 0.0005 1.06\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.38 0.36 0.22\"/></geometry></visual>\n  </link>\n  <link name=\"drawer_2\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"3.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"drawer_2_tray\"><origin xyz=\"0 0.0005\
+    \ 0.8\" rpy=\"0 0 0\"/><geometry><box size=\"0.38 0.36 0.22\"/></geometry></visual>\n  </link>\n \
+    \ <link name=\"handle_1\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.3\"\
+    /><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n   \
+    \ <visual name=\"handle_1_bar\"><origin xyz=\"0 0 0\" rpy=\"0 1.5708 0\"/><geometry><cylinder radius=\"\
+    0.012\" length=\"0.23\"/></geometry></visual>\n  </link>\n  <link name=\"handle_2\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.3\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"handle_2_bar\"><origin xyz=\"0 0 0\"\
+    \ rpy=\"0 1.5708 0\"/><geometry><cylinder radius=\"0.012\" length=\"0.23\"/></geometry></visual>\n\
+    \  </link>\n  <link name=\"door\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"\
+    4.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"door_panel\"><origin xyz=\"-0.2155 0 0.34\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.43 0.02 0.62\"/></geometry></visual>\n  </link>\n  <link name=\"door_knob\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.2\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"door_knob_ball\"><origin xyz=\"0 0\
+    \ 0\" rpy=\"0 0 0\"/><geometry><sphere radius=\"0.02\"/></geometry></visual>\n  </link>\n  <joint\
+    \ name=\"drawer_1_slide\" type=\"prismatic\">\n    <parent link=\"cabinet_body\"/>\n    <child link=\"\
+    drawer_1\"/>\n    <origin xyz=\"0 0 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 -1 0\"/>\n    <limit lower=\"\
+    0\" upper=\"0.24\" effort=\"100\" velocity=\"1\"/>\n  </joint>\n  <joint name=\"drawer_2_slide\" type=\"\
+    prismatic\">\n    <parent link=\"cabinet_body\"/>\n    <child link=\"drawer_2\"/>\n    <origin xyz=\"\
+    0 0 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 -1 0\"/>\n    <limit lower=\"0\" upper=\"0.24\" effort=\"\
+    100\" velocity=\"1\"/>\n  </joint>\n  <joint name=\"handle_1_fix\" type=\"fixed\">\n    <parent link=\"\
+    drawer_1\"/>\n    <child link=\"handle_1\"/>\n    <origin xyz=\"0 -0.1905 1.06\" rpy=\"0 0 0\"/>\n\
+    \  </joint>\n  <joint name=\"handle_2_fix\" type=\"fixed\">\n    <parent link=\"drawer_2\"/>\n   \
+    \ <child link=\"handle_2\"/>\n    <origin xyz=\"0 -0.1905 0.8\" rpy=\"0 0 0\"/>\n  </joint>\n  <joint\
+    \ name=\"door_hinge\" type=\"prismatic\">\n    <parent link=\"cabinet_body\"/>\n    <child link=\"\
+    door\"/>\n    <origin xyz=\"0.2155 -0.2095 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 0 -1\"/>\n    <limit\
+    \ lower=\"0\" upper=\"2.094\" effort=\"100\" velocity=\"1\"/>\n  </joint>\n  <joint name=\"door_knob_fix\"\
+    \ type=\"fixed\">\n    <parent link=\"door\"/>\n    <child link=\"door_knob\"/>\n    <origin xyz=\"\
+    -0.3855 -0.02 0.34\" rpy=\"0 0 0\"/>\n  </joint>\n</robot>\n"
+  expected: 'Contract A. KF1.type FAIL -- 1 of 3 claims: door_hinge compiles to mjJNT_SLIDE, the contract
+    declares hinge. Evidence: joint door_hinge, model_type slide, declared_type hinge, jnt_limited 1,
+    jnt_range [0,2.094]. KF1.parent pass. KF1.axis PASS (xaxis (0,0,-1), 0.00 deg from world z, |cos|
+    = 1 against the interface_line reference). KF1.range_and_reference PASS (numeric range unchanged).
+    KF1.rigid_follower pass (door_knob still rides the door). KF1.fake_joint pass. KF2.* na. KF3.reachability
+    pass. KF3.continuity pass. KF3.motion_semantics PASS or na -- a MuJoCo slide is pure translation by
+    construction, so the ''a slide introduces no extra rotation'' bullet is a tautology here and must
+    not be counted as a detection. KF3.forbidden_pair pass 3/3 (+0.04000, +0.30000, +0.04000 m). KF3.required_contact
+    pass 3/3 (-0.00050 m at closed). KF1.anchor: SPEC DECISION REQUIRED -- the contract declares hinge
+    with on_edge_of: door but the bound joint is a slide. Evaluated on the model joint''s axis line the
+    fraction is 1.0000 (pass); evaluated on the declared type it is na. Either is acceptable; a FAIL here
+    double-counts the type defect.'
+- name: cabinet_hinge_through_middle
+  targets: KF1.anchor
+  defect: 'Relative to cabinet_correct the door pivot moves from the panel''s right edge to its vertical
+    centreline: door_hinge''s origin becomes xyz="0 -0.2095 0", the door_panel visual origin is compensated
+    from xyz="-0.2155 0 0.34" to xyz="0 0 0.34", and door_knob_fix''s origin is compensated from xyz="-0.3855
+    -0.02 0.34" to xyz="-0.17 -0.02 0.34". Every world pose at q = 0 is bit-identical to the control.
+    This is precisely the fault the previous attempt could not detect: moving a joint origin normally
+    carries the child geometry with it, so a model-internal comparison becomes a tautology. Compensating
+    the child turns the defect into a pure pivot-versus-geometry relation, which is exactly what the reference-frame-free
+    on_edge_of predicate measures. Physically the panel now scissors about its own middle, half swinging
+    out and half swinging into the carcass.'
+  urdf: "<?xml version=\"1.0\"?>\n<!--\ngold-standard asset for Evo-Articraft P3 (Kinematic Fidelity).\n\
+    DEFECT: the door pivot sits on the panel's vertical centreline, not its edge; the\nclosed pose is\
+    \ bit-identical to the control. Targets KF1.anchor.\n-->\n<robot name=\"cabinet_hinge_through_middle\"\
+    >\n  <link name=\"cabinet_body\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"\
+    20.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"carcass_bottom\"><origin xyz=\"0 0 0.01\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.44 0.4 0.02\"/></geometry></visual>\n    <visual name=\"carcass_top\"><origin xyz=\"0 0 1.19\" rpy=\"\
+    0 0 0\"/><geometry><box size=\"0.44 0.4 0.02\"/></geometry></visual>\n    <visual name=\"carcass_left\"\
+    ><origin xyz=\"-0.21 0 0.6\" rpy=\"0 0 0\"/><geometry><box size=\"0.02 0.4 1.16\"/></geometry></visual>\n\
+    \    <visual name=\"carcass_right\"><origin xyz=\"0.21 0 0.6\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.02 0.4 1.16\"/></geometry></visual>\n    <visual name=\"carcass_back\"><origin xyz=\"0 0.19 0.6\"\
+    \ rpy=\"0 0 0\"/><geometry><box size=\"0.4 0.02 1.16\"/></geometry></visual>\n    <visual name=\"\
+    carcass_shelf_a\"><origin xyz=\"0 -0.01 0.93\" rpy=\"0 0 0\"/><geometry><box size=\"0.4 0.38 0.02\"\
+    /></geometry></visual>\n    <visual name=\"carcass_shelf_b\"><origin xyz=\"0 -0.01 0.67\" rpy=\"0\
+    \ 0 0\"/><geometry><box size=\"0.4 0.38 0.02\"/></geometry></visual>\n  </link>\n  <link name=\"drawer_1\"\
+    >\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"3.0\"/><inertia ixx=\"0.01\" ixy=\"\
+    0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"drawer_1_tray\"\
+    ><origin xyz=\"0 0.0005 1.06\" rpy=\"0 0 0\"/><geometry><box size=\"0.38 0.36 0.22\"/></geometry></visual>\n\
+    \  </link>\n  <link name=\"drawer_2\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"\
+    3.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"drawer_2_tray\"><origin xyz=\"0 0.0005 0.8\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.38 0.36 0.22\"/></geometry></visual>\n  </link>\n  <link name=\"handle_1\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.3\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"handle_1_bar\"><origin xyz=\"0 0 0\"\
+    \ rpy=\"0 1.5708 0\"/><geometry><cylinder radius=\"0.012\" length=\"0.23\"/></geometry></visual>\n\
+    \  </link>\n  <link name=\"handle_2\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"\
+    0.3\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"handle_2_bar\"><origin xyz=\"0 0 0\" rpy=\"0 1.5708 0\"/><geometry><cylinder radius=\"\
+    0.012\" length=\"0.23\"/></geometry></visual>\n  </link>\n  <link name=\"door\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"4.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"door_panel\"><origin xyz=\"0 0 0.34\"\
+    \ rpy=\"0 0 0\"/><geometry><box size=\"0.43 0.02 0.62\"/></geometry></visual>\n  </link>\n  <link\
+    \ name=\"door_knob\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.2\"/><inertia\
+    \ ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"\
+    door_knob_ball\"><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><geometry><sphere radius=\"0.02\"/></geometry></visual>\n\
+    \  </link>\n  <joint name=\"drawer_1_slide\" type=\"prismatic\">\n    <parent link=\"cabinet_body\"\
+    />\n    <child link=\"drawer_1\"/>\n    <origin xyz=\"0 0 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 -1\
+    \ 0\"/>\n    <limit lower=\"0\" upper=\"0.24\" effort=\"100\" velocity=\"1\"/>\n  </joint>\n  <joint\
+    \ name=\"drawer_2_slide\" type=\"prismatic\">\n    <parent link=\"cabinet_body\"/>\n    <child link=\"\
+    drawer_2\"/>\n    <origin xyz=\"0 0 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 -1 0\"/>\n    <limit lower=\"\
+    0\" upper=\"0.24\" effort=\"100\" velocity=\"1\"/>\n  </joint>\n  <joint name=\"handle_1_fix\" type=\"\
+    fixed\">\n    <parent link=\"drawer_1\"/>\n    <child link=\"handle_1\"/>\n    <origin xyz=\"0 -0.1905\
+    \ 1.06\" rpy=\"0 0 0\"/>\n  </joint>\n  <joint name=\"handle_2_fix\" type=\"fixed\">\n    <parent\
+    \ link=\"drawer_2\"/>\n    <child link=\"handle_2\"/>\n    <origin xyz=\"0 -0.1905 0.8\" rpy=\"0 0\
+    \ 0\"/>\n  </joint>\n  <joint name=\"door_hinge\" type=\"revolute\">\n    <parent link=\"cabinet_body\"\
+    />\n    <child link=\"door\"/>\n    <origin xyz=\"0 -0.2095 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"\
+    0 0 1\"/>\n    <limit lower=\"0\" upper=\"2.094\" effort=\"100\" velocity=\"1\"/>\n  </joint>\n  <joint\
+    \ name=\"door_knob_fix\" type=\"fixed\">\n    <parent link=\"door\"/>\n    <child link=\"door_knob\"\
+    />\n    <origin xyz=\"-0.17 -0.02 0.34\" rpy=\"0 0 0\"/>\n  </joint>\n</robot>\n"
+  expected: 'Contract A. KF1.anchor FAIL -- door_hinge, predicate on_edge_of(door), best same-side vertex
+    fraction 0.5000 over all candidate planes containing the axis, below anchor_side_fraction_min 0.95.
+    Evidence: xanchor (0.0000,-0.2095,0.0000), xaxis (0,0,1), part x-extent [-0.215,0.215], fraction 0.5000,
+    threshold 0.95, control value 1.0000. Everything else passes: KF1.parent pass, KF1.type pass, KF1.axis
+    PASS (unchanged, xaxis (0,0,1) -- this is the asset that proves anchor is independent of axis), KF1.range_and_reference
+    pass, KF1.rigid_follower pass (drift 0.000000, the knob was compensated so it still rides the panel
+    exactly), KF1.fake_joint pass, KF2.* na, KF3.reachability pass, KF3.continuity pass, KF3.motion_semantics
+    pass, KF3.forbidden_pair pass 3/3 (+0.04000, +0.30000, +0.04000 m -- the half of the panel that swings
+    inward sweeps only the door compartment, whose z-band never meets a drawer), KF3.required_contact
+    pass 3/3 (-0.00050 m at closed). Note (door, cabinet_body) is not a forbidden pair, so the inward
+    half-swing must produce no extra failure.'
+- name: cabinet_axis_rotated_90
+  targets: KF1.axis
+  defect: 'One attribute differs from cabinet_correct: drawer_1_slide''s axis becomes "1 0 0" instead
+    of "0 -1 0". The drawer now slides sideways out through the right-hand side panel rather than forward
+    out of the opening. Geometry, joint origin, limits and all other parts are untouched. This asset is
+    deliberately chosen to be invisible to the semantic axis form: +x is just as horizontal as -y, so
+    semantic: horizontal still holds and only the relational form -- interface_normal from cabinet_body
+    to drawer_1, which resolves to the mating-face normal +/-y -- can see the error. (door, drawer_1)
+    stays clear because drawer_1''s z-band never meets the door''s, and (drawer_1, cabinet_body) is a
+    required pair rather than a forbidden one, so ploughing through the side panel produces no second
+    failure.'
+  urdf: "<?xml version=\"1.0\"?>\n<!--\ngold-standard asset for Evo-Articraft P3 (Kinematic Fidelity).\n\
+    DEFECT: drawer_1 slides sideways (+x) instead of outward (-y). Still `horizontal`,\nso only the relational\
+    \ sub-claim can catch it. Targets KF1.axis.\n-->\n<robot name=\"cabinet_axis_rotated_90\">\n  <link\
+    \ name=\"cabinet_body\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"20.0\"\
+    /><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n   \
+    \ <visual name=\"carcass_bottom\"><origin xyz=\"0 0 0.01\" rpy=\"0 0 0\"/><geometry><box size=\"0.44\
+    \ 0.4 0.02\"/></geometry></visual>\n    <visual name=\"carcass_top\"><origin xyz=\"0 0 1.19\" rpy=\"\
+    0 0 0\"/><geometry><box size=\"0.44 0.4 0.02\"/></geometry></visual>\n    <visual name=\"carcass_left\"\
+    ><origin xyz=\"-0.21 0 0.6\" rpy=\"0 0 0\"/><geometry><box size=\"0.02 0.4 1.16\"/></geometry></visual>\n\
+    \    <visual name=\"carcass_right\"><origin xyz=\"0.21 0 0.6\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.02 0.4 1.16\"/></geometry></visual>\n    <visual name=\"carcass_back\"><origin xyz=\"0 0.19 0.6\"\
+    \ rpy=\"0 0 0\"/><geometry><box size=\"0.4 0.02 1.16\"/></geometry></visual>\n    <visual name=\"\
+    carcass_shelf_a\"><origin xyz=\"0 -0.01 0.93\" rpy=\"0 0 0\"/><geometry><box size=\"0.4 0.38 0.02\"\
+    /></geometry></visual>\n    <visual name=\"carcass_shelf_b\"><origin xyz=\"0 -0.01 0.67\" rpy=\"0\
+    \ 0 0\"/><geometry><box size=\"0.4 0.38 0.02\"/></geometry></visual>\n  </link>\n  <link name=\"drawer_1\"\
+    >\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"3.0\"/><inertia ixx=\"0.01\" ixy=\"\
+    0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"drawer_1_tray\"\
+    ><origin xyz=\"0 0.0005 1.06\" rpy=\"0 0 0\"/><geometry><box size=\"0.38 0.36 0.22\"/></geometry></visual>\n\
+    \  </link>\n  <link name=\"drawer_2\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"\
+    3.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"drawer_2_tray\"><origin xyz=\"0 0.0005 0.8\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.38 0.36 0.22\"/></geometry></visual>\n  </link>\n  <link name=\"handle_1\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.3\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"handle_1_bar\"><origin xyz=\"0 0 0\"\
+    \ rpy=\"0 1.5708 0\"/><geometry><cylinder radius=\"0.012\" length=\"0.23\"/></geometry></visual>\n\
+    \  </link>\n  <link name=\"handle_2\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"\
+    0.3\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"handle_2_bar\"><origin xyz=\"0 0 0\" rpy=\"0 1.5708 0\"/><geometry><cylinder radius=\"\
+    0.012\" length=\"0.23\"/></geometry></visual>\n  </link>\n  <link name=\"door\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"4.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"door_panel\"><origin xyz=\"-0.2155\
+    \ 0 0.34\" rpy=\"0 0 0\"/><geometry><box size=\"0.43 0.02 0.62\"/></geometry></visual>\n  </link>\n\
+    \  <link name=\"door_knob\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.2\"\
+    /><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n   \
+    \ <visual name=\"door_knob_ball\"><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><geometry><sphere radius=\"\
+    0.02\"/></geometry></visual>\n  </link>\n  <joint name=\"drawer_1_slide\" type=\"prismatic\">\n  \
+    \  <parent link=\"cabinet_body\"/>\n    <child link=\"drawer_1\"/>\n    <origin xyz=\"0 0 0\" rpy=\"\
+    0 0 0\"/>\n    <axis xyz=\"1 0 0\"/>\n    <limit lower=\"0\" upper=\"0.24\" effort=\"100\" velocity=\"\
+    1\"/>\n  </joint>\n  <joint name=\"drawer_2_slide\" type=\"prismatic\">\n    <parent link=\"cabinet_body\"\
+    />\n    <child link=\"drawer_2\"/>\n    <origin xyz=\"0 0 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 -1\
+    \ 0\"/>\n    <limit lower=\"0\" upper=\"0.24\" effort=\"100\" velocity=\"1\"/>\n  </joint>\n  <joint\
+    \ name=\"handle_1_fix\" type=\"fixed\">\n    <parent link=\"drawer_1\"/>\n    <child link=\"handle_1\"\
+    />\n    <origin xyz=\"0 -0.1905 1.06\" rpy=\"0 0 0\"/>\n  </joint>\n  <joint name=\"handle_2_fix\"\
+    \ type=\"fixed\">\n    <parent link=\"drawer_2\"/>\n    <child link=\"handle_2\"/>\n    <origin xyz=\"\
+    0 -0.1905 0.8\" rpy=\"0 0 0\"/>\n  </joint>\n  <joint name=\"door_hinge\" type=\"revolute\">\n   \
+    \ <parent link=\"cabinet_body\"/>\n    <child link=\"door\"/>\n    <origin xyz=\"0.2155 -0.2095 0\"\
+    \ rpy=\"0 0 0\"/>\n    <axis xyz=\"0 0 1\"/>\n    <limit lower=\"0\" upper=\"2.094\" effort=\"100\"\
+    \ velocity=\"1\"/>\n  </joint>\n  <joint name=\"door_knob_fix\" type=\"fixed\">\n    <parent link=\"\
+    door\"/>\n    <child link=\"door_knob\"/>\n    <origin xyz=\"-0.3855 -0.02 0.34\" rpy=\"0 0 0\"/>\n\
+    \  </joint>\n</robot>\n"
+  expected: 'Contract A. KF1.axis FAIL on the RELATIONAL sub-claim only -- drawer_1_slide, reference direction
+    interface_normal(cabinet_body -> drawer_1) = +/-(0,1,0), model xaxis (1,0,0), |cos theta| 0.000, angle
+    90.00 deg against axis_angle_deg 15.0. Evidence: joint drawer_1_slide, xaxis (1.000,0.000,0.000),
+    relational reference (0,-1,0), |cos| 0.000. The SEMANTIC sub-claim PASSES: the angle to world z is
+    90.00 deg, which satisfies horizontal. numeric is na (front is null). Report the three forms separately
+    as P0 requires; an implementation that scores only the semantic form gives this asset 1.0, which is
+    exactly what this asset exists to catch. Everything else passes: KF1.parent pass, KF1.type pass, KF1.anchor
+    pass, KF1.range_and_reference pass, KF1.rigid_follower pass (handle_1 rides the drawer sideways, drift
+    0.000000), KF1.fake_joint pass (2.366), KF2.* na, KF3.reachability pass, KF3.continuity pass, KF3.motion_semantics
+    pass (retention 0.4474), KF3.forbidden_pair pass 3/3 (+0.04000, +0.30067, +0.04000 m), KF3.required_contact
+    pass 3/3 (-0.00050 m at closed). Note the drawer ploughs through the right side panel, but (drawer_1,
+    cabinet_body) is a required pair not a forbidden one, so that must produce no failure.'
+- name: cabinet_range_too_small
+  targets: KF1.range_and_reference
+  defect: 'One attribute differs from cabinet_correct: drawer_2_slide''s <limit upper="0.24"> becomes
+    upper="0.04". The contract still declares range {unit: m, min: 0.0, max: 0.24} and states {closed:
+    0.0, open: 0.24}. Geometry is untouched, so drawer_2 still fits its cavity perfectly and still makes
+    its stop contact at closed; it simply cannot open more than 40 mm, one sixth of the declared travel.'
+  urdf: "<?xml version=\"1.0\"?>\n<!--\ngold-standard asset for Evo-Articraft P3 (Kinematic Fidelity).\n\
+    DEFECT: drawer_2_slide's model limit is 0.04 against a declared travel of 0.24.\nTargets KF1.range_and_reference\
+    \ (and, consequentially, KF3.reachability).\n-->\n<robot name=\"cabinet_range_too_small\">\n  <link\
+    \ name=\"cabinet_body\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"20.0\"\
+    /><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n   \
+    \ <visual name=\"carcass_bottom\"><origin xyz=\"0 0 0.01\" rpy=\"0 0 0\"/><geometry><box size=\"0.44\
+    \ 0.4 0.02\"/></geometry></visual>\n    <visual name=\"carcass_top\"><origin xyz=\"0 0 1.19\" rpy=\"\
+    0 0 0\"/><geometry><box size=\"0.44 0.4 0.02\"/></geometry></visual>\n    <visual name=\"carcass_left\"\
+    ><origin xyz=\"-0.21 0 0.6\" rpy=\"0 0 0\"/><geometry><box size=\"0.02 0.4 1.16\"/></geometry></visual>\n\
+    \    <visual name=\"carcass_right\"><origin xyz=\"0.21 0 0.6\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.02 0.4 1.16\"/></geometry></visual>\n    <visual name=\"carcass_back\"><origin xyz=\"0 0.19 0.6\"\
+    \ rpy=\"0 0 0\"/><geometry><box size=\"0.4 0.02 1.16\"/></geometry></visual>\n    <visual name=\"\
+    carcass_shelf_a\"><origin xyz=\"0 -0.01 0.93\" rpy=\"0 0 0\"/><geometry><box size=\"0.4 0.38 0.02\"\
+    /></geometry></visual>\n    <visual name=\"carcass_shelf_b\"><origin xyz=\"0 -0.01 0.67\" rpy=\"0\
+    \ 0 0\"/><geometry><box size=\"0.4 0.38 0.02\"/></geometry></visual>\n  </link>\n  <link name=\"drawer_1\"\
+    >\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"3.0\"/><inertia ixx=\"0.01\" ixy=\"\
+    0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"drawer_1_tray\"\
+    ><origin xyz=\"0 0.0005 1.06\" rpy=\"0 0 0\"/><geometry><box size=\"0.38 0.36 0.22\"/></geometry></visual>\n\
+    \  </link>\n  <link name=\"drawer_2\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"\
+    3.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"drawer_2_tray\"><origin xyz=\"0 0.0005 0.8\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.38 0.36 0.22\"/></geometry></visual>\n  </link>\n  <link name=\"handle_1\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.3\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"handle_1_bar\"><origin xyz=\"0 0 0\"\
+    \ rpy=\"0 1.5708 0\"/><geometry><cylinder radius=\"0.012\" length=\"0.23\"/></geometry></visual>\n\
+    \  </link>\n  <link name=\"handle_2\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"\
+    0.3\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"handle_2_bar\"><origin xyz=\"0 0 0\" rpy=\"0 1.5708 0\"/><geometry><cylinder radius=\"\
+    0.012\" length=\"0.23\"/></geometry></visual>\n  </link>\n  <link name=\"door\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"4.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"door_panel\"><origin xyz=\"-0.2155\
+    \ 0 0.34\" rpy=\"0 0 0\"/><geometry><box size=\"0.43 0.02 0.62\"/></geometry></visual>\n  </link>\n\
+    \  <link name=\"door_knob\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.2\"\
+    /><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n   \
+    \ <visual name=\"door_knob_ball\"><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><geometry><sphere radius=\"\
+    0.02\"/></geometry></visual>\n  </link>\n  <joint name=\"drawer_1_slide\" type=\"prismatic\">\n  \
+    \  <parent link=\"cabinet_body\"/>\n    <child link=\"drawer_1\"/>\n    <origin xyz=\"0 0 0\" rpy=\"\
+    0 0 0\"/>\n    <axis xyz=\"0 -1 0\"/>\n    <limit lower=\"0\" upper=\"0.24\" effort=\"100\" velocity=\"\
+    1\"/>\n  </joint>\n  <joint name=\"drawer_2_slide\" type=\"prismatic\">\n    <parent link=\"cabinet_body\"\
+    />\n    <child link=\"drawer_2\"/>\n    <origin xyz=\"0 0 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 -1\
+    \ 0\"/>\n    <limit lower=\"0\" upper=\"0.04\" effort=\"100\" velocity=\"1\"/>\n  </joint>\n  <joint\
+    \ name=\"handle_1_fix\" type=\"fixed\">\n    <parent link=\"drawer_1\"/>\n    <child link=\"handle_1\"\
+    />\n    <origin xyz=\"0 -0.1905 1.06\" rpy=\"0 0 0\"/>\n  </joint>\n  <joint name=\"handle_2_fix\"\
+    \ type=\"fixed\">\n    <parent link=\"drawer_2\"/>\n    <child link=\"handle_2\"/>\n    <origin xyz=\"\
+    0 -0.1905 0.8\" rpy=\"0 0 0\"/>\n  </joint>\n  <joint name=\"door_hinge\" type=\"revolute\">\n   \
+    \ <parent link=\"cabinet_body\"/>\n    <child link=\"door\"/>\n    <origin xyz=\"0.2155 -0.2095 0\"\
+    \ rpy=\"0 0 0\"/>\n    <axis xyz=\"0 0 1\"/>\n    <limit lower=\"0\" upper=\"2.094\" effort=\"100\"\
+    \ velocity=\"1\"/>\n  </joint>\n  <joint name=\"door_knob_fix\" type=\"fixed\">\n    <parent link=\"\
+    door\"/>\n    <child link=\"door_knob\"/>\n    <origin xyz=\"-0.3855 -0.02 0.34\" rpy=\"0 0 0\"/>\n\
+    \  </joint>\n</robot>\n"
+  expected: 'Contract A. KF1.range_and_reference FAIL -- 1 of 3 claims: drawer_2_slide model jnt_range
+    [0.0000,0.0400] against declared [0.0,0.24]. Evidence: joint drawer_2_slide, model_range [0,0.04],
+    declared_range [0,0.24], jnt_limited 1, qpos0 0.0 matching states.closed, span error 0.20 m. KF3.reachability
+    FAIL -- asset state `open` requires q(drawer_2_slide) = 0.24 which is outside the model range; the
+    state-matching tolerance is 0.02 x 0.24 = 0.0048 m and the closest attainable value is 0.04, so no
+    sweep sample can be classified `open` for drawer_2. Report both: they are two distinct symptoms of
+    one defect, and a range shrunk only slightly would fire KF1 without firing KF3, so they must not be
+    merged. Everything else passes: KF1.parent pass, KF1.type pass, KF1.axis pass, KF1.anchor pass, KF1.rigid_follower
+    pass (drift 0.000000), KF1.fake_joint pass (0.5678 / DECLARED travel 0.240 = 2.366 -- use the declared
+    travel, not the model range, or this predicate silently changes meaning and reads 14.2), KF2.* na,
+    KF3.continuity pass, KF3.motion_semantics pass (retention 0.9458), KF3.forbidden_pair pass 3/3 (+0.04000,
+    +0.30000, +0.04000 m), KF3.required_contact pass 3/3 (-0.00050 m at closed).'
+- name: cabinet_detached_follower
+  targets: KF1.rigid_follower
+  defect: 'One line differs from cabinet_correct: handle_1_fix''s <parent link="drawer_1"/> becomes <parent
+    link="cabinet_body"/>. The joint origin is unchanged, so at q = 0 handle_1 sits in exactly the same
+    world pose as in the control, still overlapping the drawer front by 0.001 m; a static geometry check
+    at the reference pose cannot tell the two files apart. The moment drawer_1 is pulled out, the handle
+    stays bolted to the carcass and the drawer slides away behind it. This is the pair P0''s deliberate-overlap
+    note is about: GF3''s attached_to still passes at the reference pose while KF1''s rigid_attachments
+    fails over the trajectory.'
+  urdf: "<?xml version=\"1.0\"?>\n<!--\ngold-standard asset for Evo-Articraft P3 (Kinematic Fidelity).\n\
+    DEFECT: handle_1 is bolted to cabinet_body, not to drawer_1; its rest pose is\nunchanged. Targets\
+    \ KF1.rigid_follower.\n-->\n<robot name=\"cabinet_detached_follower\">\n  <link name=\"cabinet_body\"\
+    >\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"20.0\"/><inertia ixx=\"0.01\"\
+    \ ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"carcass_bottom\"\
+    ><origin xyz=\"0 0 0.01\" rpy=\"0 0 0\"/><geometry><box size=\"0.44 0.4 0.02\"/></geometry></visual>\n\
+    \    <visual name=\"carcass_top\"><origin xyz=\"0 0 1.19\" rpy=\"0 0 0\"/><geometry><box size=\"0.44\
+    \ 0.4 0.02\"/></geometry></visual>\n    <visual name=\"carcass_left\"><origin xyz=\"-0.21 0 0.6\"\
+    \ rpy=\"0 0 0\"/><geometry><box size=\"0.02 0.4 1.16\"/></geometry></visual>\n    <visual name=\"\
+    carcass_right\"><origin xyz=\"0.21 0 0.6\" rpy=\"0 0 0\"/><geometry><box size=\"0.02 0.4 1.16\"/></geometry></visual>\n\
+    \    <visual name=\"carcass_back\"><origin xyz=\"0 0.19 0.6\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.4 0.02 1.16\"/></geometry></visual>\n    <visual name=\"carcass_shelf_a\"><origin xyz=\"0 -0.01\
+    \ 0.93\" rpy=\"0 0 0\"/><geometry><box size=\"0.4 0.38 0.02\"/></geometry></visual>\n    <visual name=\"\
+    carcass_shelf_b\"><origin xyz=\"0 -0.01 0.67\" rpy=\"0 0 0\"/><geometry><box size=\"0.4 0.38 0.02\"\
+    /></geometry></visual>\n  </link>\n  <link name=\"drawer_1\">\n    <inertial><origin xyz=\"0 0 0\"\
+    \ rpy=\"0 0 0\"/><mass value=\"3.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"\
+    0\" izz=\"0.01\"/></inertial>\n    <visual name=\"drawer_1_tray\"><origin xyz=\"0 0.0005 1.06\" rpy=\"\
+    0 0 0\"/><geometry><box size=\"0.38 0.36 0.22\"/></geometry></visual>\n  </link>\n  <link name=\"\
+    drawer_2\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"3.0\"/><inertia ixx=\"\
+    0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"drawer_2_tray\"\
+    ><origin xyz=\"0 0.0005 0.8\" rpy=\"0 0 0\"/><geometry><box size=\"0.38 0.36 0.22\"/></geometry></visual>\n\
+    \  </link>\n  <link name=\"handle_1\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"\
+    0.3\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"handle_1_bar\"><origin xyz=\"0 0 0\" rpy=\"0 1.5708 0\"/><geometry><cylinder radius=\"\
+    0.012\" length=\"0.23\"/></geometry></visual>\n  </link>\n  <link name=\"handle_2\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.3\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"handle_2_bar\"><origin xyz=\"0 0 0\"\
+    \ rpy=\"0 1.5708 0\"/><geometry><cylinder radius=\"0.012\" length=\"0.23\"/></geometry></visual>\n\
+    \  </link>\n  <link name=\"door\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"\
+    4.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"door_panel\"><origin xyz=\"-0.2155 0 0.34\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.43 0.02 0.62\"/></geometry></visual>\n  </link>\n  <link name=\"door_knob\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.2\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"door_knob_ball\"><origin xyz=\"0 0\
+    \ 0\" rpy=\"0 0 0\"/><geometry><sphere radius=\"0.02\"/></geometry></visual>\n  </link>\n  <joint\
+    \ name=\"drawer_1_slide\" type=\"prismatic\">\n    <parent link=\"cabinet_body\"/>\n    <child link=\"\
+    drawer_1\"/>\n    <origin xyz=\"0 0 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 -1 0\"/>\n    <limit lower=\"\
+    0\" upper=\"0.24\" effort=\"100\" velocity=\"1\"/>\n  </joint>\n  <joint name=\"drawer_2_slide\" type=\"\
+    prismatic\">\n    <parent link=\"cabinet_body\"/>\n    <child link=\"drawer_2\"/>\n    <origin xyz=\"\
+    0 0 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 -1 0\"/>\n    <limit lower=\"0\" upper=\"0.24\" effort=\"\
+    100\" velocity=\"1\"/>\n  </joint>\n  <joint name=\"handle_1_fix\" type=\"fixed\">\n    <parent link=\"\
+    cabinet_body\"/>\n    <child link=\"handle_1\"/>\n    <origin xyz=\"0 -0.1905 1.06\" rpy=\"0 0 0\"\
+    />\n  </joint>\n  <joint name=\"handle_2_fix\" type=\"fixed\">\n    <parent link=\"drawer_2\"/>\n\
+    \    <child link=\"handle_2\"/>\n    <origin xyz=\"0 -0.1905 0.8\" rpy=\"0 0 0\"/>\n  </joint>\n \
+    \ <joint name=\"door_hinge\" type=\"revolute\">\n    <parent link=\"cabinet_body\"/>\n    <child link=\"\
+    door\"/>\n    <origin xyz=\"0.2155 -0.2095 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 0 1\"/>\n    <limit\
+    \ lower=\"0\" upper=\"2.094\" effort=\"100\" velocity=\"1\"/>\n  </joint>\n  <joint name=\"door_knob_fix\"\
+    \ type=\"fixed\">\n    <parent link=\"door\"/>\n    <child link=\"door_knob\"/>\n    <origin xyz=\"\
+    -0.3855 -0.02 0.34\" rpy=\"0 0 0\"/>\n  </joint>\n</robot>\n"
+  expected: 'Contract A. KF1.rigid_follower FAIL -- 1 of 3 claims: (follower handle_1, leader drawer_1).
+    Both halves of the check fire. Structural: handle_1''s body is not reachable from drawer_1 without
+    crossing a joint; walking body_parentid from handle_1 gives handle_1 -> cabinet_body -> world, and
+    drawer_1 is not on that path. Behavioural: the pose of handle_1 relative to drawer_1 drifts by 0.240000
+    m over the sweep against follower_drift_m 0.0005. Evidence: follower handle_1, leader drawer_1, model_parent
+    cabinet_body, in_rigid_subtree false, max_drift 0.240000 m, first failing q1 = 0.02 m. The other two
+    attachments pass with drift 0.000000. Everything else passes: KF1.parent pass, KF1.type pass, KF1.axis
+    pass, KF1.anchor pass, KF1.range_and_reference pass, KF1.fake_joint pass, KF2.* na, KF3.reachability
+    pass, KF3.continuity pass, KF3.motion_semantics pass, KF3.forbidden_pair pass 3/3 (+0.04000, +0.30000,
+    +0.04000 m), KF3.required_contact pass 3/3 (-0.00050 m at closed). (handle_1, cabinet_body) is a permitted
+    pair, which by P0''s frozen relation table carries no predicate at all, so it contributes nothing
+    either way -- an implementation that scores permitted pairs as obligations will wrongly fail the control
+    too.'
+- name: cabinet_swept_interference
+  targets: KF3.forbidden_pair
+  defect: 'Relative to cabinet_correct the door is made taller and rehung on the opposite edge so that
+    it swings inward through drawer_2''s cavity: door_panel becomes 0.43 x 0.02 x 0.87 with origin xyz="0.2155
+    0 0.465", door_hinge''s origin moves from xyz="0.2155 -0.2095 0" to xyz="-0.2155 -0.2095 0", and door_knob_fix''s
+    origin is compensated to xyz="0.0455 -0.02 0.34" so the knob keeps its world pose. The panel now spans
+    z in [0.03,0.90], overlapping drawer_2''s band [0.69,0.91] but stopping short of drawer_1''s [0.95,1.17],
+    so exactly one forbidden pair is armed. The pivot is still 0.5 mm outside the panel''s own edge so
+    on_edge_of still measures 1.0000, and the panel still overlaps the carcass front plane by 0.0005 m
+    at closed so the required stop_contact still holds. The interference exists only in the interior of
+    the range because a rotating slab occupies a moving segment, not the swept sector: at 0 rad the panel
+    lies across the front 0.020 m clear of the closed drawer, and at 2.094 rad it has swung past the left
+    panel and out of the carcass entirely, 0.027 m clear.'
+  urdf: "<?xml version=\"1.0\"?>\n<!--\ngold-standard asset for Evo-Articraft P3 (Kinematic Fidelity).\n\
+    DEFECT: a taller door hinged on its LEFT edge swings inward through drawer_2's\ncavity; clear at 0\
+    \ rad and at 2.094 rad, deeply interpenetrating near 1.05 rad.\nTargets KF3.forbidden_pair.\n-->\n\
+    <robot name=\"cabinet_swept_interference\">\n  <link name=\"cabinet_body\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"20.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"carcass_bottom\"><origin xyz=\"0 0\
+    \ 0.01\" rpy=\"0 0 0\"/><geometry><box size=\"0.44 0.4 0.02\"/></geometry></visual>\n    <visual name=\"\
+    carcass_top\"><origin xyz=\"0 0 1.19\" rpy=\"0 0 0\"/><geometry><box size=\"0.44 0.4 0.02\"/></geometry></visual>\n\
+    \    <visual name=\"carcass_left\"><origin xyz=\"-0.21 0 0.6\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.02 0.4 1.16\"/></geometry></visual>\n    <visual name=\"carcass_right\"><origin xyz=\"0.21 0 0.6\"\
+    \ rpy=\"0 0 0\"/><geometry><box size=\"0.02 0.4 1.16\"/></geometry></visual>\n    <visual name=\"\
+    carcass_back\"><origin xyz=\"0 0.19 0.6\" rpy=\"0 0 0\"/><geometry><box size=\"0.4 0.02 1.16\"/></geometry></visual>\n\
+    \    <visual name=\"carcass_shelf_a\"><origin xyz=\"0 -0.01 0.93\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.4 0.38 0.02\"/></geometry></visual>\n    <visual name=\"carcass_shelf_b\"><origin xyz=\"0 -0.01\
+    \ 0.67\" rpy=\"0 0 0\"/><geometry><box size=\"0.4 0.38 0.02\"/></geometry></visual>\n  </link>\n \
+    \ <link name=\"drawer_1\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"3.0\"\
+    /><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n   \
+    \ <visual name=\"drawer_1_tray\"><origin xyz=\"0 0.0005 1.06\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.38 0.36 0.22\"/></geometry></visual>\n  </link>\n  <link name=\"drawer_2\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"3.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"drawer_2_tray\"><origin xyz=\"0 0.0005\
+    \ 0.8\" rpy=\"0 0 0\"/><geometry><box size=\"0.38 0.36 0.22\"/></geometry></visual>\n  </link>\n \
+    \ <link name=\"handle_1\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.3\"\
+    /><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n   \
+    \ <visual name=\"handle_1_bar\"><origin xyz=\"0 0 0\" rpy=\"0 1.5708 0\"/><geometry><cylinder radius=\"\
+    0.012\" length=\"0.23\"/></geometry></visual>\n  </link>\n  <link name=\"handle_2\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.3\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"handle_2_bar\"><origin xyz=\"0 0 0\"\
+    \ rpy=\"0 1.5708 0\"/><geometry><cylinder radius=\"0.012\" length=\"0.23\"/></geometry></visual>\n\
+    \  </link>\n  <link name=\"door\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"\
+    4.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"door_panel\"><origin xyz=\"0.2155 0 0.465\" rpy=\"0 0 0\"/><geometry><box size=\"\
+    0.43 0.02 0.87\"/></geometry></visual>\n  </link>\n  <link name=\"door_knob\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.2\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"door_knob_ball\"><origin xyz=\"0 0\
+    \ 0\" rpy=\"0 0 0\"/><geometry><sphere radius=\"0.02\"/></geometry></visual>\n  </link>\n  <joint\
+    \ name=\"drawer_1_slide\" type=\"prismatic\">\n    <parent link=\"cabinet_body\"/>\n    <child link=\"\
+    drawer_1\"/>\n    <origin xyz=\"0 0 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 -1 0\"/>\n    <limit lower=\"\
+    0\" upper=\"0.24\" effort=\"100\" velocity=\"1\"/>\n  </joint>\n  <joint name=\"drawer_2_slide\" type=\"\
+    prismatic\">\n    <parent link=\"cabinet_body\"/>\n    <child link=\"drawer_2\"/>\n    <origin xyz=\"\
+    0 0 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 -1 0\"/>\n    <limit lower=\"0\" upper=\"0.24\" effort=\"\
+    100\" velocity=\"1\"/>\n  </joint>\n  <joint name=\"handle_1_fix\" type=\"fixed\">\n    <parent link=\"\
+    drawer_1\"/>\n    <child link=\"handle_1\"/>\n    <origin xyz=\"0 -0.1905 1.06\" rpy=\"0 0 0\"/>\n\
+    \  </joint>\n  <joint name=\"handle_2_fix\" type=\"fixed\">\n    <parent link=\"drawer_2\"/>\n   \
+    \ <child link=\"handle_2\"/>\n    <origin xyz=\"0 -0.1905 0.8\" rpy=\"0 0 0\"/>\n  </joint>\n  <joint\
+    \ name=\"door_hinge\" type=\"revolute\">\n    <parent link=\"cabinet_body\"/>\n    <child link=\"\
+    door\"/>\n    <origin xyz=\"-0.2155 -0.2095 0\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 0 1\"/>\n    <limit\
+    \ lower=\"0\" upper=\"2.094\" effort=\"100\" velocity=\"1\"/>\n  </joint>\n  <joint name=\"door_knob_fix\"\
+    \ type=\"fixed\">\n    <parent link=\"door\"/>\n    <child link=\"door_knob\"/>\n    <origin xyz=\"\
+    0.0455 -0.02 0.34\" rpy=\"0 0 0\"/>\n  </joint>\n</robot>\n"
+  expected: 'Contract A. KF3.forbidden_pair FAIL -- 1 of 3 pairs: (door, drawer_2) maximum penetration
+    0.21000 m against forbidden_penetration_m 0.001. Evidence: pair (door, drawer_2), min signed distance
+    -0.21000 m, first failing q = (0.0, 0.0, 0.1396 rad), worst q = (0.0, 0.0, 0.698 rad), re-clearing
+    at 1.5356 rad, endpoint values +0.02000 m at theta = 0 and +0.02708 m at theta = 2.094 -- so an implementation
+    that samples only the declared states and not the interior of the range scores this asset 1.0. The
+    other two forbidden pairs pass: (door, drawer_1) min +0.05000 m, (drawer_1, drawer_2) min +0.04000
+    m. S_forbidden = 2/3. Everything else passes: KF1.parent pass, KF1.type pass, KF1.axis pass, KF1.anchor
+    PASS (xanchor (-0.2155,-0.2095,0), on_edge_of fraction 1.0000), KF1.range_and_reference pass, KF1.rigid_follower
+    pass (drift 0.000000), KF1.fake_joint pass, KF2.* na, KF3.reachability pass, KF3.continuity pass,
+    KF3.motion_semantics pass, KF3.required_contact pass 3/3 (-0.00050 m at closed). Note (door, cabinet_body)
+    reaches -0.24000 m mid-swing but is not a declared forbidden pair, so it must produce no failure.'
+- name: gearbox_wrong_ratio
+  targets: KF2.coefficient, KF2.residual
+  defect: 'One number differs from gearbox_correct: the promoted equality''s polycoef becomes "0 2 0 0
+    0" instead of "0 3 0 0 0", so the model implements a 2:1 reduction where contract B declares 3:1.
+    Links, joints, radii, ranges, mesh overlap and housing clearances are untouched, so the geometry still
+    looks like a 3:1 pair (radii 0.09 and 0.03) while the constraint disagrees with it. This is the case
+    P0''s overturned-judgement note is about: the residual is NOT identically zero even though the evaluator
+    itself writes the dependent state, because efc_pos measures the violation of the MODEL''s own constraint
+    at the qpos the evaluator wrote. Sweeping the independent DOF over its declared range with q_small
+    written as 3 q_large gives efc_pos = q_small - 2 q_large = q_large, so the residual grows linearly
+    and peaks at the range ends.'
+  urdf: "<?xml version=\"1.0\"?>\n<!--\ngold-standard asset for Evo-Articraft P3 (Kinematic Fidelity).\n\
+    DEFECT: the equality implements 2:1 where the contract declares 3:1.\nTargets KF2.coefficient and\
+    \ KF2.residual.\n-->\n<robot name=\"gearbox_wrong_ratio\">\n  <link name=\"housing\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"10.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"housing_base\"><origin xyz=\"0 0 0.01\"\
+    \ rpy=\"0 0 0\"/><geometry><box size=\"0.32 0.2 0.02\"/></geometry></visual>\n    <visual name=\"\
+    housing_boss_large\"><origin xyz=\"-0.06 0 0.149\" rpy=\"0 0 0\"/><geometry><cylinder radius=\"0.008\"\
+    \ length=\"0.258\"/></geometry></visual>\n    <visual name=\"housing_boss_small\"><origin xyz=\"0.0595\
+    \ 0 0.149\" rpy=\"0 0 0\"/><geometry><cylinder radius=\"0.008\" length=\"0.258\"/></geometry></visual>\n\
+    \  </link>\n  <link name=\"gear_large\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass\
+    \ value=\"1.0\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"gear_large_disc\"><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><geometry><cylinder radius=\"\
+    0.09\" length=\"0.02\"/></geometry></visual>\n  </link>\n  <link name=\"gear_small\">\n    <inertial><origin\
+    \ xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"0.4\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"\
+    0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"gear_small_disc\"><origin xyz=\"0 0\
+    \ 0\" rpy=\"0 0 0\"/><geometry><cylinder radius=\"0.03\" length=\"0.02\"/></geometry></visual>\n \
+    \ </link>\n  <joint name=\"gear_large_spin\" type=\"revolute\">\n    <parent link=\"housing\"/>\n\
+    \    <child link=\"gear_large\"/>\n    <origin xyz=\"-0.06 0 0.29\" rpy=\"0 0 0\"/>\n    <axis xyz=\"\
+    0 0 1\"/>\n    <limit lower=\"-6.283\" upper=\"6.283\" effort=\"100\" velocity=\"1\"/>\n  </joint>\n\
+    \  <joint name=\"gear_small_spin\" type=\"revolute\">\n    <parent link=\"housing\"/>\n    <child\
+    \ link=\"gear_small\"/>\n    <origin xyz=\"0.0595 0 0.29\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 0 1\"\
+    />\n    <limit lower=\"-18.85\" upper=\"18.85\" effort=\"100\" velocity=\"1\"/>\n  </joint>\n  <equality>\n\
+    \    <joint joint1=\"gear_small_spin\" joint2=\"gear_large_spin\" polycoef=\"0 2 0 0 0\"/>\n  </equality>\n\
+    </robot>\n"
+  expected: 'Contract B. KF2.coefficient FAIL -- coupling gear_mesh, model polycoef [0.0,2.0,0.0,0.0,0.0]
+    against declared coefficient 3.0 offset 0.0, so the linear term is off by 1.0 while the offset matches.
+    Evidence: eq id 0, type mjEQ_JOINT, joint1 gear_small_spin, joint2 gear_large_spin, eq_data[1] 2.0
+    vs declared 3.0. KF2.residual FAIL -- max |efc_pos| over the equality rows 6.283000 rad against epsilon
+    0.005 (residual_norm by absolute, unit rad); first failing q_large 0.3142 rad, worst q_large -6.283
+    rad. KF2.bound PASS (the constraint exists, is active, and references exactly the two bound joints)
+    -- this asset proves bound and coefficient are separate claims. KF2.expected_dof PASS (nv 2 - rank
+    1 = 1, matching the declared 1) -- a wrong ratio still removes exactly one DOF, which is why expected_dof
+    cannot substitute for the residual. All of KF1 passes (parent 2/2, type 2/2, axis semantic 2/2 and
+    relational 2/2, anchor offset 0.000000 on both, range 2/2, rigid_follower na, fake_joint pass under
+    the chord form). KF3.reachability, KF3.continuity and KF3.motion_semantics pass. KF3.forbidden_pair
+    pass 2/2 (gear-housing penetration 0.000000 m). KF3.required_contact pass (mesh_contact -0.000500
+    m at every sample).'
+- name: gearbox_missing_coupling
+  targets: KF2.bound, KF2.expected_dof
+  defect: 'The entire <equality> element is deleted from gearbox_correct; nothing else changes. The two
+    hinges are still declared, bound, correctly axed, correctly anchored and correctly ranged, and the
+    discs still mesh geometrically, but the model contains no equality, no tendon and no weld, so the
+    two gears spin independently. This is the asset that proves the P0 revision''s point about the KF2
+    formula: with no constraint instantiated there are no equality rows in efc_pos, a max over the empty
+    set conventionally returns -inf, the indicator 1[max |r| <= epsilon] evaluates true, and the worst
+    possible model scores KF2 = 1.0 unless the formula carries the 1[bound(g)] factor. Note also that
+    the difference between this file and gearbox_correct VANISHES if the loader does not promote the <equality>
+    element -- both compile to neq = 0 -- so this pair is simultaneously the regression test for the loader.'
+  urdf: "<?xml version=\"1.0\"?>\n<!--\ngold-standard asset for Evo-Articraft P3 (Kinematic Fidelity).\n\
+    DEFECT: no constraint at all; both gears spin independently. Targets KF2.bound and\nKF2.expected_dof,\
+    \ and is the regression test for max-over-empty-set = PASS.\n-->\n<robot name=\"gearbox_missing_coupling\"\
+    >\n  <link name=\"housing\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"10.0\"\
+    /><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n   \
+    \ <visual name=\"housing_base\"><origin xyz=\"0 0 0.01\" rpy=\"0 0 0\"/><geometry><box size=\"0.32\
+    \ 0.2 0.02\"/></geometry></visual>\n    <visual name=\"housing_boss_large\"><origin xyz=\"-0.06 0\
+    \ 0.149\" rpy=\"0 0 0\"/><geometry><cylinder radius=\"0.008\" length=\"0.258\"/></geometry></visual>\n\
+    \    <visual name=\"housing_boss_small\"><origin xyz=\"0.0595 0 0.149\" rpy=\"0 0 0\"/><geometry><cylinder\
+    \ radius=\"0.008\" length=\"0.258\"/></geometry></visual>\n  </link>\n  <link name=\"gear_large\"\
+    >\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass value=\"1.0\"/><inertia ixx=\"0.01\" ixy=\"\
+    0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n    <visual name=\"gear_large_disc\"\
+    ><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><geometry><cylinder radius=\"0.09\" length=\"0.02\"/></geometry></visual>\n\
+    \  </link>\n  <link name=\"gear_small\">\n    <inertial><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><mass\
+    \ value=\"0.4\"/><inertia ixx=\"0.01\" ixy=\"0\" ixz=\"0\" iyy=\"0.01\" iyz=\"0\" izz=\"0.01\"/></inertial>\n\
+    \    <visual name=\"gear_small_disc\"><origin xyz=\"0 0 0\" rpy=\"0 0 0\"/><geometry><cylinder radius=\"\
+    0.03\" length=\"0.02\"/></geometry></visual>\n  </link>\n  <joint name=\"gear_large_spin\" type=\"\
+    revolute\">\n    <parent link=\"housing\"/>\n    <child link=\"gear_large\"/>\n    <origin xyz=\"\
+    -0.06 0 0.29\" rpy=\"0 0 0\"/>\n    <axis xyz=\"0 0 1\"/>\n    <limit lower=\"-6.283\" upper=\"6.283\"\
+    \ effort=\"100\" velocity=\"1\"/>\n  </joint>\n  <joint name=\"gear_small_spin\" type=\"revolute\"\
+    >\n    <parent link=\"housing\"/>\n    <child link=\"gear_small\"/>\n    <origin xyz=\"0.0595 0 0.29\"\
+    \ rpy=\"0 0 0\"/>\n    <axis xyz=\"0 0 1\"/>\n    <limit lower=\"-18.85\" upper=\"18.85\" effort=\"\
+    100\" velocity=\"1\"/>\n  </joint>\n</robot>\n"
+  expected: 'Contract B. KF2.bound FAIL -- coupling gear_mesh has no implementing constraint: neq 0, ntendon
+    0, no weld. Evidence: declared members gear_small_spin and gear_large_spin both bind to model joints,
+    model equality count 0, tendon count 0. KF2.expected_dof FAIL -- nv over the member joints is 2 and
+    rank(efc_J restricted to equality rows) is 0, giving 2 independent DOFs against the declared expected_dof
+    1. Evidence: nv 2, equality rank 0, computed_dof 2, declared 1. KF2.coefficient na (there is nothing
+    to read a coefficient from) -- do not score it 0 and do not score it 1. KF2.residual na for the same
+    reason, AND THIS IS THE REGRESSION TRAP: measured, the equality rows of efc_pos are empty at every
+    sweep sample, so a naive max returns -inf or 0.0 and the residual indicator passes. The correct aggregate
+    is KF2 = mean_g 1[bound(g)] x 1[max_q |r_g,norm(q)| <= epsilon_g], which gives 0 for this asset. Everything
+    outside KF2 passes: KF1.parent 2/2, KF1.type 2/2, KF1.axis semantic and relational 2/2, KF1.anchor
+    through_center_of offset 0.000000 on both gears, KF1.range_and_reference 2/2, KF1.rigid_follower na,
+    KF1.fake_joint pass under the chord form, KF3.reachability pass, KF3.continuity pass, KF3.motion_semantics
+    pass, KF3.forbidden_pair pass 2/2, KF3.required_contact pass (mesh_contact -0.000500 m). The sweep
+    must drive only gear_large_spin and write gear_small_spin from the contract relation; driving both
+    hides the defect.'

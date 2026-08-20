@@ -1,0 +1,759 @@
+predicates:
+- id: KF1.common
+  claim: NOT A SCORED PREDICATE. This entry defines the shared subroutines S0-S10 that every KF1 predicate
+    below invokes by name. It never enters the numerator or the denominator.
+  p0_inputs: kinematic_claims.canonical_frame.up; kinematic_claims.canonical_frame.front; kinematic_claims.joints[*].{id,part,parent,type,range,states};
+    kinematic_claims.independent_dofs; kinematic_claims.couplings[*].relation; kinematic_claims.tolerances.*
+    (including the kf1.* extension keys defined in S10); required_parts[*].id
+  mj_inputs: 'mjModel: body_parentid, body_jntadr, body_jntnum, body_geomadr, body_geomnum, jnt_type,
+    jnt_bodyid, jnt_qposadr, jnt_dofadr, jnt_axis, jnt_pos, jnt_range, jnt_limited, geom_type, geom_dataid,
+    geom_size, geom_aabb, mesh_vertadr, mesh_vertnum, mesh_vert, mesh_pos, mesh_quat, qpos0, opt.gravity.
+    mjData: qpos, body_xpos, body_xmat, geom_xpos, geom_xmat, xanchor, xaxis. Calls: mj_resetData, mj_forward,
+    mj_geomDistance (not used by KF1 itself; listed because S7''s fallback path may use it).'
+  algorithm: 'S0 EVALUATION FRAME. All geometric KF1 work happens at one frozen configuration q_ref unless
+    a predicate says otherwise. Build it: (1) mj_resetData(m,d) so qpos=qpos0. (2) For every declared
+    joint j whose binding (S5) yields a MuJoCo joint k of type mjJNT_HINGE or mjJNT_SLIDE, set d.qpos[m.jnt_qposadr[k]]
+    = qval(j,''ref''), where qval(j,s) = clip(v, m.jnt_range[k][0], m.jnt_range[k][1]) if m.jnt_limited[k]
+    else v, and v = joints[j].states.closed if present, else joints[j].states.home if present, else joints[j].range.min.
+    Record clipped=True when clip changed the value. (3) Leave every undeclared joint, and every ball/free
+    joint, at qpos0. (4) mj_forward(m,d). (5) Cache body_xpos/body_xmat/geom_xpos/geom_xmat/xanchor/xaxis
+    into an immutable snapshot named REF. Any predicate needing another configuration repeats (1)-(4)
+    with different writes and caches its own snapshot; no predicate mutates REF.
+
+
+    S1 BINDINGS. B(P) = the set of mjModel body ids the Initialization Gate bound to part id P. It is
+    read from the Gate artifact and NEVER recomputed, and part existence is never rescored (a missing
+    part failed G1 and the asset never reached P3). b*(P) = the unique member of B(P) that is an ancestor-or-equal
+    of every other member under body_parentid; if no such member exists, set flag binding_not_subtree,
+    and take the member of minimum tree depth, ties broken by smallest body id. J(id) = the MuJoCo joint
+    index the Gate bound to a declared joint id, when the Gate provides one; KF1 does not rely on it and
+    derives its own chain in S5, using J(id) only as a cross-check reported in evidence.
+
+
+    S2 POINTS(P). Deterministic world-frame point cloud of part P at the current snapshot. For every body
+    b in B(P), for every geom g in [body_geomadr[b], body_geomadr[b]+body_geomnum[b]): if geom_type[g]==mjGEOM_MESH,
+    let mid=geom_dataid[g] and V = mesh_vert[mesh_vertadr[mid] : mesh_vertadr[mid]+mesh_vertnum[mid]]
+    reshaped (n,3); else generate a frozen primitive sample in geom-local coordinates: BOX -> 8 corners
+    + 6 face centres (14 pts); SPHERE -> 64-point Fibonacci sphere scaled by geom_size[0]; ELLIPSOID ->
+    the same 64 directions scaled componentwise by geom_size[0:3]; CYLINDER -> 32 points on each rim circle
+    at z=+/-geom_size[1] plus the 2 axis endpoints (66 pts); CAPSULE -> the cylinder sample plus 32 Fibonacci
+    points on each hemisphere cap; PLANE and HFIELD -> contribute no points (record skipped_geom_types).
+    Transform to world as p = geom_xpos[g] + geom_xmat[g] @ v. STARTUP ASSERTION (run once per asset,
+    before any scoring): for every mesh geom, every stored vertex v must satisfy |v - geom_aabb[g][0:3]|
+    <= geom_aabb[g][3:6] + 1e-6 componentwise, which is true only if mesh_vert is already expressed in
+    the geom frame. If the assertion fails, switch globally to the fallback v'' = mesh_pos[mid] + quat2mat(mesh_quat[mid])
+    @ v and re-run the assertion; if it fails again, abort KF1 for the asset with reason mesh_frame_unresolved
+    (KF1 = N/A, not 0). Concatenate, then cap: if the total exceeds kf1.point_cap, keep every ceil(n/point_cap)-th
+    point in index order and record point_stride. points(P) is memoised per (P, snapshot).
+
+
+    S3 CENTROID c(P). Size-weighted mean of per-geom centres; deliberately never uses body_ipos, body_mass
+    or body_inertia, because the corpus''s inertia is synthesised by the loader and must not influence
+    any score. For each geom g of B(P): centre m_g = geom_xpos[g] + geom_xmat[g] @ mean(V) for meshes,
+    geom_xpos[g] otherwise; weight w_g = 8*geom_aabb[g][3]*geom_aabb[g][4]*geom_aabb[g][5]. c(P) = sum(w_g*m_g)/sum(w_g);
+    if sum(w_g) <= 0, use equal weights. Known bias: within a single mesh, mean(V) is tessellation-weighted;
+    recorded as a limitation, not corrected.
+
+
+    S4 DIAG(P). Rotation-invariant size scale. Take points(P), subtract their mean, eigendecompose the
+    3x3 covariance to axes v1,v2,v3; extent e_i = max(proj_i) - min(proj_i); diag(P) = ||(e1,e2,e3)||.
+    Never use a whole-asset bounding-box diagonal: only 19 of 607 corpus assets could produce one.
+
+
+    S5 CHAIN(part,parent). Let bc = b*(part), bp = b*(parent). Walk bc upward via body_parentid to the
+    root, giving anc(bc). If bp is in anc(bc), the path is bc, parent(bc), ..., up to but excluding bp;
+    set parent_is_ancestor=True. Otherwise let L = the lowest common ancestor of bc and bp (world body
+    id 0 always qualifies), take the path from bc up to but excluding L, and set parent_is_ancestor=False.
+    chain(part,parent) = the ordered list, from the part outward, of every joint owned by every body on
+    that path: for body b, joints [body_jntadr[b], body_jntadr[b]+body_jntnum[b]). The chain therefore
+    includes joints introduced by anonymous dummy links, which is the point. mid_bodies = the bodies strictly
+    between bp (or L) and bc; named_mid = those mid_bodies that appear in B(Q) for some declared part
+    Q other than part and parent.
+
+
+    S6 UP AXIS. z_up = -gravity/||gravity|| using m.opt.gravity when ||gravity|| > 1e-9, else world (0,0,1)
+    with flag gravity_zero_default_z. canonical_frame.up is required by P0 to be the literal token ''gravity'';
+    any other value is a contract error and aborts the asset (KF1 = N/A, reason canonical_frame_unsupported).
+
+
+    S7 INTERFACE SETS between parts A (seat) and B (mover), at the current snapshot. tau = kf1.iface_band_frac
+    * min(diag(A), diag(B)). Build a KD-tree over points(A). For each p in points(B), let q = its nearest
+    neighbour in points(A) and dist = |p-q|. I_B = {p : dist <= tau}; symmetrically I_A over a KD-tree
+    of points(B). If |I_B| < kf1.n_min_iface or |I_A| < kf1.n_min_iface, multiply tau by kf1.iface_band_growth
+    and retry, at most kf1.iface_band_growth_max times; if still short, take the kf1.n_min_iface nearest
+    points on each side regardless of distance and set flag loose_band. NORMALS N = {normalize(p - q)
+    : p in I_B, |p-q| > 1e-9}, i.e. one unit vector per near point of the mover, pointing from the seat
+    surface toward the mover. pen_frac = fraction of I_B points whose signed configuration is interpenetrating,
+    approximated as |p-q| < 1e-6; report it. LINE SET I = I_A union I_B.
+
+
+    S8 AXIS COMPARISON. cmp(u, a) where a = d.xaxis[k] of the chain''s scored joint (already unit and
+    already in world frame after mj_forward): pass iff |dot(normalize(u), a)| >= cos(radians(tolerances.axis_angle_deg)).
+    Sign is always discarded, per P0''s ''compare |cos theta|''. Report ang = degrees(arccos(min(1,|dot|))).
+
+
+    S9 SWEEP Q_kf1 (used only by KF1.follower_behavior). Configurations are generated one driven joint
+    at a time, never as a grid. Base = q_ref. For each joint id in kinematic_claims.independent_dofs,
+    in declaration order, with bound MuJoCo joint k of type hinge or slide, and lo/hi = the declared range
+    clipped to jnt_range when limited: emit kf1.sweep_samples_per_dof configurations at lo + i*(hi-lo)/(kf1.sweep_samples_per_dof-1),
+    i=0..n-1, all other declared joints held at their q_ref value, and every dependent joint of every
+    coupling set to coefficient*q_indep + offset per kinematic_claims.couplings[*].relation. Then for
+    each UNDECLARED hinge/slide joint in the model with jnt_limited=1 and a finite non-zero range, in
+    ascending joint index, emit 3 configurations at [min, mid, max] with everything else at q_ref. Truncate
+    the concatenated list to kf1.max_configs entries in that order and record configs_truncated. Every
+    configuration is realised by the S0 write-then-mj_forward procedure.
+
+
+    S10 TOLERANCE EXTENSION. P0 R3 forbids unnamed thresholds in code, and the frozen block of nine keys
+    does not cover the algorithms above. KF1 requires the contract to carry a kinematic_claims.tolerances.kf1
+    sub-block, frozen and hashed with the rest: point_cap 20000, iface_band_frac 0.10, iface_band_growth
+    2.0, iface_band_growth_max 3, n_min_iface 32, cone_dirs 1024, cone_quantile 0.05, free_cone_slack_deg
+    10.0, free_cone_radius_max_deg 30.0, iface_line_aniso_max 0.50, iface_plane_ratio_max 0.25, toward_min_sep_frac
+    0.25, sym_pair_tol 0.10, sym_gap_min 0.10, sym_chamfer_max 0.02, sym_sample_n 4096, sym_angle_step_deg
+    5, sym_angle_max_deg 180, panel_planarity_max 0.25, front_min_tilt_deg 20.0, pivot_locality_max 0.10,
+    open_separation_min_frac 0.15, anchor_edge_radius_eps_frac 1e-4, range_rel_tol 0.10, range_abs_tol
+    1e-4, follower_drift_rad 0.001, sweep_samples_per_dof 5, max_configs 200. A contract missing the kf1
+    block is rejected at admission (extend A12), never defaulted silently.'
+  pass_condition: None. This entry is a definitions block and is excluded from scoring by construction.
+  na_condition: Always N/A for scoring purposes; it contributes no claim to any numerator or denominator.
+  evidence: 'asset-level diagnostics emitted once: mesh_frame_mode (direct|mesh_pos_quat|unresolved),
+    gravity_zero_default_z, skipped_geom_types, point_stride per part, binding_not_subtree per part, configs_truncated,
+    tolerances_hash.'
+  can_it_fail: Not applicable - this is not a predicate. The only failure mode is the startup assertion
+    (mesh_frame_unresolved), which aborts KF1 as N/A rather than scoring the asset.
+  deviates_from_spec: 'Not a P3 bullet. It exists because P3''s four bullets presuppose subroutines (point
+    sampling, part scale, chain resolution, interface extraction) that the bullets never define, and because
+    the corpus facts force specific choices: zero <collision> geoms means contact-array work is impossible;
+    unreliable geom names force part->body->geoms binding; synthesised inertia forbids any mass-based
+    centroid; only 19/607 assets admit a whole-asset diagonal, so diag is per-part.'
+- id: KF1.parent
+  claim: The body carrying part P hangs below the body carrying the declared parent part, with no other
+    declared part interposed between them.
+  p0_inputs: kinematic_claims.joints[j].part; kinematic_claims.joints[j].parent; required_parts[*].id
+    (to define 'other declared part')
+  mj_inputs: mjModel.body_parentid. Gate binding table B(P). No mjData needed (pure graph).
+  algorithm: '1. bc = b*(part), bp = b*(parent) via S1. 2. Run S5 to obtain parent_is_ancestor, mid_bodies,
+    named_mid. 3. If bc == bp, set same_body=True. 4. Compute inverted = (bc is in anc(bp)) and not parent_is_ancestor,
+    i.e. the declared parent hangs below the declared child. 5. The claim is the conjunction: parent_is_ancestor
+    is True AND named_mid is empty AND same_body is False.'
+  pass_condition: parent_is_ancestor == True and len(named_mid) == 0 and bc != bp. No tolerance; this
+    is a pure graph predicate.
+  na_condition: Never N/A for a declared joint whose part and parent both appear in the Gate binding table.
+    Since P0 admission rule A1 guarantees every referenced part id is declared, and Gate G1 guarantees
+    every declared part is bound, an unbound part means the asset never reached P3. If B(part) or B(parent)
+    is nevertheless empty, emit N/A with reason binding_missing and raise a pipeline error, because it
+    indicates a Gate/P3 contract mismatch rather than an asset defect.
+  evidence: joint_id, part, parent, body_child=bc, body_parent=bp, parent_is_ancestor, inverted, same_body,
+    mid_body_ids, named_mid (list of (body_id, part_id)), actual_ancestor_chain (body ids from bc to the
+    root), depth_child, depth_parent.
+  can_it_fail: 'Yes. A cabinet whose drawer_2 body is written as a child of drawer_1 instead of cabinet_body
+    fails on named_mid = [drawer_1]. A model that parents the door to the world body while declaring parent:
+    cabinet_body fails on parent_is_ancestor. A model that merges the handle and the drawer into one body
+    and binds both part ids to it fails on same_body when the contract declares a joint between them.
+    None of these is detectable from the declaration text; all three are structural facts of the compiled
+    mjModel.'
+  deviates_from_spec: ''
+- id: KF1.joint_binding
+  claim: The declared joint resolves to exactly one MuJoCo joint on the kinematic path between the parent
+    body and the part body.
+  p0_inputs: kinematic_claims.joints[j].part; kinematic_claims.joints[j].parent; kinematic_claims.joints[j].id
+    (reported, not matched by name)
+  mj_inputs: mjModel.body_parentid, body_jntadr, body_jntnum, jnt_type, jnt_bodyid. Gate binding table.
+  algorithm: '1. C = chain(part, parent) from S5. Note the chain is derived from the body graph, never
+    from joint names, because MuJoCo silently renames duplicate names. 2. n_joints = len(C). 3. Cross-check:
+    if the Gate supplied J(joint_id), record gate_agrees = (J(joint_id) in C). Disagreement is reported,
+    never scored. 4. The scored joint for every downstream predicate is k* = C[0], the joint closest to
+    the part (the last one traversed on the way down from the parent). 5. Claim passes iff n_joints ==
+    1.'
+  pass_condition: len(chain(part,parent)) == 1. No tolerance.
+  na_condition: 'N/A with reason chain_undefined only if b*(part) or b*(parent) is missing from the binding
+    table (see KF1.parent''s N/A note). Note deliberately: when KF1.parent fails, this claim is still
+    evaluated, because S5 falls back to the lowest common ancestor so the chain stays well defined. Cascading
+    N/A would shrink the denominator exactly on the worst assets.'
+  evidence: joint_id, n_joints, chain_joint_ids, chain_joint_types (mjJNT_* names), chain_body_ids, k_star,
+    gate_agrees, parent_is_ancestor, and when n_joints==0 the flag rigid_no_joint.
+  can_it_fail: 'Yes, in both directions. n_joints == 0: a model that emits a visually plausible cabinet
+    in which the drawer geometry is a child body with no joint at all - the single commonest articulation
+    defect, and one that no declaration-reading check catches because the contract still says type: slide.
+    n_joints >= 2: a model that gives the drawer body both a slide and a stray hinge, or that inserts
+    a jointed dummy link, leaving an undeclared extra DOF.'
+  deviates_from_spec: ''
+- id: KF1.type
+  claim: The MuJoCo joint type of the scored joint equals the type the contract declares, under the fixed
+    URDF-to-MuJoCo mapping.
+  p0_inputs: kinematic_claims.joints[j].type (vocabulary frozen to slide | hinge | ball | free)
+  mj_inputs: mjModel.jnt_type[k*], jnt_limited[k*] (reported only), jnt_dofadr, and nv contribution per
+    joint.
+  algorithm: '1. k* from KF1.joint_binding. If n_joints == 0 there is no k* and the claim is N/A. If n_joints
+    >= 2, score k* = C[0] and set flag chain_multi_joint. 2. Expected mapping, frozen: slide -> mjJNT_SLIDE;
+    hinge -> mjJNT_HINGE; ball -> mjJNT_BALL; free -> mjJNT_FREE. 3. URDF provenance rule, frozen and
+    explicitly NOT scored: URDF ''continuous'' loads as mjJNT_HINGE with jnt_limited=0 and URDF ''revolute''
+    loads as mjJNT_HINGE with jnt_limited=1. P0''s type vocabulary has no continuous/revolute distinction,
+    so both satisfy ''hinge''. jnt_limited is recorded as evidence here and is scored, once, only inside
+    KF1.range_ref_state, and there only when the declared span is under a full turn. 4. Also record dof_declared
+    (slide/hinge 1, ball 3, free 6) and dof_actual = the nv contributed by the whole chain C, so that
+    an extra DOF is visible in evidence even though KF1.joint_binding is what scores it.'
+  pass_condition: jnt_type[k*] == expected_mjtype(joints[j].type). No tolerance.
+  na_condition: N/A with reason no_joint when len(chain) == 0 (KF1.joint_binding already scored that defect;
+    scoring it twice would violate P0's no-double-counting rule). N/A with reason binding_missing when
+    the part or parent is unbound.
+  evidence: joint_id, declared_type, mj_type_name, jnt_limited, chain_multi_joint, dof_declared, dof_actual,
+    urdf_hint (continuous|revolute|prismatic|unknown, inferred as hinge+unlimited / hinge+limited / slide,
+    for diagnosis only).
+  can_it_fail: 'Yes in principle - a lid declared hinge that the model builds as a slide fails. But calibrate
+    expectations: in the measured corpus joint type parsed at 100% completeness and matched the requirement
+    in nearly every asset, and 6 assets declared the requested type verbatim while humans still failed
+    them. This class is therefore near-saturated and belongs to Tier D; it must be excluded from the informative
+    subset (see aggregation) so it cannot inflate KF1.'
+  deviates_from_spec: 'Implements P3 bullet 1''s ''verify joint type'' literally, with one explicit narrowing
+    recorded here rather than left to the implementer: continuous-vs-revolute is NOT scored under type.
+    The bullet is silent on it; P0''s vocabulary cannot express it; and scoring it would penalise a correct
+    URDF ''continuous'' gear shaft for a distinction the contract never made.'
+- id: KF1.axis_semantic
+  claim: The joint's world-frame axis is parallel to the gravity-up direction when the contract says vertical,
+    and perpendicular to it when the contract says horizontal.
+  p0_inputs: kinematic_claims.joints[j].axis.semantic (values vertical | horizontal); kinematic_claims.canonical_frame.up
+    (must be 'gravity'); kinematic_claims.tolerances.axis_angle_deg
+  mj_inputs: mjData.xaxis[k*] at snapshot REF (world frame, produced by mj_kinematics inside mj_forward);
+    mjModel.opt.gravity.
+  algorithm: '1. z_up from S6. 2. a = d.xaxis[k*] from REF (already unit). 3. c = |dot(a, z_up)|; ang_to_up
+    = degrees(arccos(min(1,c))). 4. vertical: pass iff ang_to_up <= axis_angle_deg. horizontal: pass iff
+    |90 - ang_to_up| <= axis_angle_deg. 5. This is the one axis form that is invariant to the whole asset
+    being modelled at any yaw about z, which is why P0 keeps it despite its coarseness.'
+  pass_condition: 'vertical: degrees(arccos(|dot(xaxis[k*], z_up)|)) <= tolerances.axis_angle_deg. horizontal:
+    |90 - degrees(arccos(|dot(xaxis[k*], z_up)|))| <= tolerances.axis_angle_deg.'
+  na_condition: 'N/A when axis.semantic is absent; when jnt_type[k*] is mjJNT_BALL or mjJNT_FREE (no single
+    axis exists - xaxis for a ball is not a motion axis); when len(chain)==0 (no k*); when canonical_frame.up
+    is not ''gravity''. It is NOT N/A merely because the asset appears tilted: P0 §06 rules that +z-up
+    is a fact (MuJoCo gravity, REP-103), so an asset modelled on its side genuinely fails.'
+  evidence: joint_id, semantic_value, xaxis_world, z_up, ang_to_up_deg, margin_deg (signed slack against
+    the tolerance), gravity_zero_default_z.
+  can_it_fail: 'Yes, and it is one of the few cheap checks with real discriminative power. A cabinet whose
+    door hinge axis is horizontal (the door flops down like an oven door when the contract says vertical)
+    fails at 90 degrees of error. A drawer whose slide axis points up fails the horizontal form. Critically,
+    the joint axis direction is not carried by the geometry: rotating jnt_axis leaves body_pos and every
+    geom pose untouched, so unlike the previous attempt''s joint-origin injection this predicate cannot
+    be defeated by the fault moving the part with it.'
+  deviates_from_spec: ''
+- id: KF1.axis_relational
+  claim: The joint's world-frame axis agrees, up to sign, with the reference direction that the declared
+    relational form computes from the actual geometry of the named parts.
+  p0_inputs: kinematic_claims.joints[j].axis.relational.type (interface_normal | interface_line | toward
+    | symmetry_axis_of); .from and .to for interface_normal and toward; .between (a 2-list) for interface_line;
+    .part for symmetry_axis_of; kinematic_claims.tolerances.axis_angle_deg; kinematic_claims.tolerances.kf1.{iface_band_frac,
+    iface_band_growth, iface_band_growth_max, n_min_iface, cone_dirs, cone_quantile, free_cone_slack_deg,
+    free_cone_radius_max_deg, iface_line_aniso_max, toward_min_sep_frac, sym_*}
+  mj_inputs: mjData.xaxis[k*], geom_xpos, geom_xmat at snapshot REF; mjModel.geom_type, geom_dataid, geom_size,
+    geom_aabb, mesh_vertadr, mesh_vertnum, mesh_vert (all via S2/S3/S4).
+  algorithm: 'All four forms are evaluated at snapshot REF (the mated / closed configuration) and all
+    return a direction u compared to a = xaxis[k*] via S8. Each form has its own ill-conditioning gate
+    that yields N/A rather than a failure.
+
+
+    (A) interface_normal {from: A, to: B} - the FREE DIRECTION of the mating interface, not a surface
+    normal. Reading a literal surface normal is wrong for both of P0''s own use cases: a piston in a bore
+    has radial normals perpendicular to the motion, and a drawer in a cabinet has five mutually perpendicular
+    mating faces. The computable equivalent of ''the direction the interface leaves open'' is: 1. Run
+    S7 on (A=seat, B=mover) to get the unit normal set N (each pointing from the seat surface toward the
+    mover). 2. If |N| < n_min_iface -> N/A interface_too_sparse. If pen_frac > 0.5 -> N/A interface_interpenetrating.
+    3. Generate cone_dirs unit directions u_1..u_K by the Fibonacci sphere. 4. For each u_i compute s(u_i)
+    = the cone_quantile-quantile of {dot(u_i, n) : n in N} (a quantile, not a min, so a handful of adverse
+    normals from a front rim or from mesh noise cannot destroy the cone). 5. Define the projective score
+    s_pm(u) = max(s(u), s(-u)) so that a bore, which is free in both axial directions, is treated as one
+    direction; the final comparison uses |cos| anyway. 6. u* = argmax s_pm; s_max = s_pm(u*). If s_max
+    < -sin(radians(free_cone_slack_deg)) -> N/A interface_fully_constrained. 7. U_free = {u_i : s_pm(u_i)
+    >= s_max - sin(radians(free_cone_slack_deg))}. radius_deg = max over U_free of the projective angle
+    min(angle(u,u*), 180-angle(u,u*)). If radius_deg > free_cone_radius_max_deg -> N/A interface_normal_ill_conditioned
+    (the interface leaves two or more free directions; a single flat panel-on-panel face lands here, correctly,
+    because one flat face does not determine a direction). 8. Orient u* for reporting only, by flipping
+    it so dot(u*, c(B)-c(A)) > 0. 9. cmp(u*, a).
+
+
+    (B) interface_line {between: [A, B]} - 1. Run S7 to get I = I_A union I_B. 2. If |I| < n_min_iface
+    -> N/A interface_too_sparse. 3. Mean-centre I and eigendecompose its 3x3 covariance, lam1 >= lam2
+    >= lam3, eigenvectors v1,v2,v3. 4. aniso = sqrt(lam2/lam1). If aniso > iface_line_aniso_max -> N/A
+    interface_line_ill_conditioned (the contact region is a square patch or a blob, not a line; a nearly
+    square door whose whole perimeter touches the frame lands here and abstains instead of failing arbitrarily).
+    5. u = v1. 6. cmp(u, a).
+
+
+    (C) toward {from: A, to: B} - 1. u_raw = c(B) - c(A) using S3. 2. sep = |u_raw|. If sep < toward_min_sep_frac
+    * min(diag(A), diag(B)) -> N/A toward_centroids_coincident (two concentric parts have no ''toward'').
+    3. cmp(u_raw, a).
+
+
+    (D) symmetry_axis_of {part: X} - a two-stage candidate-then-verify test, because a covariance-only
+    test measures elongation rather than symmetry. 1. S = points(X) subsampled by a fixed stride to at
+    most sym_sample_n; if |S| < 64 -> N/A symmetry_axis_too_sparse. 2. c = mean(S); centre S. Eigendecompose
+    the covariance, lam1 >= lam2 >= lam3 with axes v1,v2,v3. 3. Candidate selection: if lam2/lam1 >= 1
+    - sym_pair_tol and lam3/lam2 <= 1 - sym_gap_min, the shape is oblate (a disc, wheel, gear, dial) and
+    the candidate is v3. Else if lam3/lam2 >= 1 - sym_pair_tol and lam2/lam1 <= 1 - sym_gap_min, the shape
+    is prolate (a shaft, knob stem) and the candidate is v1. Else if all three ratios are within sym_pair_tol
+    of 1 -> N/A symmetry_axis_isotropic (a sphere or cube has no unique axis). Else -> N/A symmetry_axis_absent
+    (three distinct extents: not a body of revolution). 4. Verification: build a KD-tree over S; for theta
+    in sym_angle_step_deg, 2*step, ... up to sym_angle_max_deg, rotate S about (c, candidate) by theta
+    and compute e(theta) = mean over p in S of the distance from R_theta(p) to its nearest neighbour in
+    S, divided by diag(X). e_sym = min over theta of e(theta), attained at theta*. If e_sym > sym_chamfer_max
+    -> N/A symmetry_axis_unverified (the candidate direction is an inertia-like principal axis but the
+    part is not actually rotationally symmetric about it). 5. cmp(candidate, a).'
+  pass_condition: '|dot(normalize(u_form), xaxis[k*])| >= cos(radians(tolerances.axis_angle_deg)), where
+    u_form is the direction produced by branch A, B, C or D. Every ill-conditioning gate above short-circuits
+    to N/A before this test, never to a failure.'
+  na_condition: 'axis.relational absent; jnt_type[k*] in {mjJNT_BALL, mjJNT_FREE}; len(chain)==0; any
+    named part unbound; plus the per-form conditioning reasons: interface_too_sparse, interface_interpenetrating,
+    interface_fully_constrained, interface_normal_ill_conditioned, interface_line_ill_conditioned, toward_centroids_coincident,
+    symmetry_axis_too_sparse, symmetry_axis_isotropic, symmetry_axis_absent, symmetry_axis_unverified.'
+  evidence: 'joint_id, relational_type, referenced_parts, u_reference (world), xaxis_world, ang_deg, margin_deg,
+    n_points_per_part, and per form: interface_normal -> {tau_used, band_growths, n_normals, pen_frac,
+    s_max, radius_deg, loose_band}; interface_line -> {tau_used, n_interface_points, eigenvalues, aniso};
+    toward -> {c_from, c_to, sep, sep_frac}; symmetry_axis_of -> {eigenvalues, candidate_branch(oblate|prolate),
+    e_sym, theta_star_deg, n_sampled}.'
+  can_it_fail: 'Yes, and this is the highest-information class in KF1. Concrete failing models: (A) a
+    cabinet whose drawer slide axis runs vertically while the cavity''s free direction is horizontal -
+    the free cone resolves to the opening direction from the cabinet''s own walls and the drawer''s own
+    hull, and the joint axis disagrees by 90 degrees. (B) a door whose hinge axis is horizontal while
+    the door/frame contact strip is a tall vertical band. (D) a gear whose spin axis lies in the disc
+    plane instead of through the axle - the verified symmetry axis is the disc normal and the error is
+    90 degrees. None of these compares a model-internal quantity to itself: the reference direction comes
+    from the geometry of parts OTHER than (or in addition to) the joint''s own child body, while jnt_axis
+    is an independent number that no geometry placement carries along.'
+  deviates_from_spec: 'Implements P3 bullet 2 (''transform local axes into a common frame, measure angular
+    error'') for the relational form, with one substantive reinterpretation that must be recorded: P0
+    §07 defines interface_normal as ''the normal of the mating face of from and to''. Taken literally
+    that yields the radial direction for a piston in a bore and an undefined average for a drawer in a
+    five-faced cavity, i.e. it is wrong for both of the two use cases P0 itself lists (''drawer pull-out
+    direction, piston axis''). The closest admissible substitute is the free direction of the interface''s
+    one-sided contact-normal set, which returns exactly the pull-out direction for a cavity, exactly the
+    bore axis for a piston, and abstains (N/A) for a single flat face, which genuinely determines no direction.
+    The comparison uses mjData.xaxis rather than transforming mjModel.jnt_axis by hand: mj_forward already
+    puts the axis in the world frame, so no ''common frame'' transform needs to be written.'
+- id: KF1.axis_numeric
+  claim: The joint's world-frame axis agrees, up to sign, with the declared numeric unit vector after
+    that vector is mapped through the object frame anchored by canonical_frame.front.
+  p0_inputs: 'kinematic_claims.joints[j].axis.numeric (a 3-list); kinematic_claims.canonical_frame.front
+    (null, or {outward_normal_of: X}); kinematic_claims.tolerances.axis_angle_deg; kinematic_claims.tolerances.kf1.{panel_planarity_max,
+    front_min_tilt_deg}'
+  mj_inputs: mjData.xaxis[k*], geom_xpos, geom_xmat at REF; mjModel geom/mesh fields via S2/S3/S4; mjModel.opt.gravity
+    via S6.
+  algorithm: '1. If canonical_frame.front is null -> N/A, reason orientation_undetermined. P0 §06 is explicit:
+    the yaw about z has no file-level or physical fact behind it, and charging a correct cabinet modelled
+    at a different yaw is a confound that would measure ''who read the frame convention'', not ''whose
+    joints are right''. 2. Otherwise front = {outward_normal_of: X}. Compute the panel normal of X: S_X
+    = points(X), mean-centre, eigendecompose; lam1>=lam2>=lam3 with axes v1,v2,v3. If lam3/lam2 > panel_planarity_max
+    -> N/A front_anchor_not_planar. n_X = v3. 3. Sign: let c_asset = the size-weighted mean of c(Q) over
+    all bound required_parts Q (S3 weights); flip n_X so dot(n_X, c(X) - c_asset) > 0, i.e. it points
+    away from the body of the object. 4. Project out the vertical: h = n_X - dot(n_X, z_up)*z_up. If |h|
+    < sin(radians(front_min_tilt_deg)) -> N/A front_normal_near_vertical (a horizontal panel such as a
+    table top cannot anchor a yaw). 5. Object frame: x_obj = normalize(h); z_obj = z_up; y_obj = cross(z_obj,
+    x_obj). R_obj = [x_obj y_obj z_obj] as columns. 6. w = R_obj @ normalize(axis.numeric). 7. cmp(w,
+    a) via S8.'
+  pass_condition: '|dot(normalize(R_obj @ axis.numeric), xaxis[k*])| >= cos(radians(tolerances.axis_angle_deg)).'
+  na_condition: axis.numeric absent; canonical_frame.front is null (orientation_undetermined - by P0 admission
+    rule A9 this combination should never reach P3, so if it does, report it as a contract-side anomaly
+    alongside the N/A); the anchor part X unbound; front_anchor_not_planar; front_normal_near_vertical;
+    jnt_type in {ball, free}; len(chain)==0.
+  evidence: joint_id, numeric_declared, front_mode (null|outward_normal_of), front_part, panel_eigenvalues,
+    n_X_world, tilt_deg, R_obj (3x3), w_world, xaxis_world, ang_deg, margin_deg.
+  can_it_fail: 'Yes when front is anchored - a drawer declared to pull along [0,-1,0] in the object frame
+    that in fact slides sideways fails at 90 degrees. But on the measured corpus the expected applicability
+    is close to zero, because the two worked P0 examples both set front: null. This class must therefore
+    be reported with its applicable-n and will usually be entirely N/A; that is a fact about the contract,
+    not a defect of the predicate, and it is exactly why P0 §16 flags ''converge the three axis forms
+    to one'' as unresolved.'
+  deviates_from_spec: ''
+- id: KF1.anchor
+  claim: The hinge axis line sits where the contract's geometric anchor predicate says it sits relative
+    to the named part - on that part's edge, or through that part's centre.
+  p0_inputs: 'kinematic_claims.joints[j].anchor ({on_edge_of: X} | {through_center_of: X} | null); kinematic_claims.joints[j].type;
+    kinematic_claims.tolerances.anchor_side_fraction_min; kinematic_claims.tolerances.anchor_center_offset_max;
+    kinematic_claims.tolerances.kf1.anchor_edge_radius_eps_frac'
+  mj_inputs: mjData.xanchor[k*] and mjData.xaxis[k*] at REF (both in world frame; mjModel.jnt_pos/jnt_axis
+    are body-local and are NOT used directly). Geometry via S2/S3/S4.
+  algorithm: 'Common: a = xaxis[k*], o = xanchor[k*], both from REF. One claim per joint; the form is
+    dispatched by which key the anchor dict carries.
+
+
+    (A) on_edge_of {X}: 1. P = points(X). 2. Build a deterministic orthonormal basis perpendicular to
+    a: e1 = normalize(cross(a, z_up)) if |cross(a, z_up)| > 1e-6 else normalize(cross(a, (1,0,0))); e2
+    = cross(a, e1). 3. For each p in P: r = (p - o) - dot(p - o, a)*a; r2 = (dot(r,e1), dot(r,e2)); drop
+    p if |r2| <= anchor_edge_radius_eps_frac * diag(X). If more than half of P is dropped -> N/A anchor_degenerate_on_axis.
+    4. phi_p = atan2(r2.y, r2.x) for the survivors, n_valid of them. Sort ascending. 5. Exact best half-plane
+    by a two-pointer sweep on the array doubled by +2*pi: for each i, count the j with phi_j in the half-open
+    window [phi_i, phi_i + pi); f_best = max count / n_valid. The optimum of an open half-plane is always
+    attained with its boundary through some point''s direction, so the sweep is exact, and the half-open
+    convention places points exactly on the boundary line on the included side once and only once. 6.
+    Pass iff f_best >= anchor_side_fraction_min.
+
+
+    (B) through_center_of {X}: 1. c = c(X) via S3. 2. d_perp = |(c - o) - dot(c - o, a)*a|. 3. Pass iff
+    d_perp <= anchor_center_offset_max * diag(X).
+
+
+    The two forms are deliberately opposites and both must exist: a plane through a gear''s symmetry axis
+    always splits the disc 50/50, so on_edge_of would necessarily fail a correct gear; and a correct door
+    edge-hinge is not near the door''s centre.'
+  pass_condition: 'on_edge_of: f_best >= tolerances.anchor_side_fraction_min. through_center_of: d_perp
+    <= tolerances.anchor_center_offset_max * diag(X).'
+  na_condition: 'N/A whenever joints[j].type is slide, ball or free - a translation has no centre of action,
+    and MuJoCo confirms it: the pos attribute of a slide joint has zero effect on child pose, so any anchor
+    predicate on a slide is unfalsifiable by construction and must not enter the denominator (P0 admission
+    rule A10 forbids writing one at all). Also N/A when anchor is null or absent; when X is unbound; when
+    len(chain)==0; when jnt_type[k*] is not mjJNT_HINGE even though the contract says hinge (KF1.type
+    already scored that); and for form A when anchor_degenerate_on_axis or n_valid < 32.'
+  evidence: joint_id, anchor_form, anchor_part=X, xanchor_world=o, xaxis_world=a, diag_X; form A -> {n_points,
+    n_valid, n_dropped_on_axis, f_best, best_half_plane_dir_world, margin = f_best - threshold}; form
+    B -> {c_X, d_perp, d_perp_over_diag, margin = threshold - d_perp/diag}.
+  can_it_fail: 'Yes - this is the predicate P0 §06 was written to obtain, and the previous attempt''s
+    null result was a fault-injection artefact, not a property of the predicate. In URDF the joint origin
+    defines the child link frame, so a hinge authored down the middle of a door has the door''s visual
+    origin at [0,0,0] relative to it and yields f_best ~ 0.50, while an edge hinge has the visual offset
+    by half the panel width and yields f_best ~ 1.00: the two models genuinely differ. What does NOT differ
+    is a fault that displaces the URDF joint origin alone, because that translates the whole child link
+    with it - that is what produced zero detection before. CALIBRATION REQUIREMENT: the fault injection
+    for anchor_side_fraction_min and anchor_center_offset_max must move mjModel.jnt_pos (equivalently,
+    move the URDF joint origin AND compensate every child <visual>/<collision> origin by the negative
+    offset) so that the axis moves relative to the geometry. An eccentric gear (form B) fails once d_perp
+    exceeds 5% of the disc diagonal.'
+  deviates_from_spec: ''
+- id: KF1.range_ref_state
+  claim: The joint's limit configuration, travel range, rest value and every declared semantic state are
+    jointly consistent with the contract - scored once, not three times.
+  p0_inputs: 'kinematic_claims.joints[j].range.{unit,min,max}; kinematic_claims.joints[j].states (the
+    whole dict: closed, open, home, or any other label); kinematic_claims.joints[j].type; kinematic_claims.tolerances.kf1.{range_rel_tol,
+    range_abs_tol}'
+  mj_inputs: mjModel.jnt_limited[k*], jnt_range[k*], jnt_type[k*], jnt_qposadr[k*], qpos0. No mjData required.
+    Note mjModel.jnt_range is always in radians/metres regardless of the MJCF compiler angle setting,
+    so no unit conversion is applied beyond checking range.unit against the type.
+  algorithm: "Let span_decl = range.max - range.min, tol = range_rel_tol * span_decl + range_abs_tol,\
+    \ lo_m = jnt_range[k*][0], hi_m = jnt_range[k*][1], lim = bool(jnt_limited[k*]). Compute four sub-conditions\
+    \ and AND them into ONE claim; all four are reported individually as evidence so the failure is diagnosable\
+    \ without being counted more than once.\n  C1 limited: if span_decl >= 2*pi - 1e-6 and the declared\
+    \ type is hinge, C1 = True regardless of lim (a full-turn or multi-turn shaft is legitimately authored\
+    \ as URDF 'continuous', which loads unlimited). Otherwise C1 = (lim == True).\n  C2 range values:\
+    \ if lim, C2 = (|lo_m - range.min| <= tol and |hi_m - range.max| <= tol). If not lim and C1 was waived\
+    \ by the full-turn rule, C2 = True (an unlimited joint covers any declared span). If not lim and C1\
+    \ was not waived, C2 = False.\n  C3 reference / rest value: v_ref = states.closed if present else\
+    \ states.home if present else range.min. C3 = (|qpos0[jnt_qposadr[k*]] - v_ref| <= tol). This is the\
+    \ single place the number that P0 calls simultaneously states.closed, ref/qpos0 and range.min is compared,\
+    \ satisfying P0 §07's de-duplication rule.\n  C4 semantic states reachable: for every (label, v) in\
+    \ states, C4 requires (not lim) or (lo_m - tol <= v <= hi_m + tol). Report the per-label booleans\
+    \ and the first unreachable label.\n  Unit sanity (contract-side, reported not scored): range.unit\
+    \ must be m for slide and rad for hinge/ball (P0 admission rule A11); a mismatch is emitted as contract_unit_mismatch\
+    \ and forces the whole claim to N/A, because comparing metres to radians is meaningless.\n  Ball joints:\
+    \ MuJoCo stores a ball limit as [0, max] on the rotation magnitude; apply C1/C2 against that single\
+    \ interval and skip C3 (qpos0 for a ball is a quaternion; compare instead that the qpos0 quaternion\
+    \ is within tol radians of identity when v_ref == 0) and apply C4 on magnitudes."
+  pass_condition: C1 and C2 and C3 and C4, with tol = tolerances.kf1.range_rel_tol * (range.max - range.min)
+    + tolerances.kf1.range_abs_tol expressed in the joint's own unit.
+  na_condition: N/A when len(chain)==0 (no joint to read); when jnt_type[k*] is mjJNT_FREE (a free joint
+    has no jnt_range and no scalar rest value); when joints[j].range is absent; when contract_unit_mismatch;
+    when the declared type and the actual type disagree (KF1.type already scored that, and comparing a
+    slide's metres against a hinge's radians would double-penalise one defect).
+  evidence: joint_id, declared_range, declared_unit, declared_states, mj_limited, mj_range, qpos0_value,
+    tol, C1, C2, C3, C4, first_unreachable_state, reachable_by_label, full_turn_waiver_applied, contract_unit_mismatch.
+  can_it_fail: Yes. A cabinet door authored with range='0 0.35' rad when the contract declares 0 to 2.094
+    fails C2 and C4 (the open state is unreachable). A drawer whose MJCF sets qpos0 to the half-open position
+    fails C3. A door authored as URDF 'continuous' when the contract declares a 120-degree range fails
+    C1, because the full-turn waiver does not apply. Note that C1 alone would be a near-content-free declaration
+    read; it earns its place only through the waiver logic that stops it from firing on legitimately continuous
+    shafts.
+  deviates_from_spec: 'Implements P3 bullet 3 exactly as the revised P0 §07 restates it: the bullet lists
+    ''range, limited, ref/qpos0, and semantic states such as closed and open'' as four items, but P0 §07
+    rules that states.closed, ref/qpos0 and range.min are one number and must be merged into a single
+    ''range and reference'' claim. Hence one claim with four ANDed sub-conditions rather than four claims.
+    This class is Tier D (declaration-reading) and is excluded from the informative subset.'
+- id: KF1.pivot_locality
+  claim: A hinge's axis line passes through or near the part it articulates, rather than orbiting it from
+    a distance.
+  p0_inputs: kinematic_claims.joints[j].type; kinematic_claims.joints[j].part; kinematic_claims.tolerances.kf1.pivot_locality_max
+  mj_inputs: mjData.xanchor[k*], mjData.xaxis[k*] at REF; geometry of the part via S2/S4.
+  algorithm: '1. a = xaxis[k*], o = xanchor[k*]. 2. P = points(part). 3. For each p in P: d_p = |(p -
+    o) - dot(p - o, a)*a|. 4. d_min = min over P of d_p; also record d_med (median) and r_perp = mean(d_p),
+    which KF1.open_direction reuses. 5. Pass iff d_min <= pivot_locality_max * diag(part).'
+  pass_condition: min over p in points(part) of the perpendicular distance from p to the line (xanchor[k*],
+    xaxis[k*]) <= tolerances.kf1.pivot_locality_max * diag(part).
+  na_condition: 'N/A when joints[j].type is not hinge (a slide has no pivot; a ball''s anchor is scored
+    only implicitly; a free joint has none); when len(chain)==0; when jnt_type[k*] is not mjJNT_HINGE;
+    when the part is unbound or points(part) is empty. It is deliberately NOT conditioned on the anchor
+    field being present: the predicate depends only on the joint being a hinge, so it is evaluable for
+    every hinge including those whose anchor the contract left unwritten.'
+  evidence: joint_id, part, xanchor_world, xaxis_world, d_min, d_min_over_diag, d_med_over_diag, r_perp,
+    diag_part, margin = pivot_locality_max - d_min/diag(part).
+  can_it_fail: 'Yes, and it closes a hole that the P0 anchor predicates leave wide open. A door hinged
+    two metres away from itself still has 100% of its vertices on one side of the axis plane, so on_edge_of
+    passes it with f_best = 1.00; only pivot_locality catches it. The failure mode is common in generated
+    assets: the child body''s origin is left at the asset root while the mesh is offset, producing a door
+    that sweeps a giant arc around the whole cabinet. It is also non-tautological for the same reason
+    KF1.anchor is: it compares xanchor, which comes from jnt_pos, against the part''s own vertex cloud,
+    which comes from geom placement - two independently authored numbers.'
+  deviates_from_spec: 'REPLACES P3 bullet 4''s second half, ''a hinge anchor remains fixed under a small
+    perturbation'', which is a tautology: mj_kinematics derives xanchor from jnt_pos and the parent body
+    pose, so under any perturbation of the joint coordinate the anchor is invariant by construction and
+    the check can never fail. The bullet''s intent was that the pivot be where it belongs; the closest
+    admissible substitute that a model can actually fail is a locality test of the axis line against the
+    part''s own geometry, which is coordinate-free, scale-free, applies to every hinge, and detects the
+    specific defect (a remote pivot) that P0''s on_edge_of predicate provably cannot.'
+- id: KF1.open_direction
+  claim: Driving the joint from its closed state to its open state moves the part away from its parent,
+    not deeper into it.
+  p0_inputs: kinematic_claims.joints[j].states.closed and .states.open (both required); kinematic_claims.joints[j].{part,parent,type,range};
+    kinematic_claims.tolerances.kf1.open_separation_min_frac; kinematic_claims.tolerances.anchor_center_offset_max
+    (reused for the spin-in-place guard)
+  mj_inputs: Two extra snapshots built by the S0 procedure; mjData.body_xpos/body_xmat, geom_xpos/geom_xmat
+    in each; mjData.xanchor/xaxis at REF for the guard; mjModel.jnt_range, jnt_limited, jnt_qposadr.
+  algorithm: '1. Guard for rotation in place: if type is hinge, compute d_c = the perpendicular distance
+    from c(part) to the line (xanchor[k*], xaxis[k*]) at REF. If d_c <= anchor_center_offset_max * diag(part),
+    the part spins about its own centre, its centroid does not move, and the predicate is N/A (reason
+    rotation_in_place). This is exactly the through_center_of family (wheels, knobs, gears, dials).
+
+    2. q_c = clip(states.closed, jnt_range[k*]) if limited else states.closed; q_o likewise for states.open.
+    If |q_o - q_c| < 0.10 * |states.open - states.closed|, the model''s own limits leave no usable travel
+    -> N/A no_usable_travel (KF1.range_ref_state already scores that defect; scoring it again here would
+    double-count).
+
+    3. Build snapshot CLOSED: S0 procedure with joint k* written to q_c, every other declared joint at
+    its q_ref value, every coupling''s dependent joint set from its relation, mj_forward. Build snapshot
+    OPEN identically with q_o.
+
+    4. D_closed = |c(part) - c(parent)| evaluated in CLOSED; D_open = |c(part) - c(parent)| evaluated
+    in OPEN, using S3 in each snapshot.
+
+    5. Expected motion scale: for slide, delta_exp = |q_o - q_c|; for hinge, delta_exp = |q_o - q_c| *
+    r_perp, where r_perp is the mean perpendicular distance of points(part) from the axis, computed at
+    REF (also emitted by KF1.pivot_locality).
+
+    6. Pass iff D_open - D_closed >= open_separation_min_frac * delta_exp.'
+  pass_condition: D_open - D_closed >= tolerances.kf1.open_separation_min_frac * delta_exp, with delta_exp
+    = |q_o - q_c| for slide and |q_o - q_c| * r_perp for hinge.
+  na_condition: N/A when states.closed or states.open is absent (a gear or dial declaring only 'home'
+    has no open direction); when type is ball or free; when len(chain)==0; when the part or parent is
+    unbound; when the guard fires (rotation_in_place); when no_usable_travel; when delta_exp <= 0.
+  evidence: joint_id, part, parent, q_closed_declared, q_open_declared, q_closed_used, q_open_used, state_clipped,
+    D_closed, D_open, delta_D, r_perp, delta_exp, ratio = delta_D/delta_exp, margin = ratio - open_separation_min_frac,
+    c_part_closed, c_part_open, c_parent.
+  can_it_fail: 'Yes, and it catches a defect that currently escapes the entire pipeline. A drawer whose
+    slide axis is correct up to sign but whose positive direction points backwards travels into the cabinet
+    interior as q goes from closed to open: the axis is parallel to the reference direction so every |cos|
+    axis check passes; the range numbers match so KF1.range_ref_state passes; and KF3''s collision half
+    cannot catch it either, because drawer-vs-cabinet_body is a REQUIRED contact pair and P0''s precedence
+    rule ''required_and_permitted_over_forbidden'' exempts it from the penetration test. Likewise a door
+    that swings inward through the drawers instead of outward. This predicate fails both at delta_D <=
+    0.'
+  deviates_from_spec: 'REPLACES P3 bullet 4''s first half, ''a slide introduces no extra rotation'', which
+    is a tautology: mjJNT_SLIDE is pure translation by construction, so the rotational residual of a single-slide
+    chain is identically zero and no model can fail it. The bullet''s intent was that the realised motion
+    match the declared kinematic semantics. The closest admissible substitute that a model can actually
+    fail is the SIGN of the realised motion, which the bullet never covered, which the |cos| axis comparisons
+    deliberately discard, and which nothing else in P2, P3 or KF3 tests. It uses only qpos writes, forward
+    kinematics and geometry, staying inside P3''s Scope box (no rendering, no mass, no rollout).'
+- id: KF1.travel_scale
+  claim: The part a slide joint moves is large enough relative to its declared travel to be the real part
+    rather than a decoy.
+  p0_inputs: kinematic_claims.joints[j].type; kinematic_claims.joints[j].part; kinematic_claims.joints[j].range.{min,max};
+    kinematic_claims.tolerances.travel_scale_min
+  mj_inputs: Geometry of the part via S2/S4 at REF; mjModel.jnt_type[k*].
+  algorithm: 1. span = |range.max - range.min| (metres, since type is slide and A11 forces unit m). 2.
+    If span <= 0 -> N/A zero_span. 3. rho = diag(part) / span using S4. 4. Pass iff rho >= travel_scale_min.
+  pass_condition: diag(part) / |range.max - range.min| >= tolerances.travel_scale_min.
+  na_condition: N/A for every joint whose type is not slide. For a hinge the natural analogue would be
+    diag / (span_rad * r_perp), but that ratio collapses for any multi-turn shaft - the gear example's
+    +/-3 turns give an arc length of tens of metres and would fail every correct gear - so the hinge form
+    is deliberately not evaluated. Also N/A when the part is unbound, when points(part) is empty, or when
+    span is zero.
+  evidence: joint_id, part, diag_part, span_m, rho, margin = rho - travel_scale_min, obb_extents.
+  can_it_fail: 'Yes. A model that satisfies ''drawer_1 slides 0.40 m'' by attaching the slide to a 2 cm
+    decoy plate while the visible drawer stays welded to the cabinet gives rho = 0.05, far below 0.50.
+    Note the overlap to declare: a genuinely undersized drawer also fails GF4''s proportion claims, so
+    this class and GF4 can fire on the same asset for the same underlying defect; they are kept separate
+    because the repair actions differ (GF4 = wrong size, KF1.travel_scale = wrong thing moving).'
+  deviates_from_spec: 'Not one of P3''s four bullets. It is included because the revised P0 §12 freezes
+    a tolerance named travel_scale_min with the documented meaning ''fake-joint criterion: child AABB
+    diagonal / declared travel'', and R3 requires every frozen threshold to be consumed by exactly one
+    predicate. Leaving it unimplemented would leave a frozen, hashed threshold with no consumer. The AABB
+    in P0''s gloss is realised as the rotation-invariant PCA-OBB diagonal of S4, because a world-axis-aligned
+    box would make the score depend on how the asset happens to be yawed - the exact confound P0 R2 exists
+    to remove.'
+- id: KF1.follower_structure
+  claim: The follower part's body lies inside the leader part's rigid subtree - reachable from the leader
+    without crossing any joint.
+  p0_inputs: kinematic_claims.rigid_attachments[a].follower; kinematic_claims.rigid_attachments[a].leader;
+    required_parts[*].role (attached parts must appear here exactly once as follower, per admission rule
+    A4)
+  mj_inputs: mjModel.body_parentid, body_jntnum. Gate binding table. Pure graph computation, no mjData.
+  algorithm: '1. bf = b*(follower), bl = b*(leader) via S1. 2. If bf == bl, or if B(follower) and B(leader)
+    overlap, set merged_body = True and PASS (the two parts were modelled as one body, which is rigid
+    attachment in its strongest form). 3. Otherwise walk from bf upward via body_parentid collecting the
+    path until bl is reached or the root is passed. If bl is never reached: FAIL with reason not_in_leader_subtree;
+    if bl is instead a descendant of bf, additionally set inverted = True. 4. If bl is reached, examine
+    every body b on the path from bf up to but EXCLUDING bl: if any has body_jntnum[b] > 0, FAIL with
+    reason joint_on_path and record the offending body ids, their joint ids, joint types and jnt_range.
+    5. Apply the rule over the whole binding set: every body in B(follower) must satisfy steps 3-4; report
+    the count that do.'
+  pass_condition: Every body in B(follower) is a descendant-or-equal of b*(leader) and every body strictly
+    between it and b*(leader) has body_jntnum == 0. No tolerance.
+  na_condition: 'N/A only when the follower or leader part is unbound (which implies a Gate/P3 mismatch,
+    since A1 plus G1 guarantee binding) - reason binding_missing. Never N/A merely because rigid_attachments
+    is empty: an asset with no rigid_attachments instantiates zero claims of this class, which reduces
+    the class''s applicable-n to zero and is reported as such, not as a pass.'
+  evidence: attachment_index, follower, leader, body_follower, body_leader, merged_body, inverted, path_body_ids,
+    jointed_bodies_on_path (body id, joint ids, joint types, jnt_range), n_follower_bodies_ok, n_follower_bodies.
+  can_it_fail: Yes - it is the check the whole rigid_attachments field was added for. A model that hangs
+    handle_1 off cabinet_body instead of drawer_1 fails at not_in_leader_subtree; the handle then stays
+    put while the drawer pulls out, and before this field existed nothing in the contract said which drawer
+    any handle belonged to, so handle_3 following drawer_2 scored green.
+  deviates_from_spec: ''
+- id: KF1.follower_behavior
+  claim: Across the whole KF1 sweep, including undeclared degrees of freedom, the follower's pose relative
+    to its leader does not drift.
+  p0_inputs: kinematic_claims.rigid_attachments[a].{follower,leader}; kinematic_claims.independent_dofs;
+    kinematic_claims.joints[*].range and .states (to build the sweep); kinematic_claims.couplings[*].relation
+    (to set dependent joints); kinematic_claims.tolerances.follower_drift_m; kinematic_claims.tolerances.kf1.{follower_drift_rad,
+    sweep_samples_per_dof, max_configs}
+  mj_inputs: mjData.body_xpos, body_xmat at every configuration of S9; mjModel.jnt_qposadr, jnt_range,
+    jnt_limited, jnt_type.
+  algorithm: '1. bf = b*(follower), bl = b*(leader). 2. At snapshot REF compute the reference relative
+    pose: R_rel0 = body_xmat[bl].T @ body_xmat[bf]; p_rel0 = body_xmat[bl].T @ (body_xpos[bf] - body_xpos[bl]).
+    3. For each configuration in Q_kf1 (S9) - which drives each declared independent DOF one at a time
+    across its clipped range, sets dependent joints from the coupling relations, and ADDITIONALLY drives
+    every undeclared limited hinge/slide joint to [min, mid, max] - recompute R_rel, p_rel after mj_forward.
+    4. drift_pos = |p_rel - p_rel0|; drift_rot = the rotation angle of R_rel0.T @ R_rel, taken as arccos(clip((trace-1)/2,
+    -1, 1)). 5. Track the maxima over all configurations and the first configuration index at which either
+    threshold is exceeded. 6. Pass iff max drift_pos <= follower_drift_m and max drift_rot <= follower_drift_rad.'
+  pass_condition: max over Q_kf1 of |p_rel - p_rel0| <= tolerances.follower_drift_m AND max over Q_kf1
+    of angle(R_rel0.T @ R_rel) <= tolerances.kf1.follower_drift_rad.
+  na_condition: N/A when the follower or leader is unbound; when Q_kf1 is empty (no independent DOF and
+    no undeclared limited joint - nothing can move, so the claim is unfalsifiable and must not be counted
+    as satisfied); and when merged_body is True from KF1.follower_structure (identical bodies have an
+    identically constant relative pose, so the claim would be a tautology - report reason merged_body_entailed).
+  evidence: attachment_index, follower, leader, n_configs, max_drift_pos_m, max_drift_rot_rad, first_failing_config
+    (joint id driven, its value, and the full qpos vector), drift_pos_at_each_declared_extreme, entailed_by_structure
+    (bool), configs_truncated.
+  can_it_fail: 'Yes, but its independent information is narrow and must be stated honestly rather than
+    assumed. Under P3''s FK-only scope, if KF1.follower_structure passed for a single-body follower then
+    the relative pose is constant by construction and this claim is ENTAILED - it cannot fail. It carries
+    independent information in exactly three situations: (i) a locked joint on the path, jnt_range ==
+    [0,0] with limited=1, which fails the structural check but is behaviourally rigid, so the pair yields
+    1/2 rather than 0/2 - correct partial credit for a defensible modelling choice; (ii) a follower bound
+    to several bodies of which only some sit inside the leader''s rigid subtree; (iii) an undeclared limited
+    joint on the path whose motion the declared sweep would never have exercised. Every evaluation therefore
+    emits entailed_by_structure so that the reporting layer can exclude the entailed instances from the
+    informative subset. If the flag is true and the claim is satisfied, it is still counted in KF1_micro
+    (P3''s formula counts claims), but never in KF1_informative.'
+  deviates_from_spec: 'Implements P0 §08''s second half (''over the whole sweep, the follower''s pose
+    drift relative to the leader is <= follower_drift_m'') with two additions the field text does not
+    specify: a rotational tolerance, because a pure orientation drift with zero translation would otherwise
+    pass, and the extension of the sweep to undeclared limited joints, without which the check is entailed
+    by the structural check in essentially every real asset and therefore contributes no information at
+    all.'
+aggregation: "DENOMINATOR AND FORMULA. KF1 = |satisfied claims| / |applicable claims|, exactly as P3 writes\
+  \ it. A claim is APPLICABLE iff its predicate returned pass or fail; a claim that returned N/A is excluded\
+  \ from BOTH numerator and denominator and is never imputed as 0 or 1. If |applicable| == 0 the asset\
+  \ reports KF1 = N/A, never 1.0 and never 0.0 - the same lesson P0 §09 records for KF2's binding factor\
+  \ and §11 records for a zero forbidden-pair denominator.\n\nCLAIM INSTANTIATION (what the denominator\
+  \ is built from). For each entry j of kinematic_claims.joints, instantiate exactly 11 claims: KF1.parent,\
+  \ KF1.joint_binding, KF1.type, KF1.axis_semantic, KF1.axis_relational, KF1.axis_numeric, KF1.anchor,\
+  \ KF1.range_ref_state, KF1.pivot_locality, KF1.open_direction, KF1.travel_scale. For each entry a of\
+  \ kinematic_claims.rigid_attachments, instantiate exactly 2: KF1.follower_structure, KF1.follower_behavior.\
+  \ Total instantiated = 11*|joints| + 2*|rigid_attachments|; total applicable is that minus the N/A count.\
+  \ KF1.common instantiates nothing. Note the three axis forms are three SEPARATE claims, per P0 §07 (\"\
+  the three forms are scored independently and listed separately in the report\"), and range/ref/closed\
+  \ is ONE claim, per P0 §07's de-duplication rule. For the worked cabinet example this yields 3*11 +\
+  \ 3*2 = 39 instantiated claims, of which axis_numeric (3, front is null), anchor (2 slides), open_direction\
+  \ guards, and travel_scale (1 hinge) are N/A, leaving roughly 30 applicable.\n\nCLAIM TAXONOMY - three\
+  \ tiers, frozen, assigned per class, not per instance:\n  Tier D (declaration-reading): KF1.type, KF1.range_ref_state.\
+  \ These read numbers the generator wrote into the MJCF and compare them to numbers the contract wrote.\
+  \ Measured behaviour on the previous corpus: joint type parsed at 100% completeness and matched the\
+  \ requirement in nearly every asset, and 6 assets declared the requested type verbatim while humans\
+  \ still failed them. Tier D is expected to saturate near 1.0 and carries almost no discriminative signal.\n\
+  \  Tier S (structural graph): KF1.parent, KF1.joint_binding, KF1.follower_structure. These read only\
+  \ body_parentid / body_jntnum / jnt_type and cannot be satisfied by writing a correct declaration.\n\
+  \  Tier G (geometric): KF1.axis_semantic, KF1.axis_relational, KF1.axis_numeric, KF1.anchor, KF1.pivot_locality,\
+  \ KF1.open_direction, KF1.travel_scale, KF1.follower_behavior. Each compares a compiled model quantity\
+  \ against a reference derived from the model's own geometry under a contract-specified rule, so none\
+  \ is satisfiable by declaration alone.\n\nFOUR NUMBERS, ALL REPORTED, NONE COLLAPSED:\n  KF1_micro \
+  \  = satisfied / applicable over all 13 classes. This is the literal P3 formula and is the headline\
+  \ number.\n  KF1_struct  = satisfied / applicable over Tier S only.\n  KF1_geom    = satisfied / applicable\
+  \ over Tier G only.\n  KF1_informative = satisfied / applicable over Tier S union Tier G, i.e. KF1_micro\
+  \ with the two Tier D classes removed. This is the number to use when comparing generators; KF1_micro\
+  \ is the number to use when reporting compliance with P3 as written.\nAdditionally exclude from KF1_informative\
+  \ (but not from KF1_micro) every individual claim instance whose evidence carries an entailment flag:\
+  \ KF1.follower_behavior with entailed_by_structure == True. An entailed instance cannot fail, so counting\
+  \ it in a discriminative number inflates it.\n\nMICRO VERSUS MACRO. The primary aggregation is MICRO\
+  \ over claims, because P3's formula counts claims and because an implementer must be able to reproduce\
+  \ the published number. But claim counts are severely imbalanced - the corpus median is 3 joints, so\
+  \ a 12-joint asset contributes 132 joint claims against at most a handful of attachment claims - so\
+  \ the report must ALSO carry KF1_macro_class = mean over the instantiated classes c of (satisfied_c\
+  \ / applicable_c), skipping classes with applicable_c == 0. Publish both; if they diverge by more than\
+  \ 0.05 on an asset, the report flags class_imbalance so the reader knows one class is dominating.\n\n\
+  CORPUS-LEVEL AGGREGATION. Report both the macro mean over assets of KF1_micro (each asset one vote,\
+  \ the default for comparing generators) and the pooled micro over all claims of all assets (which weights\
+  \ by articulation complexity). Assets whose KF1 is N/A are excluded from both and their count is reported\
+  \ separately. Every corpus number carries applicable-n.\n\nMANDATORY PER-CLASS TABLE. For every one\
+  \ of the 13 classes: instantiated, applicable, satisfied, na, and the N/A count broken down by reason\
+  \ code (orientation_undetermined, interface_too_sparse, interface_normal_ill_conditioned, interface_line_ill_conditioned,\
+  \ interface_fully_constrained, interface_interpenetrating, toward_centroids_coincident, symmetry_axis_isotropic,\
+  \ symmetry_axis_absent, symmetry_axis_unverified, symmetry_axis_too_sparse, rotation_in_place, no_usable_travel,\
+  \ no_open_close_states, anchor_degenerate_on_axis, merged_body_entailed, no_joint, binding_missing,\
+  \ contract_unit_mismatch, zero_span, front_anchor_not_planar, front_normal_near_vertical, gravity_zero_default_z).\
+  \ A class whose corpus-wide applicability rate falls below 0.10 is printed with a NON-DIAGNOSTIC banner:\
+  \ a metric that abstains on 90% of the corpus is not measuring the corpus, and on the two worked P0\
+  \ examples KF1.axis_numeric is expected to land there.\n\nFAILURE EVIDENCE, NEVER HIDDEN. Per P3's Reporting\
+  \ box, no single scalar. Every failing claim emits its full evidence record; the asset-level output\
+  \ carries the per-joint claim list, the per-attachment claim list, the per-class table, the four scores,\
+  \ the tolerances hash (covering both the frozen nine keys and the kf1 extension block of S10), and the\
+  \ mesh_frame_mode / gravity_zero_default_z diagnostics.\n\nTOLERANCE CALIBRATION PROTOCOL (binding,\
+  \ because the frozen thresholds decide the numerator). Do NOT calibrate on the real corpus: 607 assets\
+  \ yielded only 47 failures, per-item 6-16 positives, and a sweep of tau over [0,1] produced best kappa\
+  \ of only 0.022 / 0.098 / 0.036 / 0.326 - the scores did not separate the two classes at any threshold,\
+  \ so the problem was never threshold placement. Calibrate by deterministic fault injection on hand-built\
+  \ correct assets, one fault per predicate, sweeping severity to obtain a detection-rate-versus-severity\
+  \ curve and taking the knee. Each threshold serves exactly one predicate so the sweeps do not interact.\
+  \ Two injection rules are mandatory and are the direct lesson of the previous failed attempt: (1) for\
+  \ KF1.anchor and KF1.pivot_locality, displace mjModel.jnt_pos while holding body_pos and every geom\
+  \ pose fixed - equivalently, move the URDF joint origin AND compensate every child visual/collision\
+  \ origin by the negative offset - because displacing the joint origin alone translates the child link\
+  \ with it and injects no fault at all, which is precisely why a full-link-diagonal displacement previously\
+  \ produced zero detection; (2) for KF1.axis_* rotate jnt_axis only, which needs no compensation because\
+  \ the axis direction is not carried by any geometry. Before a predicate is admitted to the scored set\
+  \ it must be shown to fail at least one injected fault and pass the uninjected gold asset."
+open_decisions:
+- Where the tolerances block lives. P0 §12 shows tolerances at top level while both complete examples
+  nest it under kinematic_claims. This spec reads kinematic_claims.tolerances.*. Pick one and fix it in
+  the schema before freezing, since the block is hashed.
+- The kf1 tolerance extension of S10 (28 new keys) has no counterpart in the frozen nine. P0 R3 forbids
+  unnamed thresholds in code, so these must be added to the contract and to admission rule A12, or the
+  four relational axis algorithms and both bullet-4 replacements cannot be implemented without exactly
+  the silent developer choices R3 exists to prevent.
+- Whether KF1.range_ref_state's C3 (qpos0 must equal the closed/home value) is a fair model requirement.
+  It fails any asset authored at a mid-travel rest pose even if every limit is right. Defensible under
+  P0 §07 ('closed / ref / range.min are the same number'), but it should be confirmed against a handful
+  of real assets before freezing, because if most generators emit qpos0 = 0 while contracts declare a
+  nonzero closed value the class becomes a constant failure.
+- 'Whether semantic-axis claims should be gated on an asset-level uprightness test. P0 §06 rules +z-up
+  is a fact, so a sideways-modelled asset fails every vertical/horizontal claim. That is intentional,
+  but it means one modelling-convention error costs many claims at once. Options: leave as is, or add
+  an asset-level up_consistency diagnostic that flags the pattern without changing the score.'
+- KF1.travel_scale overlaps GF4's proportion claims when a part is simply undersized. Kept separate here
+  because the repair actions differ, but this is the same kind of deliberate overlap P0 §03 registers
+  for part_relations.attached_to versus rigid_attachments and it should be registered there explicitly
+  or removed.
+- 'interface_line is fragile for a near-square contact region: it abstains (N/A) rather than guessing,
+  which is the safe behaviour but may push the class''s applicability low on real door/lid assets. Measure
+  the abstention rate on the corpus before freezing iface_line_aniso_max; if it exceeds ~50%, the relational
+  vocabulary needs a hinge-specific form rather than a generic longest-principal-direction rule.'
+- The free-cone algorithm for interface_normal weights each mover vertex equally, so a densely tessellated
+  face outvotes a coarse one. A per-point area weight (e.g. from the mesh face areas rather than the vertex
+  list) would remove the bias at the cost of reading mesh_face/mesh_faceadr. Decide before freezing whether
+  that cost is worth paying.
+- S2's mesh-frame convention (mesh_vert already expressed in the geom frame, so mesh_pos/mesh_quat must
+  NOT be reapplied) could not be verified here because MuJoCo is not installed in this environment. The
+  spec therefore carries a startup assertion against geom_aabb plus a defined fallback, but the assertion
+  should be run once on the real corpus and the resulting mesh_frame_mode recorded before any scores are
+  published.
+- 'P0 §16 item 1 still stands: the three axis forms are meant to converge to one after the controlled
+  90-degree-yaw experiment. Until that runs, an asset carrying all three forms contributes three claims
+  for one physical fact, which triple-weights that joint''s axis against its anchor and range. If convergence
+  is deferred, consider weighting the three axis claims to sum to one.'
+- Whether an asset with zero rigid_attachments and zero couplings but a single joint should report KF1
+  at all. It instantiates 11 claims of which several are N/A, and the resulting KF1 rests on 5-7 claims.
+  Set a minimum applicable-n below which the asset's KF1 is reported with a low-power flag.

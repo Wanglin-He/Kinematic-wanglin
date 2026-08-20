@@ -1,0 +1,588 @@
+predicates:
+- id: KF2.bound
+  claim: For coupling g there exists in the compiled mjModel exactly one active, position-level constraint
+    object (equality/joint, equality/tendon on a fixed tendon, a zero-width-limited fixed tendon, equality/weld,
+    or equality/connect) whose member set is exactly the two bound member joints of g (or exactly the
+    two bound child bodies of those joints), and it is not an actuator transmission.
+  p0_inputs: kinematic_claims.couplings[g].id; .mechanism; .relation.dependent; .relation.independent;
+    .relation.coefficient; kinematic_claims.joints[*].id, .part, .type; required_parts[*].id; Gate binding
+    table part_id -> mjModel body id (Gate G1 output, reused verbatim, no name inference).
+  mj_inputs: m.neq, m.eq_type, m.eq_obj1id, m.eq_obj2id, m.eq_objtype, m.eq_data, m.eq_active0, d.eq_active;
+    m.ntendon, m.tendon_adr, m.tendon_num, m.tendon_limited, m.tendon_range, m.wrap_type, m.wrap_objid,
+    m.wrap_prm; m.jnt_type, m.jnt_bodyid, m.jnt_dofadr, m.jnt_qposadr, m.body_jntadr, m.body_jntnum, m.body_parentid,
+    m.site_bodyid; m.nu, m.actuator_trntype, m.actuator_trnid, m.actuator_gear; mujoco.mj_forward, mujoco.mj_id2name,
+    mjtEq.{mjEQ_JOINT,mjEQ_TENDON,mjEQ_WELD,mjEQ_CONNECT}, mjtWrap.mjWRAP_JOINT, mjtObj.{mjOBJ_BODY,mjOBJ_SITE},
+    mjtTrn.mjTRN_JOINT, mjtJoint.{mjJNT_HINGE,mjJNT_SLIDE}.
+  algorithm: "STEP B (joint binding, shared by every KF2 predicate; run once and cache). For a contract\
+    \ joint id J: (B1) look up its declaration in kinematic_claims.joints, read J.part; (B2) b = Gate\
+    \ binding table[J.part]; if absent -> J is unbound. (B3) candidates = [m.body_jntadr[b] + i for i\
+    \ in range(m.body_jntnum[b])]. (B4) if len(candidates)==1 -> jid(J)=candidates[0]. (B5) else keep\
+    \ only candidates whose m.jnt_type equals the contract type map {slide:mjJNT_SLIDE, hinge:mjJNT_HINGE,\
+    \ ball:mjJNT_BALL, free:mjJNT_FREE}; if exactly one survives -> that is jid(J); otherwise J is unbound.\
+    \ Never match on joint name strings.\n\n1. jd = jid(couplings[g].relation.dependent), ji = jid(couplings[g].relation.independent).\
+    \ If either is unbound -> predicate N/A (see na_condition).\n2. If m.jnt_type[jd] or m.jnt_type[ji]\
+    \ is not in {mjJNT_HINGE, mjJNT_SLIDE} -> N/A (relation.coefficient is scalar and cannot describe\
+    \ a ball/free member).\n3. bd = m.jnt_bodyid[jd], bi = m.jnt_bodyid[ji]. c = couplings[g].relation.coefficient.\n\
+    4. Put the model at the reference sample q_ref (STEP Q of KF2.residual, step 6) and call mujoco.mj_forward(m,\
+    \ d) once. All activity reads below use this d.\n5. Enumerate candidates in this frozen priority order;\
+    \ stop at the first non-empty kind.\n   B1 eq_joint: e in range(m.neq) with m.eq_type[e]==mjEQ_JOINT\
+    \ and d.eq_active[e]!=0 and {int(m.eq_obj1id[e]), int(m.eq_obj2id[e])} == {jd, ji}.\n   B2 eq_tendon:\
+    \ e with m.eq_type[e]==mjEQ_TENDON and d.eq_active[e]!=0 and int(m.eq_obj2id[e])==-1 and t=int(m.eq_obj1id[e])\
+    \ satisfies FIXED_TENDON(t) and JOINTSET(t)=={jd,ji}. FIXED_TENDON(t): every w in range(m.tendon_adr[t],\
+    \ m.tendon_adr[t]+m.tendon_num[t]) has m.wrap_type[w]==mjWRAP_JOINT. JOINTSET(t): {int(m.wrap_objid[w])\
+    \ for those w}.\n   B3 tendon_limit: t in range(m.ntendon) with FIXED_TENDON(t) and JOINTSET(t)=={jd,ji}\
+    \ and m.tendon_limited[t]!=0 and (m.tendon_range[t][1]-m.tendon_range[t][0]) <= tolerances.tendon_lock_width_max.\n\
+    \   B4 eq_weld: e with m.eq_type[e]==mjEQ_WELD and d.eq_active[e]!=0 and BODYPAIR(e)=={bd,bi}. BODYPAIR(e):\
+    \ map each of eq_obj1id[e], eq_obj2id[e] through m.site_bodyid when m.eq_objtype[e]==mjOBJ_SITE, else\
+    \ use as a body id; treat an id of 0 (world) as a non-member so the pair can never equal {bd,bi} if\
+    \ one side is world.\n   B5 eq_connect: identical to B4 with m.eq_type[e]==mjEQ_CONNECT.\n6. If the\
+    \ winning kind yields >1 candidate, take the lowest index as the binding and emit multiple_bindings\
+    \ with the full list (KF2.expected_dof will independently register the over-constraint).\n7. Rejected-but-informative\
+    \ candidates (collect for evidence, never bind): (a) mjEQ_JOINT with d.eq_active[e]!=0, int(m.eq_obj1id[e])==jd\
+    \ and int(m.eq_obj2id[e])==-1 -> reason dependent_pinned_to_constant, unless c==0.0 in which case\
+    \ it IS a valid B1 binding; (b) any mjEQ_JOINT/mjEQ_TENDON/mjEQ_WELD/mjEQ_CONNECT whose member set\
+    \ intersects {jd,ji} or {bd,bi} but is not equal -> reason wrong_members, record its members; (c)\
+    \ any constraint matching a rule above but with d.eq_active[e]==0 -> reason inactive; (d) a FIXED_TENDON\
+    \ with JOINTSET=={jd,ji} that is neither limited nor referenced by any mjEQ_TENDON -> reason measurement_tendon_constrains_nothing;\
+    \ (e) a limited FIXED_TENDON with JOINTSET=={jd,ji} whose range width exceeds tendon_lock_width_max\
+    \ -> reason tendon_range_too_wide_to_lock; (f) the gear case, see KF2.gear_transmission.\n8. PASS\
+    \ iff a binding was produced by step 5/6. Store binding = {kind in [eq_joint, eq_tendon, tendon_limit,\
+    \ eq_weld, eq_connect], eq_index e or None, tendon_index t or None, jd, ji, bd, bi, role_swapped =\
+    \ (kind==eq_joint and int(m.eq_obj1id[e])==ji)} for all downstream predicates."
+  pass_condition: bound(g) is True, i.e. step 5/6 produced a binding. No tolerance key is involved except
+    tolerances.tendon_lock_width_max, which gates B3 only.
+  na_condition: N/A if and only if (i) jd or ji is unbound by STEP B, emitting member_unbound (this cannot
+    normally occur at P3 because a movable part without a unique resolvable motion chain already fails
+    Gate G2, so N/A here is safe and must be counted in applicable-n); or (ii) a member joint is not hinge/slide,
+    emitting member_joint_not_scalar; or (iii) couplings[g].relation.dependent == .independent, emitting
+    degenerate_relation. Absence of any implementing constraint is NEVER N/A - it is a FAIL.
+  evidence: coupling_id, dependent_joint_id, independent_joint_id, jd, ji, bd, bi, body_names(bd,bi),
+    binding_kind, eq_index, eq_type_name, tendon_index, eq_active0, eq_active, role_swapped, multiple_bindings[list
+    of indices], rejected_candidates[{kind, index, member_ids, member_names, reason}], neq, ntendon, nu.
+  can_it_fail: 'Yes. P0 section 14 hole 2: a gearbox MJCF with two independent hinges and no <equality>
+    and no <tendon> - neq=0, ntendon=0, no candidate at any priority level, bound=False, KF2_g=0. Measured,
+    decisive, and far more general: a URDF asset expressing the coupling as <joint><mimic joint=... multiplier=3.0/></joint>
+    compiles to neq=0, ntendon=0 (verified on MuJoCo 3.11 - the URDF parser silently drops <mimic>), and
+    a URDF that carries <equality> inside its <mujoco> block also compiles to neq=0 (verified). Since
+    the corpus is URDF, this predicate is expected to fail on essentially every asset that declares a
+    coupling; see open_decisions.'
+  deviates_from_spec: 'Implements the P3 bullet ''check the coupling is active and references the correct
+    joints/tendons/body roles'' literally, and implements P0-revised section 09 check 1 and the 1[bound(g)]
+    factor of the corrected formula. Two additions P3 does not state: (a) the priority order B1>B2>B3>B4>B5
+    is introduced because P0 says mechanism:any and several mechanisms can coexist, and a scored predicate
+    cannot be order-dependent; (b) a single-joint equality on the dependent joint is classified as a rejection
+    (dependent_pinned_to_constant) rather than a binding whenever the declared coefficient is non-zero,
+    because it does not reference the independent joint at all.'
+- id: KF2.gear_transmission
+  claim: No member joint of coupling g is transmitted by an actuator whose gear ratio is being used as
+    the stand-in for the declared kinematic relation; equivalently, g is not implemented only as an actuator
+    transmission.
+  p0_inputs: kinematic_claims.couplings[g].relation.dependent, .relation.independent, .relation.coefficient.
+  mj_inputs: m.nu, m.actuator_trntype, m.actuator_trnid, m.actuator_gear (columns 0:6; only column 0 is
+    meaningful for mjTRN_JOINT on a scalar joint), mjtTrn.mjTRN_JOINT, mujoco.mj_id2name(m, mjOBJ_ACTUATOR,
+    a).
+  algorithm: '1. Run KF2.bound first; take jd, ji from its STEP B result.
+
+    2. A = [a for a in range(m.nu) if m.actuator_trntype[a]==mjTRN_JOINT and int(m.actuator_trnid[a][0])
+    in (jd, ji)].
+
+    3. gear_ratio_implied = None. If exactly one actuator in A targets jd (call it a_d) and exactly one
+    targets ji (call it a_i), set gear_ratio_implied = m.actuator_gear[a_d][0] / m.actuator_gear[a_i][0]
+    when |m.actuator_gear[a_i][0]| > mjMINVAL.
+
+    4. PASS iff NOT (KF2.bound failed AND len(A) >= 1). That is: the predicate fails only when no position-level
+    constraint binds g and at least one member joint is driven through an actuator transmission.
+
+    5. On failure emit reason gear_transmission_only and record A with names and gears.
+
+    6. This predicate does not alter the score; it re-labels a KF2.bound failure so that the aggregate
+    can be recomputed under a different policy later (see aggregation and open_decisions).'
+  pass_condition: NOT (bound(g) is False AND there exists an actuator with mjTRN_JOINT transmission onto
+    jd or ji). No tolerance key.
+  na_condition: N/A whenever KF2.bound is N/A (same three reasons), or whenever KF2.bound passed (a real
+    constraint exists, so the actuators are irrelevant to KF2 - they are P4's business).
+  evidence: coupling_id, actuator_ids, actuator_names, actuator_trnid, actuator_gear_col0, gear_ratio_implied,
+    declared_coefficient, verdict=gear_transmission_only.
+  can_it_fail: 'Yes. Model both gears as hinges with <actuator><motor joint=''gear_small_spin'' gear=''3''/><motor
+    joint=''gear_large_spin'' gear=''1''/></actuator> and no equality. Measured on MuJoCo 3.11: neq=0,
+    nefc=0 after mj_forward - the two joints remain kinematically independent, writing q_large changes
+    nothing about q_small. bound=False, this predicate fires, KF2_g=0.'
+  deviates_from_spec: 'P3''s Scope box says ''do not use mass, friction, damping, or actuation'' and ''No
+    dynamic rollout'', and P3 lists ''gear'' among acceptable coupling mechanisms in the KF2 headline
+    sentence - a direct internal contradiction that P0-revised does not resolve. RULING: a gear transmission
+    scores 0 (via bound=False), not N/A. Justification: (1) measured - an actuator gear creates no constraint
+    at all (neq=0, nefc=0), so the declared relation is factually not implemented at the position level
+    and a human inspecting the asset would fail it; (2) N/A would remove a genuinely defective asset from
+    the denominator, exactly the empty-set loophole P0 section 09 was written to close, just moved from
+    max-over-empty-set to divide-by-smaller-denominator; (3) the only evaluation that could vindicate
+    a gear is a dynamic rollout, which P3 forbids, so N/A would amount to a scope-driven amnesty for a
+    real failure. The predicate is emitted separately so the aggregate can be recomputed with these couplings
+    excluded if the team overrules this.'
+- id: KF2.coefficient
+  claim: The scalar coefficient the bound constraint actually enforces between the two member joints,
+    expressed in absolute joint coordinates in the direction dependent-as-a-function-of-independent, equals
+    couplings[g].relation.coefficient.
+  p0_inputs: kinematic_claims.couplings[g].relation.coefficient; .relation.dependent; .relation.independent;
+    kinematic_claims.joints[dependent].range.{unit,min,max}; tolerances.coupling_coefficient_rel (new
+    key, default 0.02).
+  mj_inputs: 'm.eq_type, m.eq_obj1id, m.eq_obj2id, m.eq_data (columns 0..4 are polycoef a0..a4 for mjEQ_JOINT
+    and mjEQ_TENDON; measured on 3.11: mjNEQDATA=11, column 10 carries torquescale and is 1.0 by default),
+    m.qpos0, m.jnt_qposadr, m.tendon_adr, m.tendon_num, m.wrap_objid, m.wrap_prm, m.tendon_range, m.tendon_length0.'
+  algorithm: 'MAPPING (measured, not assumed). MuJoCo''s equality type=''joint'' enforces, in mjData terms,
+    efc_pos = (q1 - qpos0_1) - SUM_k a_k * (q2 - qpos0_2)^k, where q1 is the joint named joint1 (m.eq_obj1id)
+    and q2 is joint2 (m.eq_obj2id). Verified: with ref=0.5 on ja, ref=0.25 on jb and polycoef=''0 3 0
+    0 0'', qpos=(0.5+3, 0.25+1) gives efc_pos=0 while qpos=(3,1) gives efc_pos=0.25 = (3-0.5) - 3*(1-0.25).
+    So the polycoef relation is qpos0-RELATIVE, whereas P0''s relation (q_dep = coefficient*q_ind + offset,
+    and joints[].range / joints[].states) is stated in ABSOLUTE joint coordinates. Every comparison below
+    must therefore fold qpos0 in.
+
+    1. Require binding from KF2.bound. p0d = m.qpos0[m.jnt_qposadr[jd]], p0i = m.qpos0[m.jnt_qposadr[ji]].
+
+    2. kind == eq_joint, role_swapped == False (m.eq_obj1id[e]==jd): a = m.eq_data[e][0:5]. If a[2:5]
+    are not all zero within 1e-12 -> N/A(nonlinear_polycoef). Else c_model = a[1]; b_model = p0d + a[0]
+    - a[1]*p0i.
+
+    3. kind == eq_joint, role_swapped == True (m.eq_obj1id[e]==ji): a = m.eq_data[e][0:5]. If a[2:5] nonzero
+    -> N/A(nonlinear_polycoef_swapped). If |a[1]| <= mjMINVAL -> FAIL with reason swapped_role_noninvertible
+    (the model pins the independent joint to a constant). Else invert q_ind = p0i + a0 + a1*(q_dep - p0d)  =>  c_model
+    = 1.0/a[1]; b_model = p0d - (p0i + a[0])/a[1].
+
+    4. kind in {eq_tendon, tendon_limit}: read the fixed tendon''s joint coefficients w_d = m.wrap_prm[w]
+    for the wrap w with m.wrap_objid[w]==jd, w_i likewise for ji. Measured: for a fixed tendon d.ten_length
+    = SUM_j w_j * qpos_j in ABSOLUTE coordinates (verified: refs 0.5/0.25, coefs 1/-3 -> ten_length at
+    qpos0 = -0.25, not 0). The enforced relation is w_d*q_dep + w_i*q_ind = L_target. L_target = m.tendon_length0[t]
+    + m.eq_data[e][0] for kind==eq_tendon (measured: mjEQ_TENDON''s efc_pos = (ten_length - tendon_length0)
+    - a0); L_target = 0.5*(m.tendon_range[t][0] + m.tendon_range[t][1]) for kind==tendon_limit. If |w_d|
+    <= mjMINVAL -> FAIL(dependent_has_zero_tendon_coefficient). Else c_model = -w_i / w_d; b_model = L_target
+    / w_d. (Sanity check against P0''s own example: coefs 1 and -3 give c_model = -(-3)/1 = +3, matching
+    the declared 3.0 - the sign flip here is the single easiest thing to get wrong.)
+
+    5. kind in {eq_weld, eq_connect}: N/A(mechanism_has_no_coefficient). Additionally emit the structural
+    diagnostic: a weld between the child bodies of two scalar joints can only realise |coefficient| =
+    1 (parallel axes -> +1, antiparallel -> -1) and a connect realises no scalar ratio at all; if |declared
+    coefficient - 1| > tolerances.coupling_coefficient_rel and |declared coefficient + 1| > tolerances.coupling_coefficient_rel,
+    emit weld_cannot_express_coefficient.
+
+    6. Store c_model and b_model for KF2.offset and KF2.sign.
+
+    7. rel_err = |c_model - c| / max(|c|, 1e-9) where c = declared coefficient. If c == 0.0 exactly, use
+    abs_err = |c_model| against tolerances.coupling_coefficient_rel directly.'
+  pass_condition: '|c_model - c| <= tolerances.coupling_coefficient_rel * max(|c|, 1e-9); when c == 0.0,
+    |c_model| <= tolerances.coupling_coefficient_rel.'
+  na_condition: N/A when KF2.bound is N/A or failed (no binding to read a coefficient from); when the
+    mechanism carries no coefficient field (eq_weld, eq_connect); when polycoef is nonlinear (a2..a4 not
+    all zero) in the direct case, or nonlinear in the swapped case. N/A is never a pass.
+  evidence: coupling_id, binding_kind, eq_index, tendon_index, role_swapped, polycoef=a0..a4, wrap_coefficients={dep:w_d,
+    ind:w_i}, tendon_length0, tendon_range, qpos0_dep=p0d, qpos0_ind=p0i, c_model, c_declared, rel_err,
+    tolerance_key='coupling_coefficient_rel', na_reason.
+  can_it_fail: 'Yes. Model writes polycoef=''0 2 0 0 0'' while the contract declares coefficient 3.0 ->
+    c_model=2.0, rel_err=0.333 > 0.02 -> FAIL. Verified on MuJoCo 3.11 (this is P0 section 14 hole 1).
+    It also correctly PASSES the mathematically equivalent role-swapped model polycoef=''0 0.3333333 0
+    0 0'' with joint1=large, joint2=small: step 3 gives c_model = 1/0.3333333 = 3.0000003, rel_err 1e-7
+    -> pass. Verified: that swapped model''s efc_pos is 0 on the contract manifold, so residual and coefficient
+    agree.'
+  deviates_from_spec: 'The algorithm implements the P3 bullet ''verify coefficients'' literally. It deviates
+    in AGGREGATION ROLE: this predicate is diagnostic and is NOT a factor in the KF2 score. Reason (provable,
+    not stylistic): with qpos placed by the contract as q_dep = c*q_ind + b, the model''s own mjEQ_JOINT
+    residual is r(q_ind) = (b - b_model) + (c - c_model)*q_ind - SUM_{k>=2} a_k (q_ind - p0i)^k. Measured
+    confirmation: contract 3:1 against a 2:1 model gives efc_pos = 0, 0.5, 1.0, 2.0 at q_ind = 0, 0.5,
+    1.0, 2.0 - slope exactly (c - c_model) = 1. So on any sample set containing the reference point and
+    spanning the range, KF2.residual is strictly more informative than this field comparison (it also
+    covers nonlinear polycoef, tendon coefficients, and weld, where no coefficient field exists). Multiplying
+    both into the score would count one piece of information twice, which P0''s core rule forbids. The
+    predicate is still computed and reported because the residual is a scalar that says ''wrong'' without
+    saying ''the ratio is 2 instead of 3''.'
+- id: KF2.offset
+  claim: The reference phase the bound constraint actually enforces - the value of the dependent joint,
+    in absolute joint coordinates, when the independent joint is at zero - equals couplings[g].relation.offset.
+  p0_inputs: kinematic_claims.couplings[g].relation.offset; .relation.coefficient; kinematic_claims.joints[dependent].range.{unit,min,max};
+    tolerances.coupling_offset_rel (new key, default 0.01).
+  mj_inputs: 'Same as KF2.coefficient: m.eq_data[e][0:5], m.qpos0, m.jnt_qposadr, m.wrap_prm, m.wrap_objid,
+    m.tendon_adr, m.tendon_num, m.tendon_length0, m.tendon_range.'
+  algorithm: '1. Require b_model from KF2.coefficient step 2/3/4 (it is computed there because both quantities
+    come out of the same qpos0 folding; do not recompute).
+
+    2. b = couplings[g].relation.offset (absolute, in the dependent joint''s contract unit).
+
+    3. span_dep = joints[dependent].range.max - joints[dependent].range.min (from the CONTRACT, never
+    from m.jnt_range - the model''s range is itself under test by KF1 and must not set this predicate''s
+    tolerance).
+
+    4. tol_off = max(tolerances.coupling_offset_rel * span_dep, 1e-6).
+
+    5. PASS iff |b_model - b| <= tol_off.
+
+    6. Emit the qpos0 pair explicitly in evidence: a model that is correct except that it declares jnt
+    ref on a member joint will show a0 == 0 while b_model != 0, and the human needs to see which of the
+    two produced the offset.'
+  pass_condition: '|b_model - b| <= max(tolerances.coupling_offset_rel * (joints[dependent].range.max
+    - joints[dependent].range.min), 1e-6).'
+  na_condition: N/A whenever KF2.coefficient is N/A (no binding, weld/connect, nonlinear or non-invertible
+    polycoef - b_model is undefined in all of those). Also N/A when span_dep == 0, emitting dependent_span_zero,
+    since the tolerance would collapse to its 1e-6 floor and the predicate would become a bit-comparison.
+  evidence: coupling_id, binding_kind, polycoef_a0, qpos0_dep, qpos0_ind, c_model, b_model, b_declared,
+    abs_err, span_dep, tol_off, tolerance_key='coupling_offset_rel', na_reason.
+  can_it_fail: 'Yes. Model writes polycoef=''0.5 3 0 0 0'' (a0=0.5) with both refs 0 while the contract
+    declares offset 0.0 -> b_model = 0 + 0.5 - 3*0 = 0.5, |0.5 - 0| = 0.5 > tol -> FAIL. A second, sneakier
+    failing model: polycoef=''0 3 0 0 0'' but the dependent URDF joint carries a non-zero ref so qpos0_dep
+    = 0.4 -> b_model = 0.4 -> FAIL, and the evidence shows the offset came from qpos0, not from a0.'
+  deviates_from_spec: 'P3''s bullet says ''reference phase''; P0-revised''s schema calls it relation.offset.
+    The literal reading (''compare polycoef[0] to offset'') is WRONG and would produce false passes and
+    false failures on any model with a non-zero joint ref: measured, mjEQ_JOINT''s residual is qpos0-relative
+    while P0''s relation is absolute. The substitute implemented here is b_model = qpos0_dep + a0 - a1*qpos0_ind
+    (direct roles) or b_model = qpos0_dep - (qpos0_ind + a0)/a1 (swapped roles), which is the closest
+    admissible reading because it is the exact absolute-coordinate offset of the relation the model enforces.
+    Aggregation role: diagnostic only, not a score factor, for the same non-double-counting reason as
+    KF2.coefficient - the offset error is exactly the residual evaluated at the reference sample.'
+- id: KF2.sign
+  claim: 'The bound constraint drives the dependent joint in the declared direction: sign(c_model) ==
+    sign(couplings[g].relation.coefficient).'
+  p0_inputs: kinematic_claims.couplings[g].relation.coefficient.
+  mj_inputs: Derived quantity c_model from KF2.coefficient (m.eq_data polycoef, or -w_i/w_d for tendon
+    forms).
+  algorithm: '1. Require c_model from KF2.coefficient.
+
+    2. c = declared coefficient. If |c| <= 1e-9 -> N/A(coefficient_declared_zero).
+
+    3. PASS iff (c_model > 0) == (c > 0) and |c_model| > 1e-9.
+
+    4. Report this separately from KF2.coefficient even though it is implied by it, because it is the
+    one failure mode a reader can act on without looking at any number: a gear pair that turns the wrong
+    way.'
+  pass_condition: sign(c_model) == sign(c), evaluated as (c_model > 0) == (c > 0), with |c_model| > 1e-9.
+    No tolerance key (sign is not a tolerance question).
+  na_condition: N/A whenever KF2.coefficient is N/A, or when |declared coefficient| <= 1e-9 (a zero relation
+    has no sign).
+  evidence: coupling_id, c_model, c_declared, sign_model, sign_declared, binding_kind, wrap_coefficients,
+    polycoef, na_reason.
+  can_it_fail: 'Yes. Model writes polycoef=''0 -3 0 0 0'' against a declared coefficient of +3.0: c_model
+    = -3, signs differ -> FAIL. Equivalently the fixed-tendon form with coefs 1 and +3 instead of 1 and
+    -3 gives c_model = -3. Both are real, common authoring errors (a gear-pair author flips the sign to
+    make the meshing look right and gets the ratio magnitude correct).'
+  deviates_from_spec: 'Implements the P3 bullet ''signs'' literally. Aggregation role: diagnostic only,
+    not a score factor - a sign error is a coefficient error of relative size 2, so KF2.coefficient and
+    KF2.residual both already fail on it; scoring it separately would triple-count one defect.'
+- id: KF2.no_frozen_member
+  claim: 'The bound constraint does not implement the coupling by freezing a member: neither member joint
+    is pinned to a constant, and the enforced coefficient is not zero, unless the contract itself declares
+    coefficient == 0.'
+  p0_inputs: kinematic_claims.couplings[g].relation.coefficient; .relation.dependent; .relation.independent.
+  mj_inputs: m.eq_type, m.eq_obj1id, m.eq_obj2id, m.eq_data[e][0:5], m.wrap_prm, m.wrap_objid, m.tendon_adr,
+    m.tendon_num, d.eq_active.
+  algorithm: "1. c = declared coefficient. If |c| <= 1e-9 the contract itself declares a frozen dependent;\
+    \ predicate is N/A(coefficient_declared_zero).\n2. Scan the model independently of KF2.bound's winner,\
+    \ over all e in range(m.neq) with d.eq_active[e]!=0 and m.eq_type[e]==mjEQ_JOINT:\n   2a. if int(m.eq_obj2id[e])\
+    \ == -1 and int(m.eq_obj1id[e]) in (jd, ji) -> record pinned_member {joint: that id, constant: m.eq_data[e][0]}.\n\
+    \   2b. if {int(m.eq_obj1id[e]), int(m.eq_obj2id[e])} == {jd, ji} and |m.eq_data[e][1]| <= 1e-9 and\
+    \ m.eq_data[e][2:5] all zero -> record degenerate_relation {eq_index: e}.\n3. For kind in {eq_tendon,\
+    \ tendon_limit}: if either w_d or w_i is zero within 1e-9 -> record pinned_member for the joint whose\
+    \ coefficient is zero (a fixed tendon with a zero coefficient on one member does not couple it at\
+    \ all).\n4. PASS iff pinned_member and degenerate_relation are both empty."
+  pass_condition: len(pinned_member) == 0 and len(degenerate_relation) == 0. No tolerance key; the 1e-9
+    figures are exact-zero guards, not calibrated thresholds.
+  na_condition: N/A when KF2.bound is N/A, or when |declared coefficient| <= 1e-9 (the contract asks for
+    a frozen dependent, so freezing it is correct).
+  evidence: coupling_id, pinned_member[{joint_id, joint_name, eq_index, constant}], degenerate_relation[{eq_index,
+    polycoef}], zero_tendon_coefficient_member, declared_coefficient.
+  can_it_fail: 'Yes. Model writes <equality><joint joint1=''gear_small_spin'' polycoef=''0 0 0 0 0''/></equality>
+    - the small gear is pinned to its qpos0 and the large gear spins freely. KF2.bound already rejects
+    this as dependent_pinned_to_constant; this predicate names the failure mode. A second failing model
+    that KF2.bound does NOT catch: <joint joint1=''gear_small_spin'' joint2=''gear_large_spin'' polycoef=''0
+    0 0 0 0''/> - the member set is exactly right so bound=True, but the enforced relation is q_small
+    = const, coefficient 0 against a declared 3.0.'
+  deviates_from_spec: 'P3''s bullet says ''fixed members''. P0-revised''s couplings schema (section 09)
+    has NO field naming a fixed member - relation contains only {dependent, independent, coefficient,
+    offset} - so the bullet as printed has no input and is unimplementable. Closest admissible substitute:
+    instead of checking that the DECLARED fixed member is fixed, check that the MODEL has not silently
+    made a member fixed when the contract declared a live relation. This is the same physical failure
+    (''one member does not actually move with the other'') read in the only direction the schema supports,
+    and it is falsifiable. Aggregation role: diagnostic only - the frozen-member model produces a residual
+    that grows as |c*q_ind| over the sweep, so KF2.residual already scores it 0.'
+- id: KF2.expected_dof
+  claim: After the model's own equality constraints are accounted for, the member joints of coupling g
+    retain exactly couplings[g].expected_dof independent degrees of freedom.
+  p0_inputs: kinematic_claims.couplings[g].expected_dof; .relation.dependent; .relation.independent; tolerances.coupling_rank_tol_rel
+    (new key, default 1e-9).
+  mj_inputs: 'd.nefc, d.efc_type, d.efc_id, d.efc_J, d.efc_J_rownnz, d.efc_J_rowadr, d.efc_J_colind, d.nJ,
+    mujoco.mj_isSparse(m), mujoco.mju_sparse2dense; m.nv, m.jnt_dofadr, m.jnt_type; d.ten_J (flat, reshape
+    to (m.ntendon, m.nv) - measured: dense in 3.11, no ten_J_rownnz exists); mjtConstraint.mjCNSTR_EQUALITY;
+    mujoco.mj_forward.'
+  algorithm: "OBTAINING efc_J IN MuJoCo 3.11 (measured; the Python bindings expose it as a FLAT array\
+    \ either way, and the sparse index arrays contain uninitialised garbage when the model is dense, so\
+    \ the branch is mandatory):\n  if mujoco.mj_isSparse(m) == 0:  J_full = np.asarray(d.efc_J).reshape(d.nefc,\
+    \ m.nv)   # length is exactly nefc*nv\n  else:                           J_full = np.zeros((d.nefc,\
+    \ m.nv)); mujoco.mju_sparse2dense(J_full, np.asarray(d.efc_J)[:d.nJ], np.asarray(d.efc_J_rownnz)[:d.nefc],\
+    \ np.asarray(d.efc_J_rowadr)[:d.nefc], np.asarray(d.efc_J_colind)[:d.nJ])\n  (Sparsity is chosen by\
+    \ m.opt.jacobian; the default 'auto' switches to sparse at nv >= 60. Measured at nv=70: mj_isSparse=1,\
+    \ d.efc_J has length nJ=418, rownnz all 2, colind valid. Measured at nv=3: mj_isSparse=0, d.efc_J\
+    \ has length nefc*nv, and efc_J_rowadr read back as [0,-1,-1] - garbage. Do not read the sparse arrays\
+    \ in the dense branch.)\n1. Place the model at the reference sample q_ref (STEP Q of KF2.residual,\
+    \ step 6), zero d.qvel, d.ctrl, d.qacc_warmstart, call mujoco.mj_forward(m, d). Read only positional\
+    \ fields; efc_pos and efc_J depend on kinematics alone, so the synthesised inertia cannot influence\
+    \ this predicate.\n2. V = [int(m.jnt_dofadr[jd]), int(m.jnt_dofadr[ji])]; nv_g = 2. (Both members\
+    \ are hinge/slide by KF2.bound step 2, so each contributes exactly one dof.)\n3. Vc = complement of\
+    \ V in range(m.nv).\n4. R = [i for i in range(d.nefc) if d.efc_type[i] == mjCNSTR_EQUALITY and max(|J_full[i,\
+    \ Vc]|) <= rank_zero_abs], where rank_zero_abs = tolerances.coupling_rank_tol_rel * max(1.0, max|J_full[i,:]|).\
+    \ That is: keep every equality row - g's own and any other - that acts ONLY on the member dofs. Count\
+    \ and report the equality rows that touch V but also touch outside as rows_excluded_touching_outside;\
+    \ they belong to a different constraint whose Jacobian columns leave V, and including them would over-count.\n\
+    5. If KF2.bound's binding kind == tendon_limit, append one synthesised row: np.asarray(d.ten_J).reshape(m.ntendon,\
+    \ m.nv)[t]. Rationale below. Set tendon_limit_row_synthesized = True.\n6. If R is empty after steps\
+    \ 4-5 -> rank = 0.\n   Else A = J_full[R][:, V] (shape len(R) x 2); s = numpy.linalg.svd(A, compute_uv=False);\
+    \ rank = count of s[k] > max(tolerances.coupling_rank_tol_rel * s[0], 1e-12).\n7. dof_observed = nv_g\
+    \ - rank.\n8. PASS iff dof_observed == couplings[g].expected_dof (exact integer comparison)."
+  pass_condition: nv_g - rank(J_eq restricted to member dofs) == couplings[g].expected_dof, exact integer
+    equality. Tolerance key tolerances.coupling_rank_tol_rel enters only the numerical rank cut.
+  na_condition: N/A when couplings[g].expected_dof is absent from the contract; when KF2.bound is N/A
+    (members unbound or non-scalar). NOT N/A when KF2.bound FAILED - a coupling with no implementing constraint
+    has dof_observed = 2 against expected 1, and that is a genuine, separately reportable failure, so
+    the predicate runs and fails.
+  evidence: coupling_id, expected_dof, dof_observed, nv_g, member_dof_indices=V, equality_rows_used=R,
+    rows_excluded_touching_outside (count and indices), singular_values, rank, rank_cut, tendon_limit_row_synthesized,
+    is_sparse=mj_isSparse(m), nefc, nJ, tolerance_key='coupling_rank_tol_rel'.
+  can_it_fail: 'Yes, in both directions, and it is the ONLY KF2 predicate that is not implied by the residual.
+    (a) Under-constrained: two hinges, no equality -> R empty, rank 0, dof_observed 2 != 1 -> FAIL. (b)
+    Over-constrained, and the residual is blind to it: a model with the CORRECT <joint joint1=''gear_small_spin''
+    joint2=''gear_large_spin'' polycoef=''0 3 0 0 0''/> plus an extra <weld body1=''gear_small'' body2=''gear_large''/>.
+    The equality row''s efc_pos stays 0 at every sample so KF2.residual passes, but the weld''s 6 rows
+    act only on the two member dofs, rank becomes 2, dof_observed = 0 != 1 -> FAIL. Measured control:
+    a model with a duplicated identical equality gives 2 equality rows with rank 1 (numpy.linalg.matrix_rank
+    on [[1,-3],[1,-3]] = 1), so honest duplication does not produce a spurious failure.'
+  deviates_from_spec: 'Implements P0-revised section 09 check 3 (''nv(member joints) - rank(efc_J restricted
+    to equality rows)'') and the P3 bullet ''expected DOF''. Two documented deviations, both forced by
+    measurement. (1) The literal ''equality rows'' set is restricted to rows that act only on the member
+    dofs. Without the restriction, a second coupling h that legitimately ties the independent joint to
+    a third joint contributes a row to R whose support leaves V; restricting its columns to V and counting
+    it as a full rank-1 constraint on V is a mis-attribution that would fail a correct asset. The restriction
+    preserves the over-constraint detection (a weld between the two member bodies has support exactly
+    V when they are siblings) while removing the mis-attribution, and the excluded count is reported.
+    (2) For kind == tendon_limit the literal computation is wrong: measured, a zero-width limited fixed
+    tendon produces NO efc row while it is satisfied (nefc=0 on the manifold, one mjCNSTR_LIMIT_TENDON
+    row only once violated), so rank would be 0 and a correct asset would fail. A two-sided limit of zero
+    width is a bilateral constraint, so its d.ten_J row is synthesised into R and the substitution is
+    flagged in the evidence.'
+- id: KF2.residual
+  claim: With qpos placed on the manifold the CONTRACT declares (dependent derived from independent by
+    relation, never by the model), the model's own constraint violation for coupling g, normalised as
+    residual_norm prescribes, stays at or below epsilon_g at every frozen sample.
+  p0_inputs: kinematic_claims.couplings[g].relation.{dependent,independent,coefficient,offset}; .residual_norm.{by,unit};
+    .epsilon (falls back to tolerances.coupling_residual); kinematic_claims.joints[*].{id,part,type,range.{unit,min,max}};
+    kinematic_claims.independent_dofs; kinematic_claims.couplings[*] (all of them, for chain resolution);
+    tolerances.coupling_samples (new key, default 33); tolerances.coupling_path_dof_samples (new key,
+    default 5); Gate binding table part_id -> body id.
+  mj_inputs: m.qpos0, m.jnt_qposadr, m.jnt_dofadr, m.jnt_type, m.jnt_range, m.jnt_limited, m.jnt_bodyid,
+    m.body_parentid, m.body_jntadr, m.body_jntnum, m.body_geomadr, m.body_geomnum, m.geom_aabb, m.eq_data
+    (column 10 = torquescale), d.qpos, d.qvel, d.ctrl, d.qacc_warmstart, d.nefc, d.efc_type, d.efc_id,
+    d.efc_pos, d.ten_length, d.geom_xpos, d.geom_xmat; mujoco.mj_forward; mjtConstraint.mjCNSTR_EQUALITY.
+  algorithm: "STEP Q (sample construction).\n1. Resolve the drive chain: build a directed graph over couplings,\
+    \ edge independent -> dependent. Walk backwards from g's independent joint: while the current joint\
+    \ is the .dependent of some coupling h, move to h's .independent. The terminal joint is the ROOT.\
+    \ If a cycle is encountered -> N/A(coupling_cycle) for every coupling in it (P0 admission A6 should\
+    \ have prevented this). If any coupling on the chain has a non-scalar member -> N/A(chain_member_not_scalar).\
+    \ Record chain_length.\n2. Composed relation from ROOT to g's independent: compose the linear maps\
+    \ q_dep = c*q_ind + b along the chain (c_total = product of c, b_total accumulated), all in absolute\
+    \ contract coordinates.\n3. Sample grid on ROOT: lo = joints[ROOT].range.min, hi = joints[ROOT].range.max\
+    \ (contract values; the unit is m for slide and rad for hinge - MuJoCo's internal units are always\
+    \ m/rad regardless of any MJCF compiler angle setting, and URDF is always radians, so NO unit conversion\
+    \ is ever applied). If hi - lo <= 1e-12 -> N/A(independent_span_zero). N = tolerances.coupling_samples.\
+    \ grid[k] = lo + k*(hi-lo)/(N-1) for k in 0..N-1. If 0.0 lies in [lo,hi] and is not already within\
+    \ 1e-12 of a grid point, append 0.0 as sample index N. Scan order is exactly this index order and\
+    \ is frozen; it defines 'first failing state'.\n4. Reference sample q_ref: the sample whose ROOT value\
+    \ has the smallest |value| (0.0 if present, else the endpoint nearest zero). Used by KF2.bound step\
+    \ 4 and KF2.expected_dof step 1.\n5. Extra path dofs (weld/connect only): compute the body path between\
+    \ bd and bi - walk m.body_parentid from bd to world and from bi to world, find the lowest common ancestor,\
+    \ collect every joint id via m.body_jntadr/m.body_jntnum on both branches strictly below the LCA.\
+    \ P = those joints minus {jd, ji}. If P is non-empty, take the first min(2, |P|) of them in ascending\
+    \ joint id and give each a coarse grid of tolerances.coupling_path_dof_samples points over its contract\
+    \ range (its model jnt_range if it has no contract entry); the full sample set is the Cartesian product\
+    \ with the main grid varying fastest. Emit extra_path_dofs. For kind in {eq_joint, eq_tendon, tendon_limit}\
+    \ skip this entirely - measured, those residuals are functions of the member qpos alone.\n6. WRITING\
+    \ ONE SAMPLE. d.qpos[:] = m.qpos0 (this also guarantees valid unit quaternions for any ball/free joint\
+    \ in the model); d.qvel[:] = 0; d.ctrl[:] = 0; d.qacc_warmstart[:] = 0. Write the ROOT value into\
+    \ d.qpos[m.jnt_qposadr[jid(ROOT)]]. Propagate along the chain, writing each dependent as c*q_ind +\
+    \ b. Write d.qpos[m.jnt_qposadr[jd]] = c_g * q_ind_g + b_g using the CONTRACT's coefficient and offset.\
+    \ Write each held path dof from step 5. Every other joint in independent_dofs stays at its qpos0 value.\
+    \ Do NOT clamp any written value into m.jnt_range; if a written value falls outside m.jnt_range while\
+    \ m.jnt_limited is set, record dependent_out_of_model_range on that sample and keep the sample (a\
+    \ model range too small to realise the declared relation is a real defect, reported here and scored\
+    \ by KF1). Call mujoco.mj_forward(m, d). Measured: mj_forward does not project qpos - with a 2:1 model\
+    \ and contract 3:1 placement, qpos comes back unchanged and efc_pos reads 0, 0.5, 1.0, 2.0 at q_ind\
+    \ = 0, 0.5, 1.0, 2.0.\n\nSTEP R (raw residual at one sample, by binding kind).\n7. rows = sorted([i\
+    \ for i in range(d.nefc) if d.efc_type[i] == mjCNSTR_EQUALITY and int(d.efc_id[i]) == e]) - measured,\
+    \ efc_id for an equality row is the equality index, and a weld's 6 rows all carry the same efc_id\
+    \ in order [translation x,y,z, rotation x,y,z]. Filtering on efc_type first is mandatory because a\
+    \ limit row's efc_id is a joint/tendon index and collides numerically.\n   kind eq_joint or eq_tendon:\
+    \ require len(rows) == 1; r_raw = d.efc_pos[rows[0]] (signed, in the dependent joint's units for eq_joint;\
+    \ in tendon-length units for eq_tendon - for a fixed tendon whose dependent coefficient is w_d, divide\
+    \ by w_d to bring it into dependent-joint units before normalising, and record tendon_scaled_by_w_d).\n\
+    \   kind tendon_limit: rows is EMPTY whenever the constraint is satisfied (measured: nefc=0 on the\
+    \ manifold; once violated a single mjCNSTR_LIMIT_TENDON row appears carrying -(violation), sign destroyed\
+    \ and both directions identical). Therefore do NOT read efc for this kind. Compute L = d.ten_length[t];\
+    \ lo_t, hi_t = m.tendon_range[t]; r_raw = (L - hi_t if L > hi_t else (L - lo_t if L < lo_t else 0.0))\
+    \ / w_d. Record residual_source='ten_length'.\n   kind eq_weld: require len(rows) == 6. dp = d.efc_pos[rows[0:3]]\
+    \ (metres). ts = m.eq_data[e][10] (torquescale, default 1.0). theta = 2*arcsin(min(1.0, ||d.efc_pos[rows[3:6]]||\
+    \ / max(ts, 1e-12))) radians - measured exact at theta = 0.02, 0.5, 1.5 rad. r_trans = ||dp||; r_rot\
+    \ = theta.\n   kind eq_connect: require len(rows) == 3; r_trans = ||d.efc_pos[rows[0:3]]||; r_rot\
+    \ = 0.0.\n   Any other row count -> hard FAIL with unexpected_efc_row_count (never silently pass).\n\
+    \nSTEP S (normalisation).\n8. Scalar mechanisms (eq_joint, eq_tendon, tendon_limit): let u_dep = joints[dependent].range.unit,\
+    \ u_ind = joints[independent].range.unit.\n   by == 'absolute': require residual_norm.unit == u_dep,\
+    \ else N/A(residual_unit_mismatch). r_norm = r_raw.\n   by == 'dependent_range_span': den = joints[dependent].range.max\
+    \ - min. If den <= 1e-12 -> N/A(dependent_span_zero). r_norm = r_raw / den.\n   by == 'independent_range_span':\
+    \ if u_ind != u_dep -> N/A(residual_norm_unit_incoherent) (dividing radians by metres is not a number).\
+    \ den = joints[independent].range.max - min; if den <= 1e-12 -> N/A(independent_span_zero). r_norm\
+    \ = r_raw / den.\n9. Pose mechanisms (eq_weld, eq_connect): residual_norm.by is IGNORED; emit residual_norm_overridden_for_pose_constraint.\
+    \ D_dep = AABB diagonal of the DEPENDENT part's own geometry, computed at q_ref as follows: geoms\
+    \ = range(m.body_geomadr[bd], m.body_geomadr[bd]+m.body_geomnum[bd]); if empty, extend into bd's rigid\
+    \ (joint-free) descendant subtree; if still empty -> N/A(no_geometry_for_normalizer). For each geom\
+    \ take the 8 corners of m.geom_aabb[gi] (layout [cx,cy,cz,hx,hy,hz] in geom-local frame), map them\
+    \ to world by d.geom_xmat[gi].reshape(3,3) @ corner + d.geom_xpos[gi], accumulate the componentwise\
+    \ min/max over all corners of all geoms, D_dep = ||max - min||. Never use a whole-asset bounding-box\
+    \ diagonal. theta_scale = (joints[dependent].range.max - min) if u_dep == 'rad' and that span > 1e-12\
+    \ else pi. r_norm = max(r_trans / D_dep, r_rot / theta_scale). Report weld_trans_norm = r_trans/D_dep\
+    \ and weld_rot_norm = r_rot/theta_scale SEPARATELY as well as the max.\n\nSTEP T (reduction over samples).\n\
+    10. eps_g = couplings[g].epsilon if present else tolerances.coupling_residual.\n11. r_max = max over\
+    \ all samples of |r_norm|. CONVENTION, frozen and applied everywhere in this spec: max over an EMPTY\
+    \ collection is +inf, never -inf. (With N >= 2 the sample set is never empty; the convention exists\
+    \ so that no future code path can inherit the P0 section 09 loophole.)\n12. first_failing = the lowest\
+    \ sample index k with |r_norm(k)| > eps_g, or None.\n13. PASS iff r_max <= eps_g."
+  pass_condition: max over all frozen samples of |r_g,norm(q)| <= eps_g, where eps_g = couplings[g].epsilon
+    if declared else tolerances.coupling_residual, and max over an empty sample set is defined as +inf.
+  na_condition: N/A when KF2.bound is N/A (member unbound / non-scalar / degenerate relation); when the
+    drive chain has a cycle or a non-scalar link; when the ROOT's contract span is zero; when residual_norm.unit
+    disagrees with the dependent joint's contract unit under by=='absolute'; when by=='independent_range_span'
+    and the two joints' contract units differ; when the chosen normalising span is zero; when a pose mechanism's
+    dependent part has no geometry. NOT N/A when KF2.bound FAILED - the residual is then simply not computed
+    and reported as null, and the coupling scores 0 through the bound factor.
+  evidence: coupling_id, binding_kind, eq_index, tendon_index, residual_source, samples_n, drive_root_joint,
+    chain_length, chain_composed_coefficient, chain_composed_offset, extra_path_dofs, r_max, r_max_sample_index,
+    r_max_q (the full written qpos of that sample plus the named joint values), first_failing_index, first_failing_q,
+    first_failing_r_norm, epsilon_used and whether it came from couplings[g].epsilon or tolerances.coupling_residual,
+    residual_norm_by, normalizer_value, per-sample series [k, q_root, q_ind, q_dep, r_raw, r_norm], weld_trans_norm,
+    weld_rot_norm, torquescale, D_dep, theta_scale, samples flagged dependent_out_of_model_range, unexpected_efc_row_count.
+  can_it_fail: 'Yes - measured end to end. Model writes polycoef=''0 2 0 0 0'' while the contract declares
+    coefficient 3.0, residual_norm {by: absolute, unit: rad}, epsilon 0.005. Placing q_large = 1.0 and
+    q_small = 3.0 and calling mj_forward gives efc_pos = 1.0 rad; the sweep gives 0, 0.5, 1.0, 2.0 at
+    q_ind = 0, 0.5, 1.0, 2.0, so r_max = 2.0 >> 0.005 -> FAIL with first_failing at the first sample whose
+    |q_ind| > 0.0025. This is NOT a tautology despite the evaluator itself computing the dependent value:
+    the placement uses the CONTRACT''s relation while the residual is the MODEL''s own constraint violation
+    at that placement, so the two disagree exactly when the model''s relation differs from the contract''s.
+    Verified control in the other direction: a mathematically equivalent model that swaps the roles (joint1=large,
+    joint2=small, polycoef=''0 0.3333333 0 0 0'') yields efc_pos = 0 on the same manifold and correctly
+    passes.'
+  deviates_from_spec: 'Implements the P3 bullets ''sample only independent DOFs and derive dependent states
+    from the target relation'' and ''evaluate a normalized coupling residual at every sample, reporting
+    its maximum and first failing state'' literally, and P0-revised section 09 check 4. Deviations, each
+    forced by measurement: (1) for kind == tendon_limit the residual is computed from d.ten_length against
+    m.tendon_range rather than from efc_pos, because measured, the efc row is absent while satisfied (empty
+    set) and carries -(violation) with the sign destroyed once violated - reading efc_pos there would
+    produce both the empty-set loophole and a sign-blind residual; P0''s own example XML <fixed limited=''true''
+    range=''0 0''> additionally does not compile in MuJoCo 3.11 (''invalid limits in tendon''), so the
+    mechanism only ever appears with a small non-zero width, which this algorithm handles. (2) The weld/connect
+    reduction is not specified anywhere in P0 or P3 - P0 section 16 item 2 leaves it explicitly open.
+    The answer implemented here: translation normalised by the dependent part''s own AABB diagonal, rotation
+    converted to a true angle by theta = 2*arcsin(||efc_pos[3:6]||/torquescale) (measured exact) and normalised
+    by the dependent joint''s declared angular span, BOTH reported, and the SCORE taken on their max because
+    the score must be one number per coupling and max is the conservative choice. (3) The residual_norm.by
+    field is overridden for pose mechanisms, since a 6-D pose error has no meaning in dependent-joint
+    units. (4) Samples whose dependent value leaves the model''s own jnt_range are kept, not clamped,
+    because clamping would silently move the evaluation off the contract manifold and convert a real defect
+    into a pass.'
+aggregation: 'PER-COUPLING SCORE. s_g = 1[KF2.bound(g)] * 1[KF2.expected_dof(g) passes OR is N/A] * 1[KF2.residual(g)
+  passes]. KF2.coefficient, KF2.offset, KF2.sign, KF2.no_frozen_member and KF2.gear_transmission are computed
+  and reported but are NOT factors in s_g. Justification, which is provable rather than stylistic: with
+  qpos placed by the contract as q_dep = c*q_ind + b, the model''s own equality residual is r(q_ind) =
+  (b - b_model) + (c - c_model)*q_ind - SUM_{k>=2} a_k*(q_ind - qpos0_ind)^k. Measured confirmation: a
+  2:1 model against a 3:1 contract returns efc_pos = 0, 0.5, 1.0, 2.0 at q_ind = 0, 0.5, 1.0, 2.0 - intercept
+  exactly the offset error and slope exactly the coefficient error. Since the frozen sample set always
+  contains the reference point and spans the declared range, KF2.residual strictly dominates the coefficient,
+  offset, sign and frozen-member field comparisons, and also covers nonlinear polycoef, tendon coefficients
+  and weld, where no coefficient field exists at all. Multiplying them into s_g would count one piece
+  of information three or four times, which P0''s core rule (''one class of claim serves one check'')
+  forbids, and would make s_g track the correlation structure of the redundancy rather than the asset.
+  They are still emitted because a scalar residual says ''wrong'' without saying ''the ratio is 2 instead
+  of 3''. KF2.expected_dof IS a factor because it is the only predicate not implied by the residual: a
+  model carrying the correct equality PLUS a redundant weld between the two member bodies has an identically-zero
+  residual and zero remaining degrees of freedom.
+
+
+  DENOMINATOR. G_declared = kinematic_claims.couplings. G_na = {g in G_declared : KF2.bound(g) is N/A},
+  i.e. a member joint is unbound (Gate G2 should already have excluded this asset), a member joint is
+  not hinge/slide, the relation is degenerate (dependent == independent), the drive chain contains a cycle
+  or a non-scalar link, the declared normalisation is unit-incoherent or has a zero span, or a pose mechanism''s
+  dependent part has no geometry. G_applicable = G_declared \ G_na. KF2 = (SUM over g in G_applicable
+  of s_g) / |G_applicable|.
+
+
+  ZERO DENOMINATOR. If |G_applicable| == 0 - which includes the P3-stated case couplings: [] and the case
+  where every declared coupling is N/A - KF2 is reported as N/A, never 0.0 and never 1.0, and the asset
+  is excluded from the KF2 column of any applicable-only aggregate. Report applicable_n = |G_applicable|,
+  declared_n = |G_declared|, and the N/A reason histogram alongside every KF2 figure; with the corpus''s
+  coupling rate unknown (P0 section 16 item 3), a bare KF2 mean is uninterpretable.
+
+
+  FORMULA FIX (the empty-set loophole). P3 prints KF2 = mean_g 1[max_q |r_g,norm(q)| <= eps_g]. A model
+  that implements nothing produces no constraint object, hence no residual, hence max over the empty set
+  = -inf by the usual convention, hence the indicator is true and the worst possible model scores 1.0.
+  Two independent guards are specified, both required: (a) the explicit factor 1[bound(g)], so a coupling
+  with no implementing constraint scores 0 by construction regardless of what the residual term does;
+  (b) a global convention, stated in KF2.residual step 11 and applied everywhere in this spec, that max
+  over an empty collection is +inf, not -inf, so even a future code path that loses the bound factor cannot
+  inherit the loophole. The same guard is applied at the aggregation level: an empty denominator yields
+  N/A, not 1.0.
+
+
+  REPORTING. Emit the three-way split rather than KF2 alone: bound_fail_n, dof_fail_n, residual_fail_n
+  (a coupling can appear in more than one), plus gear_only_n as a distinguishable subset of bound_fail_n
+  so the aggregate can be recomputed under a policy that treats gear-only couplings as N/A. Emit the tolerances-block
+  hash (P0 section 12) with every KF2 figure.'
+open_decisions:
+- 'DECISIVE, MEASURED, BLOCKS THE WHOLE METRIC: MuJoCo 3.11''s URDF parser silently drops <joint><mimic/></joint>
+  - a two-gear URDF with multiplier=3.0 compiles to neq=0, ntendon=0, nefc=0. A URDF that puts <equality>
+  inside its <mujoco> extension block also compiles to neq=0 (the block honours <compiler>/<option>/<size>
+  only). The established facts say the corpus is URDF from Articraft''s materialization cache. Consequence:
+  bound(g) is False for every real asset that declares a coupling, and KF2 will read exactly 0.0 across
+  the corpus - a true statement about MuJoCo''s URDF pipeline, not about the generator. A human must decide
+  before any numbers are published: (a) accept 0.0 and report it as a pipeline finding, (b) extend the
+  URDF loader to synthesise an <equality><joint polycoef=''offset multiplier 0 0 0''/> from every <mimic>
+  and re-run - which changes what is being measured from ''the asset implements the coupling'' to ''the
+  asset declares the mimic'', or (c) declare KF2 not evaluable on URDF assets and report applicable_n
+  = 0. This must be settled with the same urgency as P0 section 16 item 4.'
+- 'Gear/actuator ruling (specified as FAIL, i.e. bound=False, s_g=0). P3''s KF2 headline lists ''gear''
+  as an acceptable mechanism while P3''s Scope box forbids actuation and dynamic rollout - a direct internal
+  contradiction. Measured: an actuator gear yields neq=0, nefc=0 and leaves the two joints kinematically
+  independent. The spec scores it 0 and tags it gear_only so the aggregate can be recomputed as N/A if
+  the team overrules. Someone must sign off on 0 vs N/A.'
+- 'Weld residual reduction (P0 section 16 item 2, left open there). This spec answers: translation / dependent-part
+  AABB diagonal, rotation as theta = 2*arcsin(||efc_pos[3:6]||/torquescale) / declared angular span, BOTH
+  reported, score on the max. The alternative - report two numbers and require both under epsilon - gives
+  the same pass/fail set; the alternative that actually differs is scoring on the translation alone (a
+  weld between hinge bodies with non-parallel axes shows up in both, but a pure phase error shows up only
+  in rotation). Needs a decision, and the fault-injection campaign should calibrate the two normalisers
+  separately.'
+- 'Six tolerance keys are used that P0 section 12 does not contain and that must be added to the frozen
+  block before any run: coupling_samples (33), coupling_coefficient_rel (0.02), coupling_offset_rel (0.01),
+  coupling_rank_tol_rel (1e-9), tendon_lock_width_max (1e-3), coupling_path_dof_samples (5). Per P0 principle
+  R3 none of these may live in code. The first is a sampling rule, not a threshold, and P3 freezes those
+  too.'
+- 'Aggregation choice: coefficient / offset / sign / frozen-member are reported but not scored, on the
+  proof that the residual dominates them. If the team wants P3''s ''verify coefficients, signs, fixed
+  members, reference phase'' to be literally scored, s_g becomes a product of seven correlated indicators
+  and KF2 drops toward the residual''s own pass rate while becoming harder to attribute. Decide explicitly
+  rather than by default.'
+- 'P0''s own KF2 example XML does not compile: <fixed limited=''true'' range=''0 0''> is rejected by MuJoCo
+  3.11 with ''invalid limits in tendon''. Section 09 must be corrected to a small non-zero width (the
+  spec uses tendon_lock_width_max) or to the <equality><tendon .../> form, otherwise the contract documents
+  a mechanism no asset can legally contain.'
+- P0's relation is stated in absolute joint coordinates while MuJoCo's equality/joint and equality/tendon
+  residuals are qpos0-relative (measured). The spec folds qpos0 in explicitly. If instead P0 intends the
+  relation to be qpos0-relative, every coefficient/offset comparison in KF2.coefficient and KF2.offset
+  changes and joints[].states must be reinterpreted too. P0 should state which reading is authoritative
+  in one sentence.
+- Chained couplings (the independent joint of g being the dependent of another coupling) are resolved
+  by composing linear relations from a drive root. P0 admission rule A6 forbids only the direct case (a
+  dependent appearing in independent_dofs); it does not forbid chains or cycles. A cycle is currently
+  N/A - it should instead be an A-rule that rejects the contract before generation.
+- Corpus coupling rate is unknown (P0 section 16 item 3). If only single-digit percent of assets declare
+  a coupling, KF2's applicable_n is thin and every KF2 number must carry it; the fault-injection calibration
+  of coupling_residual, coupling_coefficient_rel and coupling_offset_rel must then be done entirely on
+  hand-authored gold assets, since there will be no real positives to calibrate against.

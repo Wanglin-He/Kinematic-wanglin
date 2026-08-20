@@ -66,12 +66,25 @@ class JointType(StrEnum):
     def has_anchor(self) -> bool:
         """Whether a pivot point affects this joint's kinematics at all.
 
-        A translation has no centre: a slide joint's ``pos`` can be set anywhere and the
-        child's pose is bit-identical. Ball and free joints likewise carry no line in
-        space that an ``anchor`` claim could be about. Only a hinge rotates about a line
-        through its anchor, so only a hinge can have its anchor be wrong.
+        Measured rather than assumed, by displacing ``pos`` by 0.25 m and reading how far
+        the child's geometry moved:
+
+        ===========  ==================  ==================================================
+        joint        child displacement  meaning
+        ===========  ==================  ==================================================
+        ``slide``    0.000000            a translation has no centre; ``pos`` is inert
+        ``hinge``    0.171449            rotates about the line through the anchor
+        ``ball``     0.191345            rotates about the anchor *point*
+        ``free``     0.000000            MuJoCo ignores ``pos`` on a free joint outright
+        ===========  ==================  ==================================================
+
+        So an anchor claim is checkable for hinge and ball, and uncheckable for slide and
+        free. An earlier version excluded ball on the assumption that only a hinge has a
+        line in space to be wrong about; that rejected a claim a model can genuinely fail.
+        A ball joint's anchor is the centre of rotation, and putting it in the wrong place
+        swings the child through a different arc.
         """
-        return self is JointType.HINGE
+        return self in (JointType.HINGE, JointType.BALL)
 
     @property
     def unit(self) -> str:
@@ -262,6 +275,9 @@ class Anchor:
     lie entirely to one side of the axis plane; a gear's shaft demands the geometry be
     symmetric about it. Scoring a gear with ``on_edge_of`` would fail it by construction,
     since every plane through a disc's symmetry axis cuts it in half.
+
+    Applies to hinge and ball joints. See :attr:`JointType.has_anchor` for why those two
+    and not the others.
     """
 
     on_edge_of: str | None = None

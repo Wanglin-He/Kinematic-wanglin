@@ -113,7 +113,7 @@ items:
   - id: P0.joints.anchor
     spec: "anchor（散文中声明，schema 示例中不存在）"
     disposition: replaced
-    replaced_by: "anchor.on_edge_of | anchor.through_center_of, N/A for slide/ball/free"
+    replaced_by: "anchor.on_edge_of | anchor.through_center_of, N/A for slide and free"
     where: evo_p0p3/p0/schema.py::Anchor
     reason: >
       Two problems. A translation has no centre, so MuJoCo ignores a slide joint's pos
@@ -124,7 +124,12 @@ items:
       geometry. Both replacements are frame-free and scale-free geometric relations. They
       are opposites and both are required: a door demands its geometry lie to one side of
       the axis plane, a gear demands symmetry about it, and scoring a gear with the door
-      predicate fails it by construction.
+      predicate fails it by construction. Which joint types carry an anchor was settled by
+      measurement, not reasoning: displacing pos by 0.25 m moves the child geometry by
+      0.000000 for slide, 0.171449 for hinge, 0.191345 for ball and 0.000000 for free. An
+      earlier version of this repository excluded ball on the assumption that only a hinge
+      has a line in space to be wrong about, and so rejected a claim a model can genuinely
+      fail; a ball joint's anchor is its centre of rotation.
 
   - id: P0.joints.range
     spec: "range_m: [0.0, 0.4]"

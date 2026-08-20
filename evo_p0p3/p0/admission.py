@@ -277,15 +277,17 @@ def _a10_anchor_matches_type(c: Contract) -> Iterator[Finding]:
             yield Finding(
                 "A10",
                 path,
-                "a hinge needs an anchor predicate (on_edge_of or through_center_of); it is "
-                "the field that separates a door hinged on its edge from one through its middle",
+                f"a {j.type.value} rotates about its anchor, so it needs an anchor predicate "
+                f"(on_edge_of or through_center_of); it is the field that separates a door "
+                f"hinged on its edge from one through its middle",
             )
         if not j.type.has_anchor and j.anchor is not None:
             yield Finding(
                 "A10",
                 path,
-                f"a {j.type.value} joint has no pivot point -- a translation has no centre, and "
-                f"MuJoCo ignores the anchor entirely -- so this claim can never be checked",
+                f"a {j.type.value} joint has no pivot point that affects its kinematics -- "
+                f"displacing pos moves the child by exactly zero -- so this claim can never "
+                f"be checked",
             )
 
 

@@ -1,0 +1,1017 @@
+predicates:
+- id: A0.parse_and_canonicalize
+  claim: The contract file is a single YAML mapping that loads into an order-preserving Python structure,
+    and after unit canonicalization it is the byte-exact artifact that every downstream metric and both
+    hashes are computed over.
+  p0_inputs: 'the whole contract file (top level: overall_description, required_parts, global_form, part_geometry,
+    part_relations, proportion_claims, envelope_m?, kinematic_claims{...}, dynamics_claims?)'
+  mj_inputs: n/a — pre-generation check
+  algorithm: 1. Load with yaml.safe_load using a loader whose mapping constructor returns dict (CPython
+    3.7+ dicts preserve insertion order); never call sorted() on any mapping during load. 2. Reject if
+    the document is not a mapping, is empty, or contains a YAML alias/anchor (aliases make the canonical
+    dump ambiguous). 3. Reject any duplicate key at any level (safe_load silently keeps the last; install
+    a custom construct_mapping that raises on repeat). 4. Run A18's unit canonicalization, writing converted
+    values back in place. 5. Serialize the canonicalized structure with yaml.safe_dump(obj, sort_keys=False,
+    default_flow_style=False, allow_unicode=True, width=10**9) and set contract_hash = sha256(('evo-p0-contract/1\n'
+    + dump).encode('utf-8')).hexdigest(). 6. All later predicates read only this canonicalized structure.
+  pass_condition: load succeeds, no aliases, no duplicate keys, canonical dump round-trips (yaml.safe_load(dump)
+    == canonicalized structure)
+  na_condition: never N/A — this predicate always runs and its failure aborts the whole admission run
+    (no other predicate is evaluated)
+  evidence: predicate_id, yaml_error_line, yaml_error_column, duplicate_key_path, contract_hash
+  can_it_fail: A contract whose kinematic_claims block lists `tolerances:` twice (once inside kinematic_claims
+    and once at top level, as §12 and the two worked examples of the revised P0 actually disagree) fails
+    step 3 if both land in the same mapping, and otherwise is caught by A12 step 1.
+  deviates_from_spec: 'New: revised P0 §15 has no A-row for parsing. Without it, ''freeze the contract
+    and emit a hash'' (R3) is undefined because two byte-different files can produce the same in-memory
+    object and vice versa.'
+- id: A1.referential_integrity
+  claim: Every part ID and every joint ID appearing at any reference site in the contract is declared
+    in required_parts (or is a declared group label, where group addressing is legal) or in kinematic_claims.joints
+    respectively.
+  p0_inputs: required_parts[].id, required_parts[].group, kinematic_claims.joints[].id, and every reference
+    site listed in the algorithm
+  mj_inputs: n/a — pre-generation check
+  algorithm: '1. PID = ordered list of required_parts[].id; reject duplicates (message A1.duplicate_part_id).
+    2. GID = set of required_parts[].group values that are present. 3. JID = ordered list of kinematic_claims.joints[].id;
+    reject duplicates (A1.duplicate_joint_id). 4. Walk the frozen reference-site table, each row = (dotted
+    path pattern, kind ∈ {part, joint}, group_ok ∈ {true,false}):\n  part, group_ok=false: part_geometry[i].id;
+    part_relations[i].subject; part_relations[i].object; proportion_claims[i].subject; proportion_claims[i].object;
+    kinematic_claims.canonical_frame.front.outward_normal_of; kinematic_claims.joints[i].part; kinematic_claims.joints[i].parent;
+    kinematic_claims.joints[i].axis.relational.from; ....to; ....between[0]; ....between[1]; ....part;
+    kinematic_claims.joints[i].anchor.on_edge_of; kinematic_claims.joints[i].anchor.through_center_of;
+    kinematic_claims.rigid_attachments[i].follower; kinematic_claims.rigid_attachments[i].leader.\n  part,
+    group_ok=true: proportion_claims[i].parts[k]; kinematic_claims.contact_policy.{required,permitted,forbidden}[i].parts[k];
+    dynamics_claims.functional_scenarios[i].foreach_part[k].\n  joint: kinematic_claims.independent_dofs[i];
+    kinematic_claims.couplings[i].relation.dependent; kinematic_claims.couplings[i].relation.independent;
+    kinematic_claims.passive_dofs[i] (see A20).\n5. For every site present in this contract: the value
+    must be a non-empty str; if kind==part it must be in PID, or in GID when group_ok; if kind==joint
+    it must be in JID. 6. Collect ALL violations; do not short-circuit. 7. For each violation compute
+    nearest = argmin Levenshtein over the legal set, for the human message only — the admission layer
+    must NEVER substitute it (this is exactly the name-matching path the previous round measured as 63
+    false alarms out of 70, where signal and noise were the same event).'
+  pass_condition: the violation list is empty
+  na_condition: 'never N/A — a contract with no reference sites at all is impossible because A3/A8 require
+    at least one joint whenever any part is role: movable, and A2 requires part_geometry for every part'
+  evidence: predicate_id, path (fully indexed, e.g. kinematic_claims.joints[2].axis.relational.between[1]),
+    token, kind, group_ok, declared_part_ids, declared_group_labels, declared_joint_ids, nearest_declared,
+    levenshtein_distance
+  can_it_fail: 'The v1 example in the original P0 fails on four tokens: part_relations[1].object=''drawer_front'',
+    contact_policy.allowed[0].parts=[''drawer'',''cabinet_body''] (before groups existed), contact_policy.forbidden[0].parts=[''drawer_side'',''cabinet_wall''].'
+  deviates_from_spec: ''
+- id: A2.part_geometry_total
+  claim: part_geometry contains exactly one entry for every declared required part, and no entry for anything
+    else.
+  p0_inputs: required_parts[].id, part_geometry[].id, part_geometry[].geometry
+  mj_inputs: n/a — pre-generation check
+  algorithm: 1. Build PID (A1 step 1). 2. Build GEOM_IDS = [e.id for e in part_geometry]; reject duplicates.
+    3. missing = PID − set(GEOM_IDS), in PID declaration order. 4. extra = set(GEOM_IDS) − PID (already
+    caught by A1; reported here as a separate code for a clearer message). 5. For each entry require geometry
+    to be a str of length ≥ 1 after strip; an empty or whitespace-only description makes GF2's CLIP text
+    embedding degenerate.
+  pass_condition: missing == [] and extra == [] and every geometry string is non-empty
+  na_condition: never N/A — required_parts is mandatory (A30)
+  evidence: predicate_id, missing_part_ids, extra_part_geometry_ids, empty_geometry_ids
+  can_it_fail: 'Revised-P0 example A with the door_knob row deleted from part_geometry but kept in required_parts:
+    missing_part_ids=[''door_knob''].'
+  deviates_from_spec: ''
+- id: A3.movable_has_exactly_one_joint
+  claim: 'Every part with role: movable is the `part` of exactly one joint claim, and every joint''s `part`
+    has role: movable.'
+  p0_inputs: required_parts[].id, required_parts[].role, kinematic_claims.joints[].id, kinematic_claims.joints[].part
+  mj_inputs: n/a — pre-generation check
+  algorithm: '1. role must be one of the frozen three {fixed, movable, attached}; anything else → A3.bad_role
+    naming the id and the value (this kills `role: follows_drawer`). 2. count[p] = number of joints j
+    with j.part == p. 3. For every p with role==movable: require count[p] == 1; count==0 → A3.movable_without_joint;
+    count>1 → A3.movable_over_jointed listing the joint ids. 4. For every joint j: require role(j.part)
+    == movable; role==fixed → A3.joint_on_fixed_part; role==attached → A3.joint_on_attached_part (an attached
+    part must be rigid, so giving it a joint contradicts A4).'
+  pass_condition: no bad_role, and for all movable p count[p]==1, and for all joints role(part)==movable
+  na_condition: the movable half is N/A when no part has role movable (a fully static object); the joint
+    half still runs — a joint claim with no movable part is always a failure
+  evidence: predicate_id, part_id, role, joint_ids_referencing_part, count
+  can_it_fail: 'Example A with door_knob changed to role: movable (a plausible author error): count[''door_knob'']==0
+    → movable_without_joint. Or a contract giving cabinet_body a `cabinet_body_slide` joint → joint_on_fixed_part.'
+  deviates_from_spec: 'The A3 row states only the forward direction (''every movable part has exactly
+    one joint''). Step 4 adds the converse. Without the converse a contract can put a joint on a role:
+    fixed part, which makes A3 and A15 mutually satisfiable while Gate G2''s role table is violated, and
+    KF1 then scores a claim about a part the Gate never expected to move.'
+- id: A4.attached_is_follower_once
+  claim: 'Every part with role: attached appears exactly once as rigid_attachments[].follower, and every
+    follower has role: attached.'
+  p0_inputs: required_parts[].id, required_parts[].role, kinematic_claims.rigid_attachments[].follower,
+    kinematic_claims.rigid_attachments[].leader
+  mj_inputs: n/a — pre-generation check
+  algorithm: '1. followers = [a.follower for a in rigid_attachments]; reject duplicates (A4.follower_declared_twice
+    — a part cannot rigidly follow two leaders). 2. For every p with role==attached: require p in followers;
+    else A4.attached_without_leader. 3. For every a: require role(a.follower)==attached; else A4.follower_role_mismatch
+    naming the actual role. 4. Require a.follower != a.leader (A4.self_attachment).'
+  pass_condition: no duplicate followers, every attached part is a follower exactly once, every follower
+    has role attached, no self-attachment
+  na_condition: N/A when no part has role attached AND rigid_attachments is an empty list; if rigid_attachments
+    is non-empty steps 1,3,4 still run
+  evidence: predicate_id, part_id, role, attachment_index, follower, leader, duplicate_follower_indices
+  can_it_fail: 'Example A with the `{follower: door_knob, leader: door}` row deleted: attached_without_leader
+    for door_knob, and KF1 would then have no input for its follower-drift check — exactly the ''handle_3
+    follows drawer_2 and still scores green'' failure the revision was written to close.'
+  deviates_from_spec: ''
+- id: A5.independent_dofs_resolvable
+  claim: Every entry of independent_dofs is a declared joint ID, listed at most once, and the list is
+    non-empty whenever any joint is declared.
+  p0_inputs: kinematic_claims.independent_dofs[], kinematic_claims.joints[].id
+  mj_inputs: n/a — pre-generation check
+  algorithm: '1. Require independent_dofs to be a YAML sequence (not a mapping, not a scalar); its ORDER
+    is load-bearing for A27 and must never be sorted. 2. Every entry ∈ JID (this overlaps A1 and is reported
+    under A1''s code; A5 reports only what A1 cannot: duplicates and emptiness). 3. Reject duplicate entries
+    (A5.duplicate_independent_dof) — a repeated DOF doubles its sample count and silently reweights KF3.
+    4. If len(joints) > 0 and len(independent_dofs) == 0 → A5.empty_sweep_set: KF3 would sweep nothing,
+    every state set would be the single reference configuration, and every forbidden/required pair would
+    be evaluated at one sample only.'
+  pass_condition: is a list, no duplicates, and non-empty whenever joints is non-empty
+  na_condition: N/A only when kinematic_claims.joints == [] (a fully static object), in which case independent_dofs
+    must be the explicit empty list []
+  evidence: predicate_id, independent_dofs, duplicate_ids, n_joints
+  can_it_fail: 'Example B with independent_dofs: [] (an author who thinks the gear pair ''has no free
+    DOF because it is coupled''): empty_sweep_set, and KF2''s residual would be measured at exactly one
+    configuration q=0 where a 2:1 vs 3:1 gear-ratio error has residual exactly zero.'
+  deviates_from_spec: 'The A5 row requires only that each entry resolve to a declared joint. Steps 3 and
+    4 add duplicate and emptiness rejection: the row as written admits `independent_dofs: []`, which passes
+    every other A-check while making KF3''s sweep a single point, so every motion and contact claim would
+    be evaluated at one configuration and reported as satisfied.'
+- id: A6.dependent_not_independent
+  claim: No joint that is the `dependent` member of any coupling appears in independent_dofs.
+  p0_inputs: kinematic_claims.couplings[].relation.dependent, kinematic_claims.independent_dofs[]
+  mj_inputs: n/a — pre-generation check
+  algorithm: 1. DEP = {c.relation.dependent for c in couplings}. 2. clash = DEP ∩ set(independent_dofs).
+    3. Non-empty clash → A6.dependent_driven_independently, one message per joint id naming the coupling
+    id that made it dependent. 4. Also require, per coupling, relation.dependent != relation.independent
+    (a coupling asserting q = k·q + b is a fixed-value assertion, not a coupling) → A6.self_coupling.
+  pass_condition: clash == ∅ and no coupling has dependent == independent
+  na_condition: N/A when couplings == []
+  evidence: predicate_id, joint_id, coupling_id, independent_dofs, dependent_set
+  can_it_fail: 'Example B with independent_dofs: [gear_large_spin, gear_small_spin]: the sweep would drive
+    gear_small_spin directly, overwriting the value the coupling relation computed for it, so the KF2
+    residual would measure the sweep grid rather than the model''s constraint.'
+  deviates_from_spec: The A6 row covers only the dependent-vs-independent_dofs clash. Step 4 adds the
+    self-coupling rejection, which the row does not cover and which would otherwise make A22's component
+    arithmetic divide a one-vertex component by a self-loop edge.
+- id: A7.contact_states_defined
+  claim: Every `state` token used by contact_policy is either the literal `all` or a key of asset_states.
+  p0_inputs: kinematic_claims.contact_policy.{required,permitted,forbidden}[].state, kinematic_claims.asset_states
+    (keys)
+  mj_inputs: n/a — pre-generation check
+  algorithm: '1. The key is singular `state` and its value is a scalar string (the v1 field name `states:`
+    with a list value is rejected with A7.legacy_states_key, naming the migration). 2. For each entry
+    in each of the three classes: if value == ''all'' accept; else require value ∈ asset_states.keys();
+    else A7.undefined_state. 3. Extend the same check to every other state-consuming site so the rule
+    is not contact-only: dynamics_claims.functional_scenarios[].initial_state and .target.state (when
+    present) must also resolve to asset_states keys.'
+  pass_condition: every state token resolves to `all` or to an asset_states key
+  na_condition: N/A when contact_policy has all three classes empty AND dynamics_claims is absent
+  evidence: predicate_id, class, entry_index, parts, state_token, declared_asset_states
+  can_it_fail: 'Example B with `{parts: [gear_large, housing], state: home_position}` (a typo for `home`):
+    undefined_state. Without this the entry would be classified against an empty sample set and score
+    vacuously.'
+  deviates_from_spec: The A7 row covers contact_policy only. Step 3 extends it to dynamics_claims, which
+    §10 explicitly says consumes asset_states with scope all_declaring; leaving it out would let a P4
+    scenario name an undefined state and fail at rollout time instead of at admission.
+- id: A8.axis_form_present
+  claim: Every joint declares at least one of axis.semantic, axis.relational, axis.numeric.
+  p0_inputs: kinematic_claims.joints[].axis, .type
+  mj_inputs: n/a — pre-generation check
+  algorithm: '1. For each joint j: require the `axis` key to be present. 2. forms = [k for k in (''semantic'',''relational'',''numeric'')
+    if k in j.axis and j.axis[k] is not None]. 3. If j.type in {slide, hinge}: require len(forms) ≥ 1,
+    else A8.no_axis_form. 4. If j.type in {ball, free}: an axis is meaningless (3 and 6 rotational/translational
+    DOF respectively); require axis to be present with value null, else A8.axis_on_unaxed_joint. 5. Reject
+    any key inside axis outside the three (A30 does this generically; A8 reports it with the joint-specific
+    message).'
+  pass_condition: for slide/hinge len(forms) ≥ 1; for ball/free axis is explicitly null
+  na_condition: never N/A — every joint hits one branch
+  evidence: predicate_id, joint_id, joint_type, declared_axis_forms, axis_block
+  can_it_fail: 'A contract declaring `- {id: lid_hinge, part: lid, parent: box, type: hinge, axis: {},
+    anchor: null, ...}` → no_axis_form. KF1''s axis claim is the only informative articulation check (joint
+    type parses at 100% and matches in nearly every asset), so an axis-free joint contributes nothing
+    but still consumes a denominator slot.'
+  deviates_from_spec: The A8 row does not mention ball/free. Step 4 is added because A8 as written would
+    force an author to invent an axis for a ball joint, and KF1 would then score a claim against mjData.xaxis,
+    which for mjJNT_BALL is not a meaningful single axis.
+- id: A9.numeric_requires_anchored_front
+  claim: If any joint declares axis.numeric, canonical_frame.front is anchored.
+  p0_inputs: kinematic_claims.joints[].axis.numeric, kinematic_claims.canonical_frame.front
+  mj_inputs: n/a — pre-generation check
+  algorithm: '1. any_numeric = any joint with axis.numeric not None. 2. anchored = canonical_frame.front
+    is not None and is a mapping with exactly the key outward_normal_of whose value is a declared part
+    id (A1 checks the id; A9 checks the shape). 3. If any_numeric and not anchored → A9.numeric_axis_without_front,
+    listing every joint id that declared numeric. 4. Symmetric guard: if anchored and no joint declares
+    numeric → A9.front_anchored_unused is a WARNING, not a rejection (an anchored front costs nothing
+    and may be used by a later revision).'
+  pass_condition: not any_numeric, or anchored
+  na_condition: never N/A — the implication is evaluated for every contract
+  evidence: predicate_id, joints_with_numeric_axis, canonical_frame_front, front_anchor_part
+  can_it_fail: 'Example A with `numeric: [0, -1, 0]` uncommented on drawer_1_slide while front stays null:
+    numeric_axis_without_front. Per §06 that claim could only ever report N/A with orientation_undetermined,
+    so admitting it would inflate the declared claim count without adding a single scorable claim.'
+  deviates_from_spec: 'Step 2 adds a shape check on canonical_frame.front (exactly one key, outward_normal_of)
+    that the A9 row leaves implicit; without it, `front: true` or `front: {normal_of: x}` counts as ''anchored''
+    and KF1 has nothing to compute a frame from. Step 4 is a warning only, so it never changes the verdict.'
+- id: A10.anchor_null_for_translational
+  claim: 'Joints of type slide, ball, or free declare anchor: null.'
+  p0_inputs: kinematic_claims.joints[].type, .anchor
+  mj_inputs: n/a — pre-generation check
+  algorithm: '1. For each joint j with j.type ∈ {slide, ball, free}: require j.anchor is None (the key
+    must be PRESENT with the null value — see A17). Non-null → A10.anchor_on_translational_joint naming
+    the type and the anchor block. 2. Rationale carried into the message: a MuJoCo slide''s jnt_pos has
+    bit-for-bit zero effect on child pose, and a ball/free joint''s rotation centre is its own body frame
+    origin, so any anchor predicate over it is a tautology and must never enter a denominator.'
+  pass_condition: anchor is None for every slide/ball/free joint
+  na_condition: N/A when no joint has type in {slide, ball, free}
+  evidence: predicate_id, joint_id, joint_type, anchor_block
+  can_it_fail: 'A contract writing `type: slide, anchor: {on_edge_of: drawer_1}` — a very natural author
+    error, since ''the drawer rail is at the edge'' feels like a real claim. It is not: it is unmeasurable,
+    and admitting it would add a permanently-N/A slot to KF1''s denominator.'
+  deviates_from_spec: ''
+- id: A11.range_unit_matches_type
+  claim: 'range.unit is compatible with the joint type: m for slide, rad for hinge and ball; a free joint
+    declares no range.'
+  p0_inputs: kinematic_claims.joints[].type, .range.unit
+  mj_inputs: n/a — pre-generation check
+  algorithm: '1. Frozen table: slide→{m}, hinge→{rad}, ball→{rad}, free→range must be absent or null.
+    2. For slide/hinge/ball: require range to be a mapping with exactly the keys {unit, min, max} plus
+    the optional {limited} added by A18; require range.unit ∈ table[type], else A11.unit_type_mismatch
+    naming both. 3. For free: range not None → A11.range_on_free_joint (a free joint has 7 qpos and 6
+    DOF; a scalar [min,max] cannot be compared to jnt_range, which MuJoCo leaves unused for mjJNT_FREE).
+    4. A18 runs BEFORE this predicate, so by the time A11 executes the only tokens that can appear are
+    the canonical m and rad. 5. Require min and max finite floats with max > min + 1e-12 → A11.degenerate_range
+    (a zero-span range makes travel_scale_min divide by zero and makes every state coincide).'
+  pass_condition: range shape correct, unit ∈ table[type], max > min; or type==free with no range
+  na_condition: never N/A — every joint has a type and hits a branch
+  evidence: predicate_id, joint_id, joint_type, range_block, allowed_units, span
+  can_it_fail: 'Example A''s door_hinge written as `range: {unit: m, min: 0.0, max: 2.094}` (an author
+    who copied the drawer row): unit_type_mismatch. KF1 would otherwise compare 2.094 against mjModel.jnt_range
+    in radians and pass by coincidence.'
+  deviates_from_spec: The A11 row omits `free` entirely and says nothing about the numbers. Step 3 supplies
+    the free branch; without it a free joint's range field is unconstrained and KF1's range claim has
+    no defined comparison. Step 5 adds the span check, which A27's sample generator and A12's travel_scale_min
+    invocation both require as a precondition.
+- id: A12.tolerances_complete
+  claim: The tolerances block declares every tolerance key that this contract can actually invoke, declares
+    nothing outside the frozen vocabulary, and every value lies in a domain that keeps its own predicate
+    non-trivial.
+  p0_inputs: kinematic_claims.tolerances (all keys), and — for the invocation table — kinematic_claims.joints[].axis/.anchor/.range/.type,
+    .rigid_attachments, .asset_states, .couplings[].epsilon, .contact_policy.{required,forbidden}
+  mj_inputs: n/a — pre-generation check
+  algorithm: '1. Locate the block: it must be at kinematic_claims.tolerances (as in both worked examples).
+    A top-level `tolerances` key → A12.tolerances_misplaced; both present → A12.tolerances_duplicated.
+    2. Build REQUIRED_KEYS by evaluating the frozen invocation table against this contract:\n  axis_angle_deg
+    ⟸ any joint has any axis form (given A8, always, unless all joints are ball/free);\n  anchor_side_fraction_min
+    ⟸ any joint has anchor.on_edge_of;\n  anchor_center_offset_max ⟸ any joint has anchor.through_center_of;\n  travel_scale_min
+    ⟸ any joint has type ∈ {slide,hinge} with finite range and max−min > 0;\n  follower_drift_m ⟸ rigid_attachments
+    != [];\n  state_match_relative ⟸ asset_states != {};\n  required_contact_m ⟸ contact_policy.required
+    != [];\n  forbidden_penetration_m ⟸ contact_policy.forbidden != [];\n  coupling_residual ⟸ couplings
+    != [] and at least one coupling omits `epsilon`;\n  distance_query_distmax_m ⟸ contact_policy has
+    any non-empty class (new key, see A28).\n3. missing = REQUIRED_KEYS − declared; non-empty → A12.tolerance_missing
+    listing each key with the claim that needs it. 4. unknown = declared − FROZEN_VOCAB (the 9 published
+    keys + distance_query_distmax_m) → A12.unknown_tolerance_key; a typo here would otherwise silently
+    fall back to a code default, which is exactly what R3 forbids. 5. superfluous = declared − REQUIRED_KEYS
+    is a WARNING only (example A declares nine keys but invokes eight). 6. Domain check, each a hard reject:
+    axis_angle_deg ∈ (0,90); anchor_side_fraction_min ∈ (0.5,1.0]; anchor_center_offset_max ∈ (0,0.5];
+    travel_scale_min ∈ (0,10]; follower_drift_m ∈ (0,1]; state_match_relative ∈ (0,0.5); required_contact_m
+    ∈ (0,1]; forbidden_penetration_m ∈ (0,1]; coupling_residual ∈ (0,inf); distance_query_distmax_m ∈
+    (0,10]. Every value must be a finite float (bool is rejected; int is accepted and cast). 7. The lower
+    bounds at 0.5 are not stylistic: anchor_side_fraction_min ≤ 0.5 makes on_edge_of pass for a hinge
+    through the middle of the panel (the exact asset §07 exists to catch), and state_match_relative ≥
+    0.5 makes every sample classify into every state.'
+  pass_condition: missing == ∅ and unknown == ∅ and every declared value is finite and inside its domain
+  na_condition: never N/A — REQUIRED_KEYS may be empty for a fully static contract, in which case tolerances
+    must still be present as an explicit empty mapping {}
+  evidence: predicate_id, missing_keys, missing_key_reasons (key → the claim that invokes it), unknown_keys,
+    out_of_domain (key, value, domain), tolerances_block_path
+  can_it_fail: 'Example A with anchor_side_fraction_min: 0.5 → out_of_domain, because a hinge pinned through
+    the centre of the door splits its vertices exactly 50/50 and would pass. Or example B, which legitimately
+    omits anchor_side_fraction_min and follower_drift_m — a naive ''all nine keys required'' implementation
+    rejects a correct contract, which is why the invocation table is required rather than a fixed list.'
+  deviates_from_spec: The A12 row says only 'tolerances block complete'. 'Complete' cannot mean 'all nine
+    keys' because worked example B deliberately declares seven; it cannot mean 'any subset' because then
+    nothing is checked. The invocation table is the only reading under which both worked examples are
+    admissible and a missing key is detectable.
+- id: A13.group_namespace_and_expansion
+  claim: Group labels form a namespace disjoint from part IDs, and every group token appearing at a group-legal
+    site expands to a deterministic, non-empty, explicitly enumerated part set.
+  p0_inputs: required_parts[].id, required_parts[].group, proportion_claims[].parts[], contact_policy.{required,permitted,forbidden}[].parts[]
+  mj_inputs: n/a — pre-generation check
+  algorithm: '1. GID = ordered set of group labels in declaration order. 2. collide = GID ∩ set(PID) →
+    A13.group_shadows_part_id: if a token can be read as both, the expansion is ambiguous and no tie-break
+    rule exists. 3. members(g) = [p.id for p in required_parts if p.group == g], in declaration order;
+    require len ≥ 1. 4. Expansion of a contact entry whose parts = [a, b]: A = members(a) if a ∈ GID else
+    [a]; B likewise; expanded = [(x,y) for x in A for y in B if x != y], each pair canonicalized as tuple(sorted((x,y)))
+    and de-duplicated preserving first-occurrence order. 5. Reject len(expanded) == 0 → A13.empty_group_expansion
+    (happens when a group is crossed with itself and has one member). 6. Reject len(expanded) > 64 for
+    a single entry → A13.group_expansion_too_large, naming the count; a group×group forbidden entry silently
+    multiplies KF3''s per-pair denominator and reweights S_forbidden without the author seeing it. 7.
+    Emit the expanded pair list into the claim manifest (A31) so the denominator is visible before generation.'
+  pass_condition: no collisions, every expansion non-empty and ≤ 64 pairs
+  na_condition: N/A when no required_part declares a group
+  evidence: predicate_id, group_label, members, colliding_ids, entry_class, entry_index, expanded_pairs,
+    expanded_count
+  can_it_fail: 'A contract declaring `required_parts: [{id: drawer, role: fixed}, {id: drawer_1, role:
+    movable, group: drawer}]` → group_shadows_part_id: `{parts: [drawer, cabinet_body]}` could mean one
+    part or two.'
+  deviates_from_spec: 'New: §04 introduces `group` as an optional label ''for set addressing by contact_policy
+    etc.'' and §15 has no row for it. Without this predicate the single word ''drawer'' in a contact pair
+    is unresolvable, which is the same class of defect A1 was written to eliminate.'
+- id: A14.attachment_graph_acyclic
+  claim: The rigid_attachment graph is a forest whose every chain terminates at a part that is fixed or
+    movable.
+  p0_inputs: kinematic_claims.rigid_attachments[].follower, .leader, required_parts[].role
+  mj_inputs: n/a — pre-generation check
+  algorithm: '1. Build the map leader_of[follower] = leader (A4 guarantees it is a function). 2. For each
+    follower f, walk f → leader_of[f] → ... with a visited set; a repeat → A14.attachment_cycle listing
+    the cycle in walk order. 3. The walk terminates at a part t with no leader_of entry; require role(t)
+    ∈ {fixed, movable}; a terminal with role attached is impossible after A4, so this is an assertion.
+    4. Record chain_root[f] = t and chain_depth[f]; require chain_depth ≤ 8 (A14.attachment_chain_too_deep)
+    so the A24 resolution is bounded. 5. Publish chain_root as a frozen output: A24 and KF1''s follower-drift
+    check both consume it.'
+  pass_condition: no cycle, every chain terminates at a fixed or movable part, depth ≤ 8
+  na_condition: N/A when rigid_attachments == []
+  evidence: predicate_id, cycle_path, follower, chain_root, chain_depth
+  can_it_fail: '`rigid_attachments: [{follower: handle_1, leader: door_knob}, {follower: door_knob, leader:
+    handle_1}]` → attachment_cycle. Both parts are role attached and each appears exactly once as a follower,
+    so A4 passes and only A14 catches it; KF1''s structural check (''follower''s body lies in the leader''s
+    rigid subtree'') would then recurse forever.'
+  deviates_from_spec: 'New: §08 permits a follower whose leader is itself attached (a knob on a handle
+    on a door) but never bounds the chain. A4 alone cannot see a cycle.'
+- id: A15.joint_parent_forest
+  claim: 'The part-level graph induced by joints[].part ← joints[].parent is acyclic, gives every part
+    at most one incoming joint, and every chain terminates at a part with role: fixed.'
+  p0_inputs: kinematic_claims.joints[].part, .parent, required_parts[].role
+  mj_inputs: 'n/a — pre-generation check; it FREEZES the downstream KF1 binding rule: joints[].parent
+    means ''the nearest ancestor MuJoCo body, via m.body_parentid, that the Gate bound to a declared part'',
+    so intermediate unbound bodies (rails, brackets) do not falsify the parent claim'
+  algorithm: 1. Nodes = PID. Edges = {(j.parent → j.part) for j in joints}; A3 already guarantees each
+    part has ≤ 1 incoming edge. 2. Reject j.part == j.parent → A15.self_parented_joint. 3. Depth-first
+    walk from every node with the recursion stack as the visited set; a back edge → A15.kinematic_cycle
+    listing the joint ids around the loop. Note this is the CONTRACT-side loop check; Gate G2's 'declared
+    mechanical loops may be formed by equality/tendon' is about the model, and a loop expressed through
+    couplings is legal and is NOT an edge here. 4. Walk each chain to its root r (a part with no incoming
+    edge); require role(r) == fixed → else A15.floating_kinematic_root naming r and its role. 5. Emit
+    the frozen parent-binding rule text above into the manifest, so KF1's implementation cannot re-decide
+    it.
+  pass_condition: no self-parent, no cycle, every root has role fixed
+  na_condition: N/A when joints == []
+  evidence: predicate_id, cycle_joint_ids, part_id, parent_id, chain_root, chain_root_role
+  can_it_fail: A contract declaring drawer_2's parent as drawer_1 and drawer_1's parent as drawer_2 →
+    kinematic_cycle. Or example A with cabinet_body's role changed to movable (and given a joint parented
+    to `door`) → floating_kinematic_root. Neither is caught by A1, A3, or Gate G2, which checks the MODEL
+    graph, not the contract graph.
+  deviates_from_spec: 'New: §15 has no row for the contract''s own kinematic graph. Gate G2 checks the
+    generated model; a contract that is internally cyclic is unsatisfiable by any model, and the failure
+    would be charged to the asset.'
+- id: A16.axis_form_wellformed
+  claim: Each declared axis form uses a token from its frozen vocabulary and carries exactly the keys
+    that form requires.
+  p0_inputs: kinematic_claims.joints[].axis.semantic, .axis.relational{type,from,to,between,part}, .axis.numeric
+  mj_inputs: 'n/a — pre-generation check; freezes for KF1: semantic vertical ⇒ |dot(xaxis, ẑ)| ≥ cos(axis_angle_deg),
+    horizontal ⇒ |dot(xaxis, ẑ)| ≤ sin(axis_angle_deg), both read from mjData.xaxis[jntid] after mj_forward'
+  algorithm: '1. semantic ∈ {vertical, horizontal} exactly; anything else (e.g. ''depth'', ''along the
+    rail'', ''z'') → A16.unknown_semantic_axis naming the frozen pair. 2. relational.type ∈ {interface_normal,
+    interface_line, toward, symmetry_axis_of}; else A16.unknown_relational_type. 3. Per-type required
+    key sets, checked as an exact match (no extra keys, no missing keys):\n  interface_normal → {type,
+    from, to};\n  interface_line   → {type, between} with between a 2-element list;\n  toward           →
+    {type, from, to};\n  symmetry_axis_of → {type, part}.\n  Mismatch → A16.relational_shape_mismatch
+    naming expected and actual key sets. 4. For interface_normal/toward require from != to; for interface_line
+    require between[0] != between[1] → A16.degenerate_relational_pair (the reference direction is undefined
+    when the two parts coincide). 5. numeric must be a 3-element list of finite floats with L2 norm ≥
+    1e-6 → A16.degenerate_numeric_axis; on acceptance normalize in place to unit length and write back
+    (the canonical contract stores the normalized vector, so the hash is stable against [0,-2,0] vs [0,-1,0]).
+    6. Sign is not scored anywhere: KF1 compares |cos θ| for all three forms, so an axis and its negation
+    are the same claim; state this in the manifest so no implementer adds a sign test.'
+  pass_condition: every declared form passes its vocabulary and shape check
+  na_condition: 'per form: N/A for a form this joint did not declare; the whole predicate is N/A for ball/free
+    joints (axis is null per A8)'
+  evidence: predicate_id, joint_id, form, token, expected_vocabulary, expected_keys, actual_keys, numeric_norm
+  can_it_fail: 'The v1 contract''s `axis: depth` → unknown_semantic_axis; `relational: {type: interface_line,
+    from: door, to: cabinet_body}` (using from/to where between is required) → relational_shape_mismatch.
+    Both would otherwise reach KF1, where the reference-direction computation has no branch for them and
+    would either crash or silently return N/A for the one informative articulation check.'
+  deviates_from_spec: 'New: A8 checks presence only. §07 freezes both vocabularies in prose tables but
+    §15 has no predicate over them.'
+- id: A17.anchor_key_explicit_and_wellformed
+  claim: Every joint declares the `anchor` key explicitly, and a non-null anchor is a mapping with exactly
+    one key from {on_edge_of, through_center_of}.
+  p0_inputs: kinematic_claims.joints[].anchor, .type, .part, .parent, part_geometry[].geometry
+  mj_inputs: 'n/a — pre-generation check; freezes for KF1: on_edge_of is evaluated over the union of geom
+    vertices of ALL bodies bound to the named part (A28), against the plane containing mjData.xanchor[jntid]
+    with normal chosen as the world direction orthogonal to mjData.xaxis[jntid] that maximizes the vertex
+    spread; through_center_of uses the perpendicular distance from that axis line to the part''s volume-weighted
+    geom centroid, divided by diag(part)'
+  algorithm: '1. Require the literal key `anchor` to be PRESENT on every joint. Absent → A17.anchor_key_omitted.
+    An absent key and an explicit null both mean ''no anchor claim'', but only the explicit null proves
+    the author decided; a missing key is indistinguishable from an oversight and would silently shrink
+    KF1''s denominator. 2. If anchor is None: accept (A10 already forces this for slide/ball/free; for
+    hinge it means the anchor claim is N/A). 3. If anchor is not None: require type == hinge (A10 handles
+    the rest); require a mapping with len(keys)==1 and that key ∈ {on_edge_of, through_center_of} → else
+    A17.anchor_form_invalid naming the actual keys. 4. Require the value to be a declared part id (A1)
+    and — a new constraint — require it to equal either j.part or j.parent → A17.anchor_part_unrelated:
+    an anchor predicate over a part the joint does not connect measures nothing about that joint. 5. Warn
+    (not reject) when a through_center_of anchor names a part whose part_geometry text contains none of
+    {disc, wheel, gear, knob, dial, round, circular}, and when an on_edge_of anchor names a part whose
+    text contains any of them: the two predicates are mutually exclusive by construction (any plane through
+    a disc''s symmetry axis splits it 50/50, so on_edge_of on a wheel is a guaranteed fail), and a mis-chosen
+    form is the most likely authoring error.'
+  pass_condition: key present on every joint; non-null anchors are single-key mappings from the frozen
+    pair whose part is the joint's own part or parent
+  na_condition: the anchor CLAIM is N/A (excluded from KF1's denominator) whenever anchor is None or type
+    ∈ {slide, ball, free}; the predicate itself is never N/A
+  evidence: predicate_id, joint_id, joint_type, anchor_block, anchor_part, joint_part, joint_parent, form_warning
+  can_it_fail: 'A contract writing `anchor: {on_edge_of: gear_large}` for gear_large_spin → step 5 warns,
+    and the asset is then guaranteed to fail KF1 no matter how correct it is. A contract writing `anchor:
+    {through_center_of: housing}` on door_hinge → anchor_part_unrelated.'
+  deviates_from_spec: 'New: A10 constrains only the slide/ball/free side. §07''s table gives the two hinge
+    forms but §15 has no row requiring the key to be present or the form to be well-shaped, so a hinge
+    with `anchor: {on_edge: door}` (a typo) parses as ''no claim'' and silently vanishes from KF1''s denominator
+    — the same silent-shrink failure mode as an omitted block.'
+- id: A18.unit_canonicalization_contract
+  claim: Every length in the frozen contract is metres and every angle is radians, converted once at admission
+    with the converted value written back, so that no downstream code ever performs a unit conversion.
+  p0_inputs: kinematic_claims.joints[].range{unit,min,max,limited}, .states{*}, kinematic_claims.tolerances.*
+    (all *_m and *_deg keys), kinematic_claims.couplings[].residual_norm.unit, .epsilon
+  mj_inputs: 'n/a — pre-generation check; it FIXES the downstream comparison contract: mjModel.jnt_range,
+    mjModel.qpos0, mjModel.jnt_ref and mjData.qpos are ALWAYS SI (metres for mjJNT_SLIDE, radians for
+    mjJNT_HINGE and mjJNT_BALL) irrespective of the MJCF <compiler angle="degree|radian"> attribute, which
+    affects only how the XML text is parsed; URDF has no angle attribute and is radians by definition.
+    Downstream therefore compares contract numbers to jnt_range/qpos DIRECTLY, with no scaling, ever.'
+  algorithm: '1. ACCEPTED_LENGTH = {m: 1.0, cm: 0.01, mm: 0.001}; ACCEPTED_ANGLE = {rad: 1.0, deg: pi/180}.
+    2. For every joint with a range: if range.unit ∈ ACCEPTED and is not already the canonical token (m
+    for slide, rad for hinge/ball), multiply range.min, range.max and EVERY value in that joint''s `states`
+    mapping by the factor; set range.unit to the canonical token; append {joint_id, from_unit, factor}
+    to a canonicalization log. 3. If range.unit is outside both tables → A18.unknown_unit naming the accepted
+    tokens. A11 runs AFTER this step and therefore only ever sees canonical tokens. 4. tolerances keys
+    ending in _m are metres by name and admit no unit field; axis_angle_deg is degrees by name and is
+    converted to radians ONLY at the point of use, never in the stored contract (its name is the unit,
+    so converting it would make the name a lie and break the hash''s readability). 5. couplings[].residual_norm.unit,
+    when by == absolute, must equal the canonical unit of the DEPENDENT joint → else A18.residual_unit_mismatch;
+    couplings[].epsilon is then in that same unit and is converted by the same factor if the author wrote
+    deg. 6. NEW REQUIRED FIELD range.limited (bool): required whenever type == hinge and (max − min) ≥
+    2π, because that is exactly where a correct model may legitimately compile to a URDF `continuous`
+    joint (mjModel.jnt_limited == 0, jnt_range == [0,0]); absent in that case → A18.multi_turn_limited_unstated.
+    When limited is false, KF1''s range half of the range_reference claim is N/A and only the reference
+    half is scored. 7. Everything downstream asserts, once, that it received the canonical form: assert
+    range.unit == (''m'' if type==''slide'' else ''rad'').'
+  pass_condition: every unit token is in an accepted table, every conversion succeeded, residual_norm.unit
+    agrees with its dependent joint, and range.limited is present wherever step 6 requires it
+  na_condition: N/A when joints == [] and couplings == []
+  evidence: predicate_id, joint_id, declared_unit, canonical_unit, factor, converted_fields, canonicalization_log,
+    contract_hash_before, contract_hash_after
+  can_it_fail: 'Example A''s door_hinge written naturally as `range: {unit: deg, min: 0, max: 120}, states:
+    {closed: 0, open: 120}`: without step 2 the contract is rejected by A11, and with a naive implementation
+    that converts range but not states, KF1 would compare states.open = 120 against a qpos of 2.094 rad
+    and fail a correct asset. Example B''s ±3-turn gear ranges with no `limited` field → multi_turn_limited_unstated,
+    and a correct continuous-joint model would otherwise fail the range claim against jnt_range == [0,0].'
+  deviates_from_spec: 'Extends A11. The A11 row states which unit token is legal per type but says nothing
+    about what the number means once it reaches MuJoCo, and §07''s parenthetical (''MuJoCo internal is
+    always rad/m regardless of the compiler angle setting'') is prose with no predicate. Steps 6–7 are
+    additions: without `limited`, jnt_limited == 0 makes every URDF `continuous` joint''s declared range
+    unfalsifiable.'
+- id: A19.states_and_reference_designation
+  claim: Every joint declares at least one state, every state value lies inside its declared range, and
+    exactly one state is designated the reference against which qpos0/jnt_ref is compared.
+  p0_inputs: kinematic_claims.joints[].states (mapping label→value), .range{min,max}, .reference_state
+    (new), .type
+  mj_inputs: 'n/a — pre-generation check; freezes for KF1 the single merged ''range_reference'' claim:
+    PASS iff |jnt_range[j] − [range.min, range.max]| ≤ range_match_abs (when limited) AND |qpos0[qposadr(j)]
+    − states[reference_state]| ≤ range_match_abs, where range_match_abs = 1e-4 · max(1, |max−min|)'
+  algorithm: '1. For type ∈ {slide, hinge}: require states to be a non-empty mapping of label → finite
+    float. Empty or missing → A19.no_states: §07 merges states.closed, ref/qpos0 and range.min into ONE
+    claim, so a joint with no state has no reference and that claim is unscorable. 2. Every state value
+    v must satisfy range.min − eps ≤ v ≤ range.max + eps with eps = 1e-9·max(1,|range.max−range.min|)
+    → else A19.state_outside_range naming the label and both numbers. 3. Reference designation: if len(states)
+    == 1 the sole label is the reference; otherwise the joint must declare `reference_state: <label>`
+    with the label ∈ states → else A19.reference_state_undesignated. The ''reference is whichever state
+    equals range.min'' heuristic is NOT usable: example B''s `home: 0.0` sits at the midpoint of [−6.283,
+    6.283]. 4. For type ∈ {ball, free}: a scalar states mapping is meaningless (4 and 7 qpos components);
+    require states to be absent or null → A19.scalar_states_on_multidof_joint. 5. Emit, per joint, the
+    label→value table and the reference label into the manifest; A24 and A27 both consume it.'
+  pass_condition: non-empty states for slide/hinge, all values inside range, exactly one designated reference,
+    no scalar states on ball/free
+  na_condition: N/A for a contract with no slide/hinge joints
+  evidence: predicate_id, joint_id, states, range_min, range_max, offending_label, offending_value, reference_state
+  can_it_fail: 'Example A with `states: {closed: 0.0, open: 0.55}` while range stays [0.0, 0.40] → state_outside_range:
+    KF3 would be asked to drive the sweep to a value the same contract declares out of range, and ''open
+    is reachable'' would fail for a correct asset. Example B''s two-state joints if a second state were
+    added without reference_state → reference_state_undesignated.'
+  deviates_from_spec: 'New: §07''s dedup paragraph merges states/ref/qpos0/range.min into one claim but
+    never says which state plays the reference role, and §15 has no row for states at all.'
+- id: A20.dof_partition_total
+  claim: Every declared joint is classified into exactly one of independent, coupling-dependent, or explicitly-passive,
+    so no joint is silently left at its reference value throughout the sweep.
+  p0_inputs: kinematic_claims.joints[].id, .independent_dofs[], .couplings[].relation.dependent, .passive_dofs[]
+    (new)
+  mj_inputs: n/a — pre-generation check
+  algorithm: '1. IND = list(independent_dofs); DEP = [c.relation.dependent for c in couplings]; PAS =
+    list(passive_dofs) if the (new, optional) key is present else []. 2. Require the three lists to be
+    pairwise disjoint (IND∩DEP is A6''s job and is skipped here; report IND∩PAS as A20.passive_and_independent
+    and DEP∩PAS as A20.passive_and_dependent). 3. unclassified = JID − (IND ∪ DEP ∪ PAS), in joints declaration
+    order. 4. Non-empty → A20.unclassified_joint, one message per joint: ''joint <id> is neither in independent_dofs
+    nor the dependent of any coupling nor listed in passive_dofs; KF3 would hold it at its reference state
+    for the whole sweep, so every claim about its range, its reachable states and every contact pair that
+    depends on it would be evaluated at a single configuration.'' 5. A joint the author genuinely wants
+    held fixed is declared in passive_dofs; the manifest then pre-marks its KF3 motion claims N/A rather
+    than passing them vacuously.'
+  pass_condition: unclassified == [] and the three sets are pairwise disjoint
+  na_condition: N/A when joints == []
+  evidence: predicate_id, unclassified_joint_ids, independent_dofs, dependent_joints, passive_dofs, all_joint_ids
+  can_it_fail: 'Example A with independent_dofs: [drawer_1_slide, drawer_2_slide] (door_hinge dropped
+    by accident, a one-token edit): door_hinge is unclassified. The contract still passes A5 and A6; KF3
+    would sweep the two drawers with the door frozen at closed, and the three `door`-bearing forbidden
+    pairs plus the door''s stop_contact obligation would all be scored at a single door angle — the door
+    claims would report as satisfied.'
+  deviates_from_spec: 'New: §10 defines independent_dofs and says dependents are solved from couplings,
+    but nothing requires the union to cover the joint set.'
+- id: A21.coupling_schema
+  claim: Every coupling entry is structurally complete, uses only frozen vocabulary, has a non-degenerate
+    relation, and names a residual source that is actually measurable for the mechanism it permits.
+  p0_inputs: kinematic_claims.couplings[].{id, mechanism, relation{dependent,independent,coefficient,offset},
+    expected_dof, residual_norm{by,unit}, epsilon?, residual_source (new)}
+  mj_inputs: 'n/a — pre-generation check; freezes for KF2: bound(g) searches mjModel eq_type ∈ {mjEQ_JOINT,
+    mjEQ_WELD} with eq_obj1id/eq_obj2id equal to the bound joint ids and eq_active0/mjData.eq_active true,
+    plus fixed tendons whose wrap_objid set equals the member set; coefficients read from eq_data[eq_dataadr
+    .. +5] (polycoef) or from wrap_prm for tendon coefs; residual read from mjData.efc_pos rows whose
+    efc_type == mjCNSTR_EQUALITY and efc_id == the equality index, after mj_forward with no stepping'
+  algorithm: '1. Required key set is exactly {id, mechanism, relation, expected_dof, residual_norm} plus
+    optional {epsilon, residual_source}; any other key → A30. Missing → A21.coupling_key_missing naming
+    the key. 2. id unique across couplings → A21.duplicate_coupling_id. 3. mechanism ∈ {any, equality,
+    tendon, weld} → A21.unknown_mechanism. 4. relation required keys exactly {dependent, independent,
+    coefficient, offset}; coefficient and offset finite floats. 5. |coefficient| ≥ 1e-6 → else A21.zero_coefficient:
+    q_dep = 0·q_indep + b is not a coupling, it is a constant-value assertion, and it makes `by: dependent_range_span`
+    normalization meaningless. 6. expected_dof an int ≥ 0 (A22 checks its value). 7. residual_norm required
+    keys exactly {by, unit}; by ∈ {dependent_range_span, independent_range_span, absolute} → A21.unknown_residual_norm.
+    When by ∈ {dependent_range_span, independent_range_span}, the named joint''s (range.max − range.min)
+    must be > 1e-9 → A21.degenerate_normalizer (division by zero). When by == absolute, unit is checked
+    by A18 step 5. 8. epsilon, if present, a finite float > 0 → A21.nonpositive_epsilon. 9. A joint may
+    be the `dependent` of at most one coupling → A21.over_determined_joint listing the coupling ids; two
+    couplings assigning the same joint make the sweep''s value for it depend on evaluation order. 10.
+    NEW REQUIRED FIELD residual_source, mandatory whenever mechanism ∈ {any, tendon}, value ∈ {efc_equality,
+    tendon_length, na}: mjData.efc_pos carries a mjCNSTR_EQUALITY row only for an <equality> implementation;
+    a fixed-tendon implementation produces a mjCNSTR_LIMIT row instead, so ''mechanism: any'' leaves the
+    residual sub-check''s measurability implementation-dependent and therefore non-comparable across generators.
+    Missing → A21.residual_source_unstated. When the model''s actual implementation has no row of the
+    declared source, the residual sub-check reports N/A and bound(g) alone decides — which must be stated
+    in the manifest, not decided in code.'
+  pass_condition: all key sets exact, all tokens in vocabulary, |coefficient| ≥ 1e-6, normalizer span
+    > 0, epsilon > 0, no joint dependent twice, residual_source present where required
+  na_condition: N/A when couplings == []
+  evidence: predicate_id, coupling_id, missing_keys, extra_keys, token, allowed_tokens, coefficient, normalizer_joint,
+    normalizer_span, dependent_joint, conflicting_coupling_ids
+  can_it_fail: 'Example B with `residual_norm: {by: dependent_range_span, unit: rad}` on a gear whose
+    declared span is 37.7 rad is admissible by shape but §09 shows it tolerates ~43° of phase error; the
+    degenerate case (a gear whose range were [0,0]) → degenerate_normalizer. Example B with `mechanism:
+    any` and no residual_source → residual_source_unstated, and a tendon-implemented gearbox would then
+    produce an empty efc_pos equality slice, which under a naive max() over an empty set returns −inf
+    and passes — the identical bug §09 documents for bound(g).'
+  deviates_from_spec: 'New: §15 has no row validating couplings at all beyond A6, yet §09 is the section
+    that added the whole block. Step 10 goes beyond §09, which lists equality/tendon/weld as interchangeable
+    implementations without noting that only the equality path produces the efc_pos row its own check
+    ④ reads.'
+- id: A22.coupling_dof_arithmetic
+  claim: expected_dof equals the joint count minus the coupling count in the coupling's connected component,
+    and all couplings in one component declare the same value.
+  p0_inputs: kinematic_claims.couplings[].id, .relation.dependent, .relation.independent, .expected_dof,
+    kinematic_claims.independent_dofs
+  mj_inputs: 'n/a — pre-generation check; freezes for KF2 check ③: measured_dof = nv(member joints) −
+    rank(efc_J restricted to the component''s equality rows), computed with numpy.linalg.matrix_rank at
+    tol = 1e-8'
+  algorithm: '1. Build an undirected graph over joint ids with one edge per coupling {dependent, independent}.
+    2. Components = connected components. For component C: n_joints = |vertices(C)|, n_couplings = |edges(C)|.
+    3. predicted = n_joints − n_couplings. 4. For every coupling in C: require expected_dof == predicted
+    → A22.expected_dof_arithmetic naming coupling id, declared value, predicted value, n_joints, n_couplings.
+    5. Require all couplings in C to declare the same expected_dof (implied by step 4; reported separately
+    as A22.expected_dof_disagreement for a clearer message when several are wrong together). 6. Require
+    predicted ≥ 1 → A22.overconstrained_component: a component with more scalar couplings than joints
+    leaves zero DOF, and KF3 would have nothing to sweep in it. 7. Cross-check with A20: |vertices(C)
+    ∩ independent_dofs| must equal predicted → A22.independent_count_mismatch.'
+  pass_condition: expected_dof == n_joints − n_couplings for every coupling, predicted ≥ 1, and the independent
+    count in each component equals predicted
+  na_condition: N/A when couplings == []
+  evidence: predicate_id, component_joint_ids, component_coupling_ids, n_joints, n_couplings, predicted_dof,
+    declared_dof, independent_in_component
+  can_it_fail: 'Example B with `expected_dof: 2` (an author reading ''two gears, two DOF''): predicted
+    = 2 − 1 = 1 → expected_dof_arithmetic. KF2 check ③ would then compare a measured rank-1 constraint
+    against a declared 2 and fail a perfectly correct gearbox.'
+  deviates_from_spec: 'New: §09 lists expected_dof as a field KF2 must verify against the model but never
+    constrains it against the contract''s own relation list, so a self-contradictory contract is admissible
+    and its failure is charged to the asset.'
+- id: A23.coupling_range_consistency_and_dedup
+  claim: A dependent joint's declared range and states are consistent with the coupling relation applied
+    to the independent joint's, and the dependent's range_reference claim is marked derived so KF1 and
+    KF2 do not both score the same number.
+  p0_inputs: kinematic_claims.couplings[].relation{dependent,independent,coefficient,offset}, kinematic_claims.joints[].range{min,max},
+    .states, .reference_state
+  mj_inputs: n/a — pre-generation check
+  algorithm: '1. For each coupling g with dependent d and independent i: predicted_lo, predicted_hi =
+    sorted([coefficient·range_i.min + offset, coefficient·range_i.max + offset]). 2. tol = 1e-3 · max(1e-9,
+    predicted_hi − predicted_lo). 3. If |range_d.min − predicted_lo| > tol or |range_d.max − predicted_hi|
+    > tol → A23.coupling_range_inconsistent, reporting declared and predicted intervals. This contract
+    is unsatisfiable: no model can simultaneously honour the declared dependent range and the declared
+    ratio. 4. For each state label s declared by BOTH d and i: require |states_d[s] − (coefficient·states_i[s]
+    + offset)| ≤ tol → A23.coupling_state_inconsistent. 5. On success, set a manifest flag derived_from
+    = g.id on the claim KF1.<d>.range_reference and EXCLUDE it from KF1''s denominator. Rationale: the
+    dependent''s range carries no information independent of (independent range, coefficient, offset),
+    and KF2 already scores the coefficient; scoring both violates the core rule ''the same information
+    is not counted twice'' and double-penalises a single gear-ratio defect — once in KF1 as a wrong range
+    and once in KF2 as a wrong coefficient. 6. Emit the exclusion explicitly (claim_id, excluded, reason)
+    so KF1''s applicable-n is auditable.'
+  pass_condition: declared dependent range and shared states match the relation within tol
+  na_condition: N/A when couplings == []; per-coupling N/A when the independent joint's range is not finite
+  evidence: predicate_id, coupling_id, dependent_joint, independent_joint, coefficient, offset, declared_range,
+    predicted_range, delta_min, delta_max, offending_state_label, excluded_claim_ids
+  can_it_fail: 'Example B with gear_small_spin''s range left at [−6.283, 6.283] (copy-pasted from the
+    large gear) while coefficient is 3.0: predicted [−18.850, 18.850] → coupling_range_inconsistent. The
+    contract as published is consistent, which is what makes this a real check rather than an assertion.'
+  deviates_from_spec: 'New. Answers the routed question directly: the dependent joint MUST also appear
+    in `joints` (A1 forces it, A3 forces it via the movable role, A22 needs its range), and the only genuine
+    double count that creates is on range/states — closed here by the derived-claim exclusion, not by
+    removing the joint.'
+- id: A24.state_scope_resolvable
+  claim: Every state reference resolves to a non-empty set of joints that actually declare that state
+    label, so no state predicate is a vacuous conjunction over an empty set.
+  p0_inputs: kinematic_claims.asset_states{label:{scope,tolerance{relative}}}, kinematic_claims.contact_policy.{required,permitted,forbidden}[].{parts,state},
+    kinematic_claims.joints[].part, .states, kinematic_claims.rigid_attachments, required_parts[].role,
+    dynamics_claims.functional_scenarios[].initial_state
+  mj_inputs: 'n/a — pre-generation check; freezes for KF3 the sample classifier: sample q ∈ state s ⟺
+    for every j in the resolved set, |q_j − states_j[s]| ≤ tol_rel(s) · (range_j.max − range_j.min)'
+  algorithm: '1. asset_states shape: each value is a mapping with exactly {scope, tolerance}; scope ∈
+    {named_parts, all_declaring} → A24.unknown_scope; tolerance is a mapping with exactly {relative},
+    a finite float in (0, 0.5) → A24.bad_state_tolerance (≥ 0.5 makes every sample match every state).
+    2. Frozen part→joints resolution:\n   J(p) = {j : j.part == p} if role(p)==movable;\n   J(p) = J(chain_root(p))
+    if role(p)==attached, using A14''s chain_root;\n   J(p) = ∅ if role(p)==fixed.\n   This is the answer
+    to ''which joints does a state constrain when a contact pair names a jointless carcass'': a fixed
+    part contributes nothing, and an attached part contributes its leader chain''s joint. 3. For every
+    contact entry e with state s != ''all'' and asset_states[s].scope == named_parts: expand e.parts through
+    A13, then Jset(e) = ⋃ over every part in every expanded pair of J(part); Jset_s(e) = {j ∈ Jset(e)
+    : s ∈ j.states}. 4. Require Jset_s(e) != ∅ → A24.vacuous_state_scope, message: ''contact entry <class>[<i>]
+    {parts} state=<s> resolves to no joint that declares <s>; the classifier would then accept EVERY swept
+    sample as being in state <s>, turning this required obligation into “contact at some point during
+    the whole sweep” / this permitted exemption into a global exemption.'' 5. For every s with scope ==
+    all_declaring: require at least one joint to declare s → A24.state_never_declared. 6. For dynamics_claims.functional_scenarios[].initial_state:
+    require asset_states[label].scope == all_declaring → A24.initial_state_wrong_scope (a whole-asset
+    initial pose cannot be defined by a per-claim named-part scope). 7. Emit Jset_s(e) per entry into
+    the manifest so the classifier''s joint set is frozen before generation, not recomputed at scoring
+    time.'
+  pass_condition: every asset_states value is well-shaped, every named_parts contact entry resolves to
+    a non-empty joint set that declares the label, every all_declaring label is declared by ≥1 joint,
+    and every dynamics initial_state has all_declaring scope
+  na_condition: 'N/A when asset_states == {} AND every contact entry uses state: all'
+  evidence: predicate_id, class, entry_index, parts, expanded_pairs, state, scope, per_part_resolution
+    (part → role → joints), resolved_joint_set, joints_declaring_state
+  can_it_fail: 'Example A extended with `required: [{parts: [cabinet_body, cabinet_back_panel], state:
+    closed, relation: stop_contact}]` where both parts are role fixed → Jset is empty → vacuous_state_scope,
+    and the obligation would otherwise be evaluated over the entire sweep under ∃-semantics and pass on
+    any single grazing sample. Conversely `{parts: [handle_1, cabinet_body], state: closed}` passes because
+    handle_1 resolves through drawer_1 to drawer_1_slide, which declares closed — so the predicate is
+    not simply ''reject fixed parts''.'
+  deviates_from_spec: New. §10 defines the two scopes in prose ('only the joints of the parts named by
+    the claim that consumes the state') but never says what a fixed part or an attached part contributes,
+    and §15's A7 checks only that the label exists.
+- id: A25.contact_entry_shape_and_relation
+  claim: Every contact entry has a two-part pair and exactly the keys its class allows, and every required
+    entry carries a frozen relation token whose semantics are compatible with its state scope.
+  p0_inputs: kinematic_claims.contact_policy.{required,permitted,forbidden}[].{parts,state,relation}
+  mj_inputs: 'n/a — pre-generation check; freezes for KF3: stop_contact ⇒ ∃-semantics, min over samples
+    classified into the state of min_sd(pair) ≤ required_contact_m; mesh_contact ⇒ ∀-semantics, max over
+    ALL samples of min_sd(pair) ≤ required_contact_m; no_contact ⇒ ∀-semantics, min over all samples of
+    min_sd(pair) > 0; forbidden ⇒ ∀-semantics, max over all samples of (−min_sd(pair)) ≤ forbidden_penetration_m;
+    min_sd via mj_geomDistance over the geom cross product of the two parts (A28)'
+  algorithm: '1. contact_policy must be a mapping with exactly the keys {required, permitted, forbidden,
+    precedence}; each of the first three an explicit list (possibly empty) → A25.contact_policy_shape.
+    2. Every entry: `parts` a 2-element list of distinct non-empty strings → A25.bad_pair_arity / A25.self_pair.
+    Canonicalize each expanded pair as tuple(sorted(...)). 3. Per-class key sets: required → exactly {parts,
+    state, relation}; permitted → {parts, state} plus OPTIONAL relation; forbidden → exactly {parts, state},
+    and a `relation` key present → A25.relation_on_forbidden_entry (''forbidden entries have no relation;
+    the predicate is fixed as max penetration ≤ forbidden_penetration_m''). 4. Frozen relation vocabulary
+    by class: required → {stop_contact, mesh_contact, no_contact}; permitted → {rest_contact} only. 5.
+    A required-class token appearing under permitted → A25.obligation_in_permitted_class, message: ''permitted
+    entries are scored-inert (they only exempt a pair from forbidden); relation=<t> reads as an obligation
+    — move the entry to `required` if that is what you meant.'' This is the highest-value message in the
+    predicate: the entry looks scored and contributes nothing. 6. (relation, state) compatibility: stop_contact
+    requires state != ''all'' (its ∃-semantics over the whole sweep would be satisfied by a single grazing
+    sample anywhere); mesh_contact and no_contact require state == ''all'' (their ∀-semantics over one
+    state''s tolerance ball is a far weaker claim than intended). Violation → A25.relation_state_incompatible
+    naming the pair and the required scope. 7. Duplicate detection: within a class, the same canonical
+    pair with the same state twice → A25.duplicate_contact_entry (it silently doubles that pair''s weight
+    in S_required or S_forbidden). The same pair in permitted AND required is a contradiction (one asserts
+    inertness, the other an obligation) → A25.pair_permitted_and_required. The same pair in required/permitted
+    AND forbidden is legal and is what `precedence` exists for.'
+  pass_condition: shapes and key sets exact, tokens in the per-class vocabulary, relation/state compatibility
+    satisfied, no duplicates, no pair both permitted and required
+  na_condition: N/A when all three classes are empty lists
+  evidence: predicate_id, class, entry_index, parts, canonical_pair, state, relation, allowed_relations_for_class,
+    expected_state_scope, duplicate_of_index
+  can_it_fail: 'Example B''s `required: [{parts: [gear_large, gear_small], state: all, relation: mesh_contact}]`
+    passes; changing the token to stop_contact → relation_state_incompatible, and the obligation would
+    then be met by the two gears touching once anywhere in ±3 turns. The v1 contract''s `allowed: [{parts:
+    [drawer, cabinet_body], states: [closed], relation: stop_contact}]` fails on the class name, the plural
+    `states` key, the list-valued state, and — after migration to `permitted` — on obligation_in_permitted_class.'
+  deviates_from_spec: 'New. Answers the routed question: `permitted` entries do NOT need a relation token
+    — the token has no predicate and §11''s table says so explicitly — but the admission layer must still
+    reject required-class tokens there, because that is the specific authoring error that silently deletes
+    an obligation. The required vocabulary is frozen at three tokens; `no_contact` is added because `forbidden`
+    tolerates up to forbidden_penetration_m of overlap and therefore cannot express ''these two must never
+    touch at all'' (a fan blade and its shroud, a gear tooth root).'
+- id: A26.precedence_declared
+  claim: contact_policy.precedence is present and equal to the single frozen literal, and the overlap
+    resolution it selects is emitted per overlapping pair.
+  p0_inputs: kinematic_claims.contact_policy.precedence, and the canonical pair sets of the three classes
+  mj_inputs: n/a — pre-generation check
+  algorithm: '1. Require the key `precedence` with value exactly ''required_and_permitted_over_forbidden''
+    → A26.precedence_missing / A26.unknown_precedence naming the only accepted literal. A single-value
+    enum is deliberate: it makes the author write the rule down and reserves the field for a future second
+    policy without a schema change. 2. overlap = canonical pairs appearing in (required ∪ permitted) and
+    in forbidden. 3. For each overlapping pair emit the resolution row: for a required entry with state
+    s the forbidden check for that pair is SUSPENDED on exactly the samples classified into s (A24''s
+    classifier); for a permitted entry with state s (or ''all'') likewise. Outside those samples the forbidden
+    check applies. 4. Require that no pair is suspended on ALL samples while also being listed as forbidden
+    → A26.forbidden_pair_fully_suspended: the forbidden entry is then unfalsifiable and must be deleted,
+    not silently kept in S_forbidden''s denominator. 5. Emit the per-pair suspension map into the manifest.'
+  pass_condition: precedence present and equal to the frozen literal, and no forbidden pair is fully suspended
+  na_condition: N/A when contact_policy.forbidden == [] (nothing can be overridden)
+  evidence: predicate_id, precedence_value, overlapping_pairs, suspension_map (pair → suspending class,
+    entry index, state, sample predicate), fully_suspended_pairs
+  can_it_fail: 'Example A with `permitted: [{parts: [drawer_1, drawer_2], state: all}]` added alongside
+    the existing `forbidden: [{parts: [drawer_1, drawer_2], state: all}]` → forbidden_pair_fully_suspended:
+    the pair contributes a denominator slot to S_forbidden that can never fail. Deleting precedence entirely
+    leaves S_collision undefined at the sweep''s endpoints, which §11 states outright.'
+  deviates_from_spec: 'New: §11 introduces `precedence` in the schema and explains why it is needed, but
+    §15 has no row requiring it, so a contract omitting it is admissible and KF3 then has no defined behaviour
+    on the standard example.'
+- id: A27.sweep_schedule_frozen
+  claim: The contract freezes a sweep schedule that makes the sample sequence, and therefore first_failing_q
+    and every max/min, a deterministic total order reproducible byte-for-byte across runs.
+  p0_inputs: kinematic_claims.sweep{mode, samples_per_dof, include_state_corners, order} (new block),
+    kinematic_claims.independent_dofs (as an ORDERED list), kinematic_claims.joints[].range, .states,
+    .reference_state, kinematic_claims.couplings[].relation, kinematic_claims.asset_states (as an ORDERED
+    mapping)
+  mj_inputs: 'n/a — pre-generation check; freezes for KF3: for each sample, write qpos, call mj_forward
+    once (never mj_step), read mjData.xanchor/xaxis/xpos/geom_xpos and run mj_geomDistance queries'
+  algorithm: '1. Require a `sweep` block with exactly the keys {mode, samples_per_dof, include_state_corners,
+    order}. 2. mode ∈ {coordinate_wise, grid} → A27.unknown_sweep_mode. 3. samples_per_dof an int ≥ 3
+    and ≤ 201 → A27.bad_sample_count (fewer than 3 cannot show a mid-travel defect; the cap bounds runtime).
+    4. include_state_corners a bool. 5. order must be the frozen literal ''declaration'' → A27.unknown_sweep_order.
+    6. Frozen sample generation, emitted into the manifest as executable pseudocode so no implementer
+    re-decides it:\n   K = independent_dofs IN THE ORDER WRITTEN (never sorted, never a Python set);\n   q_ref[j]
+    = states_j[reference_state_j] for every slide/hinge joint (A19 guarantees it exists);\n   coordinate_wise:
+    for k in range(len(K)): for i in range(N): q = copy(q_ref); q[K[k]] = min_k + i*(max_k−min_k)/(N−1);
+    sample_index = k*N + i;\n   grid: odometer order over the cartesian product with K[0] the SLOWEST-varying
+    axis; sample_index = the odometer counter;\n   then, if include_state_corners: for each label in asset_states
+    IN YAML KEY ORDER, append the configuration setting every joint that declares that label to its value
+    and every other joint to q_ref, sample_index continuing the counter.\n7. Dependent joints are filled
+    after the independent values are set, in the topological order of the coupling DAG (A21 step 9 gives
+    each dependent one parent, A22 gives no cycle), evaluated as the single expression q_dep = coefficient*q_indep
+    + offset — no accumulation, no summation reordering, so results are bitwise reproducible on a fixed
+    platform. 8. If mode == grid: compute N**len(K) and reject > 20000 → A27.grid_too_large naming the
+    count and suggesting coordinate_wise. 9. first_failing_q for every KF3 claim is the sample with the
+    smallest sample_index that fails; ties are impossible because sample_index is a total order. 10. Any
+    implementation that iterates a Python set, a dict without insertion order, or a sorted() copy of independent_dofs
+    violates this contract and must be caught by a unit test asserting that two runs produce identical
+    sample_index → qpos arrays.'
+  pass_condition: sweep block present and well-shaped, order == 'declaration', grid size within cap
+  na_condition: N/A when independent_dofs == [] (A5 already rejects that whenever joints exist)
+  evidence: predicate_id, sweep_block, dof_order, samples_per_dof, total_samples, grid_size, state_corner_count,
+    sample_schedule_hash (sha256 over the emitted pseudocode plus the resolved parameters)
+  can_it_fail: 'Example A (3 independent DOFs) with mode: grid and samples_per_dof: 21 → 9261 samples,
+    admissible; with samples_per_dof: 41 → 68921 → grid_too_large. And every contract as published fails
+    today, because none has a `sweep` block: the sample order is currently whatever the implementer''s
+    loop happens to do, and ''first failing q'' — which §11 requires as evidence — is not a well-defined
+    quantity.'
+  deviates_from_spec: 'New: P3''s Scope box demands ''a deterministic feasible q-sweep'' and ''every threshold
+    and sampling rule frozen before evaluation'', and §15 has no row for the sampling rule at all. Nothing
+    in the revised P0 defines sample count, grid vs coordinate-wise, or scan order.'
+- id: A28.part_body_multiplicity_and_measurement
+  claim: The contract declares how many internal degrees of freedom each part may have, and the admission
+    layer freezes the geom-level aggregation rules that make every KF measurement well defined when a
+    part binds to several bodies.
+  p0_inputs: required_parts[].id, required_parts[].internal_dofs (new, optional, default 0), kinematic_claims.tolerances.distance_query_distmax_m
+  mj_inputs: 'n/a — pre-generation check; it FREEZES the following downstream bindings, which are the
+    reason the predicate exists: B(p) = the body set the Gate bound to part p (may have |B| > 1; the corpus
+    median is 5 bodies for 3 joints); G(p) = concat over b ∈ B(p) of range(m.body_geomadr[b], m.body_geomadr[b]
+    + m.body_geomnum[b]), sorted ascending; sd(p,q) = min over G(p)×G(q) of mj_geomDistance(m, d, g1,
+    g2, distmax, None); AABB(p) = elementwise union of the world AABBs of G(p); diag(p) = ||AABB_hi −
+    AABB_lo||; centroid(p) = geom-volume-weighted mean of d.geom_xpos over G(p)'
+  algorithm: '1. required_parts[].internal_dofs, if present, an int in [0, 8]; default 0 → A28.bad_internal_dofs.
+    2. Require kinematic_claims.tolerances.distance_query_distmax_m whenever contact_policy has any non-empty
+    class (A12 lists it); domain (0, 10]. 3. Emit into the manifest, as frozen text that KF1/KF3 must
+    implement verbatim:\n   (a) part geometry is the UNION over all bound bodies, never a single body,
+    because the corpus median is 5 bodies per asset and a drawer is routinely a box body plus a front-panel
+    body;\n   (b) mj_geomDistance is the only distance primitive; mjData.contact is never read (every
+    real geom compiles to contype=0 conaffinity=0, so ncon is always 0);\n   (c) mj_geomDistance RETURNS
+    distmax when the pair is farther apart than distmax — that value is a censoring sentinel, must be
+    recorded as ''>= distmax'', and must never be reported as a minimum clearance;\n   (d) FORBIDDEN mjModel/mjData
+    fields, because the inertials are synthesized by our own injection and must never influence a score:
+    body_mass, body_inertia, body_ipos, body_iquat, dof_M0, qM, geom_density, and mjData.xipos. Part centroids
+    use geom_xpos and geom volume, never xipos;\n   (e) KF1 extra-DOF check: extra = Σ_{b ∈ B(p)} m.body_jntnum[b]
+    − (1 if role(p)==movable else 0); FAIL p with code extra_dof_in_part when extra > internal_dofs[p].\n4.
+    Warn when a part''s declared internal_dofs > 0 and that part is also a rigid_attachments leader: a
+    leader with internal DOF makes follower drift ambiguous.'
+  pass_condition: internal_dofs values in domain and distance_query_distmax_m declared where needed
+  na_condition: the internal_dofs half is N/A when no part declares the field (all default to 0); the
+    distmax half is N/A when contact_policy is entirely empty
+  evidence: predicate_id, part_id, internal_dofs, distmax, aggregation_rules_hash (sha256 over the emitted
+    frozen text)
+  can_it_fail: 'A contract for a drawer whose correct model splits it into a box body plus a rigidly-welded
+    front panel: with internal_dofs absent (default 0) and the panel attached by a fixed joint, body_jntnum
+    sums to 1 and it passes; if the generator instead gives the panel its own hinge, extra = 1 > 0 and
+    KF1 fails it. Without the frozen rule, an implementer who binds a part to its FIRST body only would
+    measure the drawer''s clearance against the box and miss a front panel that penetrates the carcass
+    entirely.'
+  deviates_from_spec: 'New. Answers the routed question: nothing in the revised P0 says what happens when
+    a part''s geometry spans several bodies, yet §04 says the Gate binds each id to a ''body / geom set''
+    (plural) and the corpus median is 5 bodies per asset. Without (c) and (d) two independent implementations
+    of the same spec produce different numbers.'
+- id: A29.tolerance_override_registry_and_hash
+  claim: Only registered per-claim tolerance overrides exist, and the frozen tolerance hash is computed
+    over the merged effective (claim, key, value) set rather than over the literal tolerances block.
+  p0_inputs: kinematic_claims.tolerances (all keys), kinematic_claims.couplings[].epsilon, kinematic_claims.asset_states[label].tolerance.relative,
+    and the claim manifest from A31
+  mj_inputs: n/a — pre-generation check
+  algorithm: '1. Frozen override registry (closed set — any other per-claim value that looks like a tolerance
+    is rejected by A30):\n   kinematic_claims.couplings[i].epsilon                → coupling_residual\n   kinematic_claims.asset_states[s].tolerance.relative  →
+    state_match_relative\n   Every other tolerance key is global-only; a per-joint `axis_angle_deg`, a
+    per-entry `forbidden_penetration_m`, etc. → A29.unregistered_override naming the path and the registry.
+    2. Merge rule: effective(claim c, key k) = the registered override reachable from c if present, else
+    tolerances[k]; A12 step 6''s domain check applies to the override value too → A29.override_out_of_domain.
+    3. Build the effective set: for every claim c in the manifest (A31), for every key k in TOLERANCE_KEYS_OF(c.kind)
+    — a frozen per-claim-kind table: KF1.*.axis_* → {axis_angle_deg}; KF1.*.anchor → {anchor_side_fraction_min}
+    or {anchor_center_offset_max}; KF1.attach.*.drift → {follower_drift_m}; KF2.*.residual → {coupling_residual};
+    KF3.required.* → {required_contact_m, state_match_relative, distance_query_distmax_m}; KF3.forbidden.*
+    → {forbidden_penetration_m, distance_query_distmax_m}; KF3.motion.*.travel_scale → {travel_scale_min}
+    — emit the triple (c.id, k, format(float(effective), ''.12g'')). 4. Sort the triples by (c.id, k)
+    using byte-wise comparison of the UTF-8 encodings (no locale, no natural sort). 5. payload = ''evo-p0-tol/1\\n''
+    + ''''.join(f''{cid}\\t{k}\\t{v}\\n'' for each triple). 6. tolerance_hash = sha256(payload.encode(''utf-8'')).hexdigest();
+    emit the hash always and the full payload behind a --explain flag. 7. Every evaluation record carries
+    tolerance_hash AND contract_hash (A0). Two contracts with byte-identical `tolerances` blocks but different
+    couplings[].epsilon MUST produce different tolerance_hash values — that is the entire reason the hash
+    is over the merged set. 8. The hash is recomputed after any contract edit; a mismatch against the
+    recorded value invalidates every stored result computed under the old one.'
+  pass_condition: no unregistered overrides, every override value inside its key's domain, and the hash
+    computes without error
+  na_condition: never N/A — a contract with an empty manifest still hashes the versioned prefix alone,
+    which is a valid and distinguishable value
+  evidence: predicate_id, unregistered_override_paths, override_path, override_key, override_value, domain,
+    tolerance_hash, effective_triple_count, payload (on --explain)
+  can_it_fail: 'Two copies of example B differing only in `epsilon: 0.005` vs `epsilon: 0.05`: a hash
+    over the literal tolerances block gives them the same value and the two runs become indistinguishable
+    in the results archive; the merged-set hash separates them. And a contract adding `axis_angle_deg:
+    5.0` inside a single joint (a very natural way to tighten one claim) → unregistered_override, because
+    nothing downstream would read it and the author would believe the claim was tightened.'
+  deviates_from_spec: Extends A12. The A12 row requires the block to be complete; §12 requires the block
+    to be hashed. Neither says overrides exist, yet §09 and §10 both define one, so 'hash the tolerances
+    block' is already insufficient for the two worked examples as published.
+- id: A30.schema_closure
+  claim: No key outside the frozen schema appears at any level of the contract, and every block the downstream
+    metrics read is present as an explicit value rather than by omission.
+  p0_inputs: the entire canonicalized contract
+  mj_inputs: n/a — pre-generation check
+  algorithm: '1. Define the frozen key schema as a nested allow-list mirroring §04–§12 plus the fields
+    added by A18/A19/A20/A21/A27/A28 (range.limited, joints[].reference_state, passive_dofs, couplings[].residual_source,
+    sweep, required_parts[].internal_dofs). 2. Walk the contract depth-first; at every mapping compare
+    its key set against the allow-list for that path; report each surplus key as A30.unknown_key with
+    the full path, the allowed set at that path, and the nearest allowed key by Levenshtein (message only).
+    3. Require these blocks to be PRESENT, using an explicit empty list/mapping where they do not apply,
+    never omitted: kinematic_claims.{canonical_frame, joints, rigid_attachments, couplings, independent_dofs,
+    asset_states, contact_policy, tolerances, sweep}; contact_policy.{required, permitted, forbidden,
+    precedence}. Omission → A30.required_block_omitted. The distinction matters: `couplings: []` is a
+    positive assertion that KF2 is N/A for this asset; a missing `couplings` key is indistinguishable
+    from an author who forgot, and §09''s own lesson is that an empty set silently scoring 1.0 is the
+    failure mode to design against. 4. canonical_frame.up must equal the literal ''gravity'' (the only
+    defined value) → A30.unknown_canonical_up; canonical_frame.front must be null or the single-key mapping
+    checked by A9. 5. Type-check every leaf against the schema''s declared type (str / float / int / bool
+    / list / mapping / null); a bool where a float is expected is a hard reject (Python''s bool is an
+    int and would pass a naive isinstance check).'
+  pass_condition: no unknown keys, no omitted required blocks, canonical_frame values in vocabulary, every
+    leaf of the declared type
+  na_condition: never N/A
+  evidence: predicate_id, path, unknown_key, allowed_keys_at_path, nearest_allowed_key, omitted_block_paths,
+    leaf_path, expected_type, actual_type
+  can_it_fail: A contract writing `tolernaces:` (transposed) → unknown_key at kinematic_claims.tolernaces,
+    and A12 separately reports every required tolerance as missing; without A30 an implementation with
+    code-level defaults would run happily on thirteen unnamed thresholds, which is precisely the state
+    §12 was written to end. A contract omitting `couplings` entirely → required_block_omitted.
+  deviates_from_spec: 'New: §15 has no closure rule. R3 (''no default thresholds scattered in the code'')
+    is unenforceable without one, because a mistyped tolerance key is indistinguishable from an absent
+    one.'
+- id: A31.claim_manifest_emission
+  claim: Admission emits the complete, frozen list of claims each metric will score, with every N/A pre-marked
+    and every denominator fixed before the asset exists, so no metric can score a full mark on an empty
+    set.
+  p0_inputs: every admitted block; specifically joints[], rigid_attachments[], couplings[], contact_policy.{required,forbidden}
+    after A13 expansion, independent_dofs, passive_dofs, and the derived-claim exclusions from A23
+  mj_inputs: n/a — pre-generation check; the manifest is the input contract for the KF implementations
+  algorithm: '1. KF1 claims, per joint j: KF1.<j>.parent, KF1.<j>.type, KF1.<j>.axis_semantic, KF1.<j>.axis_relational,
+    KF1.<j>.axis_numeric, KF1.<j>.anchor, KF1.<j>.range_reference. Pre-mark N/A: axis_* when that form
+    is undeclared; axis_numeric additionally when canonical_frame.front is null (evidence code orientation_undetermined);
+    anchor when anchor is null or type ∈ {slide,ball,free}; range_reference''s range half when range.limited
+    is false. Pre-mark EXCLUDED (removed from the denominator, distinct from N/A) for range_reference
+    when A23 fired. Plus, per rigid_attachment a: KF1.attach.<follower>.structure, KF1.attach.<follower>.drift.\n2.
+    KF2 claims, per coupling g: KF2.<g>.bound, KF2.<g>.coefficients, KF2.<g>.expected_dof, KF2.<g>.residual,
+    with the per-coupling indicator defined as the AND of the four and the four reported individually
+    as evidence; KF2.<g>.residual pre-marked N/A when residual_source == na.\n3. KF3 claims: per independent
+    joint j, KF3.motion.<j>.reachable, .continuous, .travel_scale; per required contact entry (post-expansion),
+    KF3.required.<i>.<canonical_pair>; per forbidden canonical pair, KF3.forbidden.<i>.<canonical_pair>
+    after A26''s suspension mapping.\n4. Per metric emit applicable_n (claims that are neither N/A nor
+    EXCLUDED), na_n, excluded_n.\n5. Hard rule stamped into the manifest: when applicable_n == 0 for a
+    metric, that metric reports N/A — never 1.0, never 0.0 — and is excluded from any cross-asset average,
+    with applicable_n carried into the report. This generalises §09''s bound(g) fix and §11''s ''denominator
+    0 reports N/A'' to every metric, so the same class of bug cannot reappear in KF1 or KF3.\n6. manifest_hash
+    = sha256 over the sorted claim-id list plus each claim''s status; emitted alongside contract_hash
+    and tolerance_hash.\n7. At scoring time the KF implementations MUST iterate the manifest and MUST
+    NOT discover claims from the model; a claim the manifest does not list cannot be scored, and a manifest
+    claim the scorer cannot evaluate is a scorer bug reported as ERROR, never as a pass.'
+  pass_condition: the manifest builds without error, every claim id is unique, and every claim carries
+    exactly one status ∈ {scorable, na, excluded}
+  na_condition: never N/A — a contract with no joints, no couplings and no contact policy yields an empty
+    manifest with applicable_n = 0 for all three metrics, which is itself the correct and reportable outcome
+  evidence: predicate_id, manifest (claim_id, metric, status, na_reason, tolerance_keys), applicable_n
+    per metric, na_n per metric, excluded_n per metric, manifest_hash
+  can_it_fail: Example B has no rigid attachments, so KF1.attach.* has applicable_n = 0 and a naive mean
+    over an empty follower list returns 1.0; the manifest forces N/A. A contract whose joints are all
+    type ball has every axis claim N/A (A8) and every anchor claim N/A (A10), collapsing KF1 to parent
+    + type + range_reference — visible in the manifest before generation rather than discovered as a 0/0
+    at scoring time.
+  deviates_from_spec: New. P3's reporting box demands 'per-metric applicability' and 'exclude N/A dimensions
+    from applicable-only aggregation', and §09 shows a concrete metric that returns 1.0 for the worst
+    possible model because a max over an empty set is −inf. The only structural fix is to fix the denominators
+    before the asset exists.
+aggregation: "ADMISSION IS A GATE, NOT A SCORE. It emits a binary verdict plus three artifacts.\n\nVerdict.\
+  \ admitted = AND over all predicates whose na_condition did not fire. There is no partial credit and\
+  \ no weighting: a contract that fails one predicate is returned to its author unchanged. Denominator:\
+  \ the number of predicates that actually evaluated (typically 20-31 of the 32 specified, since A4/A6/A13/A14/A21/A22/A23/A26\
+  \ are N/A for simple contracts). When that denominator is zero the verdict is REJECT with code EMPTY_CONTRACT,\
+  \ never ADMIT — an admission layer that admits by vacuity is the same defect as KF2 scoring 1.0 on an\
+  \ empty residual set.\n\nExecution order and error collection. A0 runs first and aborts on failure (nothing\
+  \ else can be evaluated against an unparseable file). A18 runs second, because A11, A19, A21 and A27\
+  \ all read canonicalized numbers. A1, A13 and A14 run next, because A15, A24, A25 and A31 consume their\
+  \ outputs (PID/GID/JID, expanded pairs, chain_root). A31 runs last. Within that ordering every predicate\
+  \ runs to completion and collects ALL its violations — never short-circuit on the first — because the\
+  \ point is to hand the author one complete list rather than force N round-trips. Findings are reported\
+  \ sorted by (predicate_id, path) with byte-wise string comparison, so two runs on the same file produce\
+  \ identical output.\n\nArtifacts emitted on ADMIT — all three are inputs to P3, and P3 may not recompute\
+  \ any of them:\n  1. contract_hash (A0) over the canonicalized YAML, and tolerance_hash (A29) over the\
+  \ merged effective (claim, key, value) set. Both go into every evaluation record. Results computed under\
+  \ a different pair of hashes are not comparable and must not be pooled.\n  2. the claim manifest (A31):\
+  \ every claim id each of KF1/KF2/KF3 will score, its status (scorable / na / excluded), its na_reason,\
+  \ and applicable_n / na_n / excluded_n per metric. This freezes every denominator before the asset exists.\n\
+  \  3. the frozen resolution tables that P3 must implement verbatim rather than re-derive: the joint-parent\
+  \ binding rule (A15), the part -> joints state-scope resolution (A24), group expansion and canonical\
+  \ pair ordering (A13/A25), the contact predicate semantics table with its exists/forall quantifiers\
+  \ (A25), the precedence suspension map (A26), the sample schedule pseudocode and its sample_index total\
+  \ order (A27), and the geom-union measurement rules plus the forbidden-mjModel-field list (A28).\n\n\
+  Downstream aggregation rule this layer imposes. For each metric, score = satisfied / applicable_n using\
+  \ the manifest's applicable_n; when applicable_n == 0 the metric reports N/A, is excluded from every\
+  \ cross-asset mean, and carries applicable_n into the report. No metric may compute its own denominator\
+  \ from what it happened to find in the model."
+open_decisions:
+- 'NEW CONTRACT FIELDS. Nine fields do not exist in the revised P0 and are required by the predicates
+  above: joints[].range.limited (A18), joints[].reference_state (A19), kinematic_claims.passive_dofs (A20),
+  couplings[].residual_source (A21), kinematic_claims.sweep{mode,samples_per_dof,include_state_corners,order}
+  (A27), required_parts[].internal_dofs (A28), tolerances.distance_query_distmax_m (A12/A28), and the
+  required-relation token no_contact (A25). Adding them bumps the contract schema version and invalidates
+  every already-frozen contract, including both worked examples. Decide whether to version-bump now or
+  defer — but deferring the sweep block means ''first failing q'', which P3 lists as required evidence,
+  stays undefined.'
+- 'UNITS: STRICT OR PERMISSIVE. A18 as written accepts deg/mm/cm and canonicalizes with write-back. The
+  stricter alternative is to reject anything but m/rad and make the author do the arithmetic. Permissive
+  is friendlier and the conversion is trivial, but it means the file the author wrote is not the file
+  that gets hashed. Pick one; do not ship both.'
+- THE THREE AXIS FORMS (P0 section 16 item 1, still open). If the controlled 90-degree-rotation experiment
+  converges the schema on `relational`, A9 and the axis_numeric branch of A16/A31 become dead code. If
+  it converges on `numeric`, canonical_frame.front stops being optional and A9 inverts from a conditional
+  into a mandatory-field check. Do not calibrate axis_angle_deg before this resolves.
+- 'WELD RESIDUAL REDUCTION (P0 section 16 item 2, still open). A21''s residual_source enum has no entry
+  for the 6-D weld case because the scalarization is undecided (translation over child AABB diagonal vs
+  rotation in radians; max of the two vs two separate numbers). Until it is decided, mechanism: weld should
+  be rejected at admission rather than admitted with an undefined residual.'
+- A23's DEDUPLICATION DIRECTION. A23 keeps the dependent joint's range in the contract, verifies it against
+  the relation, and excludes it from KF1's denominator. The alternative is to forbid a dependent joint
+  from declaring a range at all and have KF1 derive it. The first keeps the contract readable and lets
+  A23 catch a self-contradictory contract; the second is smaller but makes the joints block asymmetric.
+- PERMITTED ENTRIES CARRYING A REQUIRED-CLASS RELATION (A25 step 5) is specified as a hard reject. It
+  could instead be a warning, since the entry is merely inert rather than wrong. Reject is the right default
+  precisely because inert-looking-scored is the failure the required/permitted split was introduced to
+  end — but it will reject contracts migrated verbatim from v1's `allowed` block, so the migration needs
+  a documented rewrite rule.
+- GROUP TOKENS IN contact_policy AT ALL. A13 permits them with a 64-pair expansion cap. The cheaper option
+  is to forbid group addressing in contact_policy and require enumerated pairs, at the cost of verbosity
+  for a six-drawer cabinet. The cap value of 64 is arbitrary and uncalibrated.
+- SWEEP MODE DEFAULT AND THE 20000-SAMPLE CAP (A27). coordinate_wise misses interaction defects (two drawers
+  that collide only when both are half open); grid catches them and costs N^K. Neither the default nor
+  the cap has been measured against runtime on the 545 loadable assets.
+- TOLERANCE VALUES REMAIN UNCALIBRATED. A12's domain bounds are hard guards that keep each predicate non-trivial
+  (anchor_side_fraction_min > 0.5, state_match_relative < 0.5); they are not calibrated values. Section
+  12 is explicit that calibration must come from deterministic fault injection, not from the 47 real positives.
+  Nothing here endorses the nine protocol initial values.
+- envelope_m IS ROUTED NOWHERE. It appears in worked example A, is cited in section 07's rationale for
+  the anchor predicates, and feeds no metric and no admission predicate. Either give it a consumer (a
+  P2 scale check) or drop it — under A30 it currently has to sit in the allow-list purely so example A
+  parses.
+- DRY-RUN THE 32 PREDICATES OVER contracts-300/ BEFORE AUTHORING ANY NEW PROMPT. How many of the 300 already-extracted
+  contracts would be rejected, and by which predicate, is the cheapest available evidence about whether
+  these predicates are calibrated to real authoring or only to the two worked examples.
