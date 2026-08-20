@@ -1,0 +1,111 @@
+# Authored from revisions/*/prompt.txt ONLY. The asset was not opened.
+#
+# The prompt is unusually explicit about connection ("Crank and adjusters should be mounted
+# on explicit bearing/clamp features", "Keep a fully connected mechanical stack with no
+# free-floating parts"), and that is encoded as required contact rather than left as prose.
+#
+# Deliberately NOT declared: a flywheel rotation. The prompt names a "flywheel housing",
+# not a spinning flywheel. A real exercise bike obviously has one, but declaring a claim
+# the prompt never made would blame the asset for the contract author's expectations --
+# which is the failure mode this pilot exists to avoid.
+
+record_id: rec_stationary_exercise_bike_541413c0121143a2bed6faede26e1fdc
+
+overall_description: >
+  A precision stationary exercise bike: a frame carrying a crank set, a flywheel housing,
+  an adjustable saddle post and adjustable handlebars, with every part mounted on an
+  explicit bearing or clamp and nothing free-floating.
+
+required_parts:
+  - {id: frame,            role: fixed}
+  - {id: flywheel_housing, role: fixed}
+  - {id: crank,            role: movable}
+  - {id: saddle_post,      role: movable}
+  - {id: handlebar,        role: movable}
+
+global_form:
+  category: stationary exercise bike
+  geometry: upright frame with a forward flywheel housing and two vertical adjustment posts
+  coarse_structure: a connected mechanical stack with no free-floating parts
+
+part_geometry:
+  - {id: frame,            geometry: welded tubular frame with datum-friendly flat surfaces}
+  - {id: flywheel_housing, geometry: shallow enclosure at the front of the frame}
+  - {id: crank,            geometry: crank arms on a transverse spindle}
+  - {id: saddle_post,      geometry: straight vertical post with index marks}
+  - {id: handlebar,        geometry: transverse bar on a vertical post}
+
+part_relations:
+  - {subject: crank,            relation: attached_to, object: frame}
+  - {subject: saddle_post,      relation: attached_to, object: frame}
+  - {subject: handlebar,        relation: attached_to, object: frame}
+  - {subject: flywheel_housing, relation: attached_to, object: frame}
+
+proportion_claims: []
+
+kinematic_claims:
+
+  canonical_frame: {up: gravity, front: null}
+
+  joints:
+    - id: crank_spin
+      part: crank
+      parent: frame
+      type: hinge
+      axis: {semantic: horizontal}      # a bottom-bracket axis is transverse
+      anchor: {through_center_of: crank}
+      range:  {unit: rad, min: -6.283, max: 6.283}
+      states: {home: 0.0}
+
+    - id: saddle_post_adjust
+      part: saddle_post
+      parent: frame
+      type: slide
+      axis: {semantic: vertical}        # "adjustment features" on a saddle post are height
+      anchor: null
+      range:  {unit: m, min: 0.0, max: 0.15}
+      states: {low: 0.0, high: 0.15}
+
+    - id: handlebar_adjust
+      part: handlebar
+      parent: frame
+      type: slide
+      axis: {semantic: vertical}
+      anchor: null
+      range:  {unit: m, min: 0.0, max: 0.10}
+      states: {low: 0.0, high: 0.10}
+
+  rigid_attachments: []
+  couplings: []
+
+  independent_dofs: [crank_spin, saddle_post_adjust, handlebar_adjust]
+
+  asset_states:
+    home: {scope: named_parts, tolerance: {relative: 0.02}}
+    low:  {scope: named_parts, tolerance: {relative: 0.02}}
+    high: {scope: named_parts, tolerance: {relative: 0.02}}
+
+  contact_policy:
+    required:
+      # "mounted on explicit bearing/clamp features" and "no free-floating parts":
+      # each moving part must stay in contact with what carries it, throughout its travel.
+      - {parts: [crank, frame],       state: all, relation: mesh_contact}
+      - {parts: [saddle_post, frame], state: all, relation: mesh_contact}
+      - {parts: [handlebar, frame],   state: all, relation: mesh_contact}
+    permitted: []
+    forbidden:
+      - {parts: [crank, saddle_post], state: all}
+      - {parts: [crank, handlebar],   state: all}
+      - {parts: [saddle_post, handlebar], state: all}
+    precedence: required_and_permitted_over_forbidden
+
+  tolerances:
+    axis_angle_deg:           15.0
+    anchor_side_fraction_min: 0.95
+    anchor_center_offset_max: 0.05
+    travel_scale_min:         0.50
+    follower_drift_m:         0.0005
+    state_match_relative:     0.02
+    required_contact_m:       0.005
+    forbidden_penetration_m:  0.001
+    coupling_residual:        0.02

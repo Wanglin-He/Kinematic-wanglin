@@ -1,0 +1,118 @@
+# Authored from revisions/*/prompt.txt ONLY. The asset was not opened.
+#
+# The prompt is unusually precise about the kinematics, which makes this the clearest of
+# the three: "The spindle and both crank arms rotate continuously about the bottom-bracket
+# axis" is one degree of freedom with the arms riding it, not three. That distinction is
+# the whole content of rigid_attachments, and getting it wrong in either direction --
+# three joints where there is one, or one where there are three -- is a real defect.
+
+record_id: rec_bicycle_crankset_and_pedal_assembly_815cd8c51ee342719a051869fe2b7325
+
+overall_description: >
+  An e-bike torque-sensing crankset: a wide cylindrical bottom-bracket shell, a spindle
+  carrying two crank arms and a large chainring turning together about the bottom-bracket
+  axis, and a pedal on each crank arm turning about its own axis.
+
+required_parts:
+  - {id: bb_shell,       role: fixed}
+  - {id: spindle,        role: movable}
+  - {id: crank_arm_left, role: attached, group: crank_arm}
+  - {id: crank_arm_right, role: attached, group: crank_arm}
+  - {id: chainring,      role: attached}
+  - {id: pedal_left,     role: movable, group: pedal}
+  - {id: pedal_right,    role: movable, group: pedal}
+
+global_form:
+  category: bicycle crankset
+  geometry: a wide cylindrical shell with two arms projecting from opposite ends of a spindle
+  coarse_structure: one rotating spindle assembly carrying a large disc and two pedals
+
+part_geometry:
+  - {id: bb_shell,        geometry: wide short cylinder}
+  - {id: spindle,         geometry: slender shaft through the shell}
+  - {id: crank_arm_left,  geometry: flat elongated arm}
+  - {id: crank_arm_right, geometry: flat elongated arm}
+  - {id: chainring,       geometry: large thin toothed disc}
+  - {id: pedal_left,      geometry: small rectangular platform on a short stub}
+  - {id: pedal_right,     geometry: small rectangular platform on a short stub}
+
+part_relations:
+  - {subject: spindle,         relation: inside,      object: bb_shell}
+  - {subject: crank_arm_left,  relation: attached_to, object: spindle}
+  - {subject: crank_arm_right, relation: attached_to, object: spindle}
+  - {subject: chainring,       relation: attached_to, object: spindle}
+  - {subject: pedal_left,      relation: attached_to, object: crank_arm_left}
+  - {subject: pedal_right,     relation: attached_to, object: crank_arm_right}
+
+proportion_claims:
+  - {subject: chainring, object: bb_shell, measure: width, target_ratio: 2.5, tolerance: 0.5}
+
+kinematic_claims:
+
+  canonical_frame: {up: gravity, front: null}
+
+  joints:
+    # "The spindle and both crank arms rotate continuously about the bottom-bracket axis"
+    # -- one joint. The arms and the chainring ride it; see rigid_attachments.
+    - id: spindle_spin
+      part: spindle
+      parent: bb_shell
+      type: hinge
+      axis: {semantic: horizontal}
+      anchor: {through_center_of: spindle}
+      range:  {unit: rad, min: -6.283, max: 6.283}
+      states: {home: 0.0}
+
+    # "Each pedal spindle rotates continuously about its own axis" -- two more, each
+    # hanging off the arm it is mounted on rather than off the shell.
+    - id: pedal_left_spin
+      part: pedal_left
+      parent: crank_arm_left
+      type: hinge
+      axis: {semantic: horizontal}
+      anchor: {through_center_of: pedal_left}
+      range:  {unit: rad, min: -6.283, max: 6.283}
+      states: {home: 0.0}
+
+    - id: pedal_right_spin
+      part: pedal_right
+      parent: crank_arm_right
+      type: hinge
+      axis: {semantic: horizontal}
+      anchor: {through_center_of: pedal_right}
+      range:  {unit: rad, min: -6.283, max: 6.283}
+      states: {home: 0.0}
+
+  rigid_attachments:
+    - {follower: crank_arm_left,  leader: spindle}
+    - {follower: crank_arm_right, leader: spindle}
+    - {follower: chainring,       leader: spindle}
+
+  couplings: []
+
+  independent_dofs: [spindle_spin, pedal_left_spin, pedal_right_spin]
+
+  asset_states:
+    home: {scope: named_parts, tolerance: {relative: 0.02}}
+
+  contact_policy:
+    required:
+      - {parts: [spindle, bb_shell], state: all, relation: mesh_contact}
+    permitted:
+      - {parts: [chainring, bb_shell], state: all}
+    forbidden:
+      - {parts: [{group: pedal}, bb_shell],   state: all}
+      - {parts: [{group: pedal}, chainring],  state: all}
+      - {parts: [{group: pedal}, {group: pedal}], state: all}
+    precedence: required_and_permitted_over_forbidden
+
+  tolerances:
+    axis_angle_deg:           15.0
+    anchor_side_fraction_min: 0.95
+    anchor_center_offset_max: 0.05
+    travel_scale_min:         0.50
+    follower_drift_m:         0.0005
+    state_match_relative:     0.02
+    required_contact_m:       0.005
+    forbidden_penetration_m:  0.001
+    coupling_residual:        0.02

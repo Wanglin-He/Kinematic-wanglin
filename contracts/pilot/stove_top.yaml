@@ -1,0 +1,126 @@
+# Authored from revisions/*/prompt.txt ONLY. The asset was not opened.
+#
+# "Only the four knobs articulate" is the sharpest sentence in any of the three prompts:
+# it fixes the burners and the slab explicitly, so a burner that turns out to carry a joint
+# is a declared failure rather than a judgement call. Gate G2 checks that directly.
+
+record_id: rec_stove_top_0002
+
+overall_description: >
+  A flat four-burner gas cooktop set flush into a countertop cutout, with four round rotary
+  knobs in a straight row along the front edge. Only the knobs move, each turning
+  continuously about a front-to-back axis.
+
+required_parts:
+  - {id: cooktop_slab, role: fixed}
+  - {id: burner_1, role: fixed, group: burner}
+  - {id: burner_2, role: fixed, group: burner}
+  - {id: burner_3, role: fixed, group: burner}
+  - {id: burner_4, role: fixed, group: burner}
+  - {id: knob_1, role: movable, group: knob}
+  - {id: knob_2, role: movable, group: knob}
+  - {id: knob_3, role: movable, group: knob}
+  - {id: knob_4, role: movable, group: knob}
+
+global_form:
+  category: gas cooktop
+  geometry: shallow flat slab nearly flush with the surrounding counter
+  coarse_structure: four burners on the slab with four knobs in a row along the front edge
+
+part_geometry:
+  - {id: cooktop_slab, geometry: thin flat rectangular slab}
+  - {id: burner_1, geometry: round raised burner ring}
+  - {id: burner_2, geometry: round raised burner ring}
+  - {id: burner_3, geometry: round raised burner ring}
+  - {id: burner_4, geometry: round raised burner ring}
+  - {id: knob_1, geometry: small round knob}
+  - {id: knob_2, geometry: small round knob}
+  - {id: knob_3, geometry: small round knob}
+  - {id: knob_4, geometry: small round knob}
+
+part_relations:
+  - {subject: burner_1, relation: attached_to, object: cooktop_slab}
+  - {subject: burner_2, relation: attached_to, object: cooktop_slab}
+  - {subject: burner_3, relation: attached_to, object: cooktop_slab}
+  - {subject: burner_4, relation: attached_to, object: cooktop_slab}
+  - {subject: knob_1,   relation: attached_to, object: cooktop_slab}
+  - {subject: knob_2,   relation: attached_to, object: cooktop_slab}
+  - {subject: knob_3,   relation: attached_to, object: cooktop_slab}
+  - {subject: knob_4,   relation: attached_to, object: cooktop_slab}
+
+proportion_claims: []
+
+kinematic_claims:
+
+  canonical_frame: {up: gravity, front: null}
+
+  joints:
+    # "each rotates continuously about a front-to-back revolute axis" -- front-to-back is
+    # horizontal, which gravity settles without needing an object frame. Which horizontal
+    # direction is not stated and is not claimed here.
+    - id: knob_1_turn
+      part: knob_1
+      parent: cooktop_slab
+      type: hinge
+      axis: {semantic: horizontal}
+      anchor: {through_center_of: knob_1}
+      range:  {unit: rad, min: -6.283, max: 6.283}
+      states: {off: 0.0}
+
+    - id: knob_2_turn
+      part: knob_2
+      parent: cooktop_slab
+      type: hinge
+      axis: {semantic: horizontal}
+      anchor: {through_center_of: knob_2}
+      range:  {unit: rad, min: -6.283, max: 6.283}
+      states: {off: 0.0}
+
+    - id: knob_3_turn
+      part: knob_3
+      parent: cooktop_slab
+      type: hinge
+      axis: {semantic: horizontal}
+      anchor: {through_center_of: knob_3}
+      range:  {unit: rad, min: -6.283, max: 6.283}
+      states: {off: 0.0}
+
+    - id: knob_4_turn
+      part: knob_4
+      parent: cooktop_slab
+      type: hinge
+      axis: {semantic: horizontal}
+      anchor: {through_center_of: knob_4}
+      range:  {unit: rad, min: -6.283, max: 6.283}
+      states: {off: 0.0}
+
+  rigid_attachments: []
+  couplings: []
+
+  independent_dofs: [knob_1_turn, knob_2_turn, knob_3_turn, knob_4_turn]
+
+  asset_states:
+    off: {scope: named_parts, tolerance: {relative: 0.02}}
+
+  contact_policy:
+    required:
+      - {parts: [knob_1, cooktop_slab], state: all, relation: mesh_contact}
+      - {parts: [knob_2, cooktop_slab], state: all, relation: mesh_contact}
+      - {parts: [knob_3, cooktop_slab], state: all, relation: mesh_contact}
+      - {parts: [knob_4, cooktop_slab], state: all, relation: mesh_contact}
+    permitted: []
+    forbidden:
+      - {parts: [{group: knob}, {group: knob}],   state: all}
+      - {parts: [{group: knob}, {group: burner}], state: all}
+    precedence: required_and_permitted_over_forbidden
+
+  tolerances:
+    axis_angle_deg:           15.0
+    anchor_side_fraction_min: 0.95
+    anchor_center_offset_max: 0.05
+    travel_scale_min:         0.50
+    follower_drift_m:         0.0005
+    state_match_relative:     0.02
+    required_contact_m:       0.005
+    forbidden_penetration_m:  0.001
+    coupling_residual:        0.02

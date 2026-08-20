@@ -1,0 +1,9 @@
+{
+  "note": "Contracts authored from revisions/*/prompt.txt only. Hashed and committed BEFORE any asset was opened, so 'frozen before evaluation' is auditable rather than asserted. Any later edit changes the hash and the claim fails.",
+  "frozen_at": "2026-08-19",
+  "contracts": {
+    "bicycle_crankset.yaml": "827168112cc48bbc98372811af12912f2ddcc3de689396707b8cf9b3e5765ec5",
+    "stationary_exercise_bike.yaml": "cb175499c0f930c5ba13a96a2c765907d2e2cb213615fd3294cf72da84a288b5",
+    "stove_top.yaml": "c978a2ee0dc437a5ce89ff8b5cb1eee4dfaaf7e4906e28edbb34ffbfd78f8fb1"
+  }
+}
